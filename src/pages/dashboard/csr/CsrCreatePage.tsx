@@ -1,50 +1,277 @@
 import React from "react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
+import { ChevronDown, Loader2, X } from "lucide-react";
 import { useCreateCsr } from "@/features/csr";
-import { FormLayout } from "@/shared/components/forms/FormLayout";
-import { EntityFormRenderer, type EntityFieldConfig } from "@/shared/components/forms/EntityFormRenderer";
-import { Button } from "@/shared/components/ui/button";
-import { useEntityForm } from "@/shared/hooks/useEntityForm";
+import {
+  ModernFormLayout,
+  FormSection,
+  FormField,
+  FormActions,
+} from "@/shared/components/forms/ModernFormLayout";
+import RichTextEditor from "@/shared/components/RichTextEditor";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
 import { slugify } from "@/shared/utils/slug";
 
-const schema = z.object({ title:z.string().min(1), slug:z.string().min(1), description:z.string().min(1), link:z.string().min(1), status:z.enum(["ONGOING","UPCOMING","PREVIOUS"]), date:z.string().min(1), sortOrder:z.string().optional().transform(v=>v?Number(v):undefined), coverImage:z.instanceof(File).nullable().optional(), mediaAssets:z.array(z.instanceof(File)).optional() });
-type FormValues = Readonly<{ title:string; slug:string; description:string; link:string; status:"ONGOING"|"UPCOMING"|"PREVIOUS"; date:string; sortOrder:string; coverImage:File|null; mediaAssets:File[] }>;
-type SubmitValues = z.output<typeof schema>;
-const fields: ReadonlyArray<EntityFieldConfig> = [
-  { name: "title", label: "Title", type: "text" },
-  { name: "slug", label: "Slug", type: "text" },
-  { name: "description", label: "Description", type: "richtext" },
-  { name: "link", label: "Link", type: "text" },
-  { name: "status", label: "Status", type: "select", options: [{label:"ONGOING",value:"ONGOING"},{label:"UPCOMING",value:"UPCOMING"},{label:"PREVIOUS",value:"PREVIOUS"}] },
-  { name: "date", label: "Date", type: "date" },
-  { name: "sortOrder", label: "Sort Order", type: "text" },
-  { name: "coverImage", label: "Cover Image", type: "file", accept: "image/*" },
-  { name: "mediaAssets", label: "Media Assets", type: "file", multiple: true, maxFiles: 12 },
-];
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+const selectCls = `${inputCls} appearance-none pr-9 cursor-pointer`;
+
+const schema = z.object({
+  title: z.string().min(1, "Title is required"),
+  slug: z.string().min(1, "Slug is required"),
+  description: z.string().min(1, "Description is required"),
+  link: z.string().min(1, "Link is required"),
+  status: z.enum(["ONGOING", "UPCOMING", "PREVIOUS"]),
+  date: z.string().min(1, "Date is required"),
+  sortOrder: z
+    .string()
+    .optional()
+    .transform((v) => (v ? Number(v) : undefined)),
+});
+
+type FieldErrors = Partial<Record<string, string>>;
+
 export const CsrCreatePage: React.FC = () => {
-  const nav=useNavigate(); const m=useCreateCsr();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const mutation = useCreateCsr();
+
+  const [title, setTitle] = React.useState("");
+  const [slug, setSlug] = React.useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = React.useState(false);
-  const form=useEntityForm<FormValues, SubmitValues>({ schema, initialValues:{title:"",slug:"",description:"",link:"",status:"ONGOING",date:"",sortOrder:"",coverImage:null,mediaAssets:[]}, successMessage:"CSR created", onSubmit: async (p)=>{ await m.mutateAsync({ ...p, coverImage:p.coverImage??null, mediaAssets:p.mediaAssets??[] }); nav('/dashboard/csr',{replace:true}); }});
-  const handleFieldChange = React.useCallback((name: string, value: unknown) => {
-    if (name === "title") {
-      const nextTitle = String(value ?? "");
-      form.setField("title", nextTitle);
-      if (!slugManuallyEdited) form.setField("slug", slugify(nextTitle));
+  const [description, setDescription] = React.useState("");
+  const [link, setLink] = React.useState("");
+  const [status, setStatus] = React.useState<"ONGOING" | "UPCOMING" | "PREVIOUS">("ONGOING");
+  const [date, setDate] = React.useState("");
+  const [sortOrder, setSortOrder] = React.useState("");
+  const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = React.useState<string | null>(null);
+  const [newMediaFiles, setNewMediaFiles] = React.useState<File[]>([]);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTitle(val);
+    if (!slugManuallyEdited) setSlug(slugify(val));
+  };
+
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSlugManuallyEdited(true);
+    setSlug(slugify(e.target.value));
+  };
+
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setCoverImageFile(file);
+    if (file) {
+      setCoverImagePreview(URL.createObjectURL(file));
+    } else {
+      setCoverImagePreview(null);
+    }
+  };
+
+  const handleRemoveCoverImage = () => {
+    setCoverImageFile(null);
+    setCoverImagePreview(null);
+  };
+
+  const handleMediaAssetsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    setNewMediaFiles((prev) => [...prev, ...files]);
+    e.target.value = "";
+  };
+
+  const handleRemoveNewMedia = (index: number) => {
+    setNewMediaFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFieldErrors({});
+
+    const parsed = schema.safeParse({ title, slug, description, link, status, date, sortOrder });
+    if (!parsed.success) {
+      const errors: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as string;
+        if (!errors[key]) errors[key] = issue.message;
+      }
+      setFieldErrors(errors);
       return;
     }
-    if (name === "slug") {
-      setSlugManuallyEdited(true);
-      form.setField("slug", slugify(String(value ?? "")));
-      return;
+
+    setIsSubmitting(true);
+    try {
+      await mutation.mutateAsync({
+        ...parsed.data,
+        coverImage: coverImageFile ?? null,
+        mediaAssets: newMediaFiles,
+      });
+      toast.success("CSR created successfully");
+      navigate("/dashboard/csr", { replace: true });
+    } catch (err) {
+      const { message, fieldErrors: fe } = parseApiError(err);
+      toast.error(message);
+      if (fe) setFieldErrors(fe);
+    } finally {
+      setIsSubmitting(false);
     }
-    form.setField(name as keyof FormValues, value as never);
-  }, [form, slugManuallyEdited]);
-  return <FormLayout title='Create CSR'><form onSubmit={(e)=>{e.preventDefault(); void form.submit();}} style={{display:'grid',gap:10}}>
-    <EntityFormRenderer fields={fields} values={form.values as Record<string, unknown>} errors={form.errors} onFieldChange={handleFieldChange} />
-    <div style={{display:'flex',gap:8}}>
-      <Button type="submit">Create</Button>
-      <Button type="button" variant="outline" onClick={() => nav('/dashboard/csr')}>Cancel</Button>
-    </div>
-  </form></FormLayout>;
+  };
+
+  return (
+    <ModernFormLayout
+      title="Create CSR"
+      subtitle="Add a new corporate social responsibility entry"
+      onBack={() => navigate("/dashboard/csr")}
+    >
+      <form onSubmit={(e) => void handleSubmit(e)} noValidate>
+        <div className="space-y-6">
+          <FormSection title="Details">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField label="Title" required error={fieldErrors.title}>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={handleTitleChange}
+                  placeholder="Enter title"
+                  className={inputCls}
+                />
+              </FormField>
+
+              <FormField label="Slug" required error={fieldErrors.slug} hint="Auto-generated from title, editable">
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={handleSlugChange}
+                  placeholder="enter-slug"
+                  className={inputCls}
+                />
+              </FormField>
+
+              <FormField label="Link" required error={fieldErrors.link}>
+                <input
+                  type="text"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="https://..."
+                  className={inputCls}
+                />
+              </FormField>
+
+              <FormField label="Status" required error={fieldErrors.status}>
+                <div className="relative">
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as typeof status)}
+                    className={selectCls}
+                  >
+                    <option value="ONGOING">ONGOING</option>
+                    <option value="UPCOMING">UPCOMING</option>
+                    <option value="PREVIOUS">PREVIOUS</option>
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b]"
+                  />
+                </div>
+              </FormField>
+
+              <FormField label="Date" required error={fieldErrors.date}>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={inputCls}
+                />
+              </FormField>
+
+              <FormField label="Sort Order" error={fieldErrors.sortOrder}>
+                <input
+                  type="number"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  placeholder="0"
+                  className={inputCls}
+                />
+              </FormField>
+            </div>
+          </FormSection>
+
+          <FormSection title="Description">
+            <FormField label="Description" required error={fieldErrors.description}>
+              <RichTextEditor initialContent={description} onChange={setDescription} />
+            </FormField>
+          </FormSection>
+
+          <FormSection title="Media">
+            <FormField label="Cover Image" error={fieldErrors.coverImage}>
+              {coverImagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={coverImagePreview}
+                    alt="Cover preview"
+                    className="h-32 w-48 rounded-xl object-cover border border-[#d2d2d7]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoverImage}
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#1d1d1f] text-white shadow-sm transition hover:bg-red-500"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverImageChange}
+                  className="block w-full text-[13px] text-[#1d1d1f] file:mr-3 file:rounded-lg file:border-0 file:bg-[#f5f5f7] file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-[#1d1d1f] hover:file:bg-[#e8e8ed]"
+                />
+              )}
+            </FormField>
+
+            <FormField label="Media Assets" error={fieldErrors.mediaAssets}>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleMediaAssetsChange}
+                className="block w-full text-[13px] text-[#1d1d1f] file:mr-3 file:rounded-lg file:border-0 file:bg-[#f5f5f7] file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-[#1d1d1f] hover:file:bg-[#e8e8ed]"
+              />
+              {newMediaFiles.length > 0 && (
+                <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                  {newMediaFiles.map((file, i) => (
+                    <div key={i} className="relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="h-16 w-full rounded-lg object-cover border border-[#d2d2d7]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNewMedia(i)}
+                        className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#1d1d1f] text-white shadow-sm transition hover:bg-red-500"
+                      >
+                        <X size={8} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </FormField>
+          </FormSection>
+
+          <FormActions
+            submitLabel="Create CSR"
+            submitIcon={<Loader2 size={11} />}
+            isSubmitting={isSubmitting}
+            onCancel={() => navigate("/dashboard/csr")}
+          />
+        </div>
+      </form>
+    </ModernFormLayout>
+  );
 };

@@ -1,361 +1,170 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, UserCheck, UserX, Edit, Trash2 } from "lucide-react";
-import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { confirmAction } from "@/shared/utils/confirm";
-import {
-  hideRowIds,
-  readHiddenRowIds,
-} from "@/pages/dashboard/common/dashboardTableState";
-import { readCustomerRecords } from "./customerData";
-import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import { Users, ShoppingBag, DollarSign, UserCheck, Eye } from "lucide-react";
+import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
+import { useOrders } from "@/features/commerce";
 
-const verificationVariantMap: Record<string, "qualified" | "closedLost"> = {
-  Verified: "qualified",
-  Pending: "closedLost",
+type CustomerRow = Readonly<{
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  orderCount: number;
+  totalSpent: number;
+}>;
+
+const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
+
+const deriveCustomers = (orders: unknown[]): CustomerRow[] => {
+  const map = new Map<string, CustomerRow>();
+  for (const order of orders) {
+    const o = (typeof order === "object" && order !== null ? order : {}) as Record<string, unknown>;
+    const cid = text(o.customerId);
+    if (!cid) continue;
+    const amount =
+      typeof o.total === "number" ? o.total
+        : typeof o.totalAmount === "number" ? o.totalAmount
+        : parseFloat(text(o.total ?? o.totalAmount, "0")) || 0;
+    if (map.has(cid)) {
+      const existing = map.get(cid)!;
+      (existing as { orderCount: number; totalSpent: number }).orderCount += 1;
+      (existing as { orderCount: number; totalSpent: number }).totalSpent += amount;
+    } else {
+      map.set(cid, {
+        id: cid,
+        name: text(o.customerName ?? o.fullname, "Unknown"),
+        email: text(o.customerEmail ?? o.email, "—"),
+        phone: text(o.phone ?? o.customerPhone, "—"),
+        orderCount: 1,
+        totalSpent: amount,
+      });
+    }
+  }
+  return Array.from(map.values());
 };
+
+const LIMIT = 20;
 
 export const CustomersPage: React.FC = () => {
   const navigate = useNavigate();
-  const toast = useToast();
   const [search, setSearch] = React.useState("");
-  const [customers, setCustomers] = React.useState(() => {
-    const hiddenIds = readHiddenRowIds("customers");
-    return readCustomerRecords().filter(
-      (customer) => !hiddenIds.has(customer.id),
-    );
-  });
-  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
-    [],
-  );
+  const [page, setPage] = React.useState(1);
 
-  const refreshCustomers = React.useCallback(() => {
-    const hiddenIds = readHiddenRowIds("customers");
-    setCustomers(
-      readCustomerRecords().filter((customer) => !hiddenIds.has(customer.id)),
-    );
-  }, []);
+  const ordersQuery = useOrders(undefined, true);
+  const rawOrders = React.useMemo<unknown[]>(() => {
+    const payload = ordersQuery.data;
+    if (Array.isArray(payload)) return payload;
+    const envelope = payload as { data?: unknown[] } | undefined;
+    return envelope?.data ?? [];
+  }, [ordersQuery.data]);
 
-  React.useEffect(() => {
-    refreshCustomers();
-  }, [refreshCustomers]);
+  const customers = React.useMemo(() => deriveCustomers(rawOrders), [rawOrders]);
 
-  const filteredCustomers = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return customers;
-
-    return customers.filter((customer) =>
-      [
-        customer.name,
-        customer.email,
-        customer.city,
-        customer.segment,
-        customer.status,
-        customer.verification,
-      ].some((value) => value.toLowerCase().includes(query)),
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter((c) =>
+      [c.name, c.email, c.phone].some((v) => v.toLowerCase().includes(q)),
     );
   }, [customers, search]);
 
-  // Calculate stats
-  const stats = React.useMemo(() => {
-    const total = customers.length;
-    const verified = customers.filter(
-      (c) => c.verification === "Verified",
-    ).length;
-    const pending = customers.filter(
-      (c) => c.verification === "Pending",
-    ).length;
-    const active = customers.filter((c) => c.status === "Active").length;
+  const totalPages = Math.ceil(filtered.length / LIMIT) || 1;
+  const pageData = React.useMemo(
+    () => filtered.slice((page - 1) * LIMIT, page * LIMIT),
+    [filtered, page],
+  );
 
-    return { total, verified, pending, active };
-  }, [customers]);
+  const stats = React.useMemo(
+    () => ({
+      total: customers.length,
+      withOrders: customers.filter((c) => c.orderCount > 0).length,
+      totalOrders: customers.reduce((s, c) => s + c.orderCount, 0),
+      totalRevenue: customers.reduce((s, c) => s + c.totalSpent, 0),
+    }),
+    [customers],
+  );
 
-  const onDeleteCustomers = async (customerIds: ReadonlyArray<string>) => {
-    if (customerIds.length === 0) return;
-
-    const confirmed = await confirmAction(
-      customerIds.length === 1
-        ? "Delete this customer?"
-        : `Delete ${customerIds.length} selected customers?`,
-    );
-    if (!confirmed) return;
-
-    hideRowIds("customers", customerIds);
-    refreshCustomers();
-    setSelectedIds((current) =>
-      current.filter((id) => !customerIds.includes(id)),
-    );
-    toast.success(
-      `${customerIds.length} ${customerIds.length === 1 ? "customer" : "customers"} deleted.`,
-    );
-  };
+  const columns = [
+    {
+      key: "customer",
+      label: "Customer",
+      render: (row: CustomerRow) => (
+        <div>
+          <div className="font-medium text-gray-900">{row.name}</div>
+          <div className="text-xs text-gray-400">{row.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: "phone",
+      label: "Phone",
+      render: (row: CustomerRow) => <span className="text-gray-600">{row.phone}</span>,
+    },
+    {
+      key: "orderCount",
+      label: "Orders",
+      render: (row: CustomerRow) => (
+        <span className="font-medium text-gray-900">{row.orderCount}</span>
+      ),
+    },
+    {
+      key: "totalSpent",
+      label: "Total Spent",
+      render: (row: CustomerRow) => (
+        <span className="font-medium text-gray-900">Rs {row.totalSpent.toFixed(2)}</span>
+      ),
+    },
+    {
+      key: "view",
+      label: "",
+      render: (row: CustomerRow) => (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/dashboard/customers/${row.id}`);
+            }}
+            className="flex items-center gap-1.5 rounded-full border border-[#d2d2d7] bg-white px-3 py-1 text-[12px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <Eye size={12} strokeWidth={2} />
+            View
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-[1400px] p-6">
-        {/* Breadcrumbs */}
-        <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="hover:text-gray-700"
-          >
-            🏠
-          </button>
-          <span>›</span>
-          <span className="text-gray-400">DASHBOARD</span>
-          <span>›</span>
-          <span className="font-medium text-gray-900 uppercase">CUSTOMERS</span>
-        </div>
-
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-gray-900">Customers</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Track customer accounts, verification status, and order history
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-blue-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Total Contacts
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.total}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <Users size={22} className="text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-yellow-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Leads
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.pending}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-                <UserX size={22} className="text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-purple-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Prospects
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.verified}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                <UserCheck size={22} className="text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-emerald-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Customers
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.active}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <Users size={22} className="text-emerald-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Actions */}
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-900">
-              {filteredCustomers.length} contacts
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search contacts..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-64 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 placeholder-gray-500 outline-none transition-all focus:border-gray-400"
-            />
-            <button
-              onClick={() => navigate("/dashboard/customers/create")}
-              className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-            >
-              + New Contact
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-white">
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredCustomers.length > 0 &&
-                      selectedIds.length === filteredCustomers.length
-                    }
-                    onChange={(e) =>
-                      setSelectedIds(
-                        e.target.checked
-                          ? filteredCustomers.map((c) => c.id)
-                          : [],
-                      )
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Company
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Phone
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Added
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredCustomers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
-                  >
-                    No customers found.
-                  </td>
-                </tr>
-              ) : null}
-              {filteredCustomers.map((customer, idx) => (
-                <tr
-                  key={customer.id}
-                  className="transition-colors hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(customer.id)}
-                      onChange={(e) =>
-                        setSelectedIds((current) =>
-                          e.target.checked
-                            ? [...current, customer.id]
-                            : current.filter((id) => id !== customer.id),
-                        )
-                      }
-                      className="h-4 w-4 rounded border-gray-300"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{idx + 1}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600">
-                        {customer.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {customer.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {customer.email}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {customer.city}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    +1 555-0{idx + 1}01
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge
-                      status={customer.verification}
-                      variant={verificationVariantMap[customer.verification]}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    Mar {15 + idx}, 2026
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() =>
-                          navigate(`/dashboard/customers/${customer.id}`)
-                        }
-                        className="text-gray-400 transition-colors hover:text-gray-600"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => void onDeleteCustomers([customer.id])}
-                        className="text-gray-400 transition-colors hover:text-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4">
-            <p className="text-sm text-gray-600">
-              Showing 1-5 of {filteredCustomers.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-sm font-medium text-white">
-                1
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                2
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                →
-              </button>
-            </div>
-          </div>
-        </div>
+    <PageLayout
+      title="Customers"
+      subtitle="View customers derived from order activity."
+      searchValue={search}
+      onSearchChange={(v) => {
+        setSearch(v);
+        setPage(1);
+      }}
+      searchPlaceholder="Search name, email, phone..."
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCardV2 label="Total Customers" value={stats.total} icon={Users} colorVariant="blue" />
+        <StatCardV2 label="Active Buyers" value={stats.withOrders} icon={UserCheck} colorVariant="emerald" />
+        <StatCardV2 label="Total Orders" value={stats.totalOrders} icon={ShoppingBag} colorVariant="amber" />
+        <StatCardV2 label="Total Revenue" value={`Rs ${stats.totalRevenue.toFixed(0)}`} icon={DollarSign} colorVariant="blue" />
       </div>
-    </div>
+      <DataTableV2
+        columns={columns}
+        data={pageData}
+        searchValue={search}
+        onRowClick={(row) => navigate(`/dashboard/customers/${row.id}`)}
+        emptyMessage={ordersQuery.isLoading ? "Loading customers..." : "No customers found."}
+        showPagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
+    </PageLayout>
   );
 };

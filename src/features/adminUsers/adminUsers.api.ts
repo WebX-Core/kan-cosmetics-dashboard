@@ -14,7 +14,10 @@ export type AdminUsersListResponse = Readonly<{
 
 export const adminUsersApi = {
   list: async (q?: ApiListQuery): Promise<AdminUsersListResponse> => {
-    const res = await api.get("/admin/get-all-users", { params: q });
+    const res = await api.get("/admin/get-all-users", {
+      params: q,
+      headers: { "Cache-Control": "no-cache" },
+    });
     const payload = unwrap<unknown>(res);
 
     const pickFirstArray = (value: unknown): ReadonlyArray<User> => {
@@ -90,15 +93,18 @@ export const adminUsersApi = {
 
   create: async (payload: CreateUserPayload): Promise<User> => {
     const { profile, ...rest } = payload;
+    const hasProfile = profile instanceof File;
 
-    const fd = toFormData(
-      rest as Readonly<Record<string, FormFieldValue>>,
-      { profile: (profile ?? undefined) as FormFileValue }
-    );
-
-    const res = await api.post("/admin/create-users", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = hasProfile
+      ? await api.post(
+          "/admin/create-users",
+          toFormData(
+            rest as Readonly<Record<string, FormFieldValue>>,
+            { profile: (profile ?? undefined) as FormFileValue }
+          ),
+          { headers: { "Content-Type": "multipart/form-data" } }
+        )
+      : await api.post("/admin/create-users", rest);
 
     return unwrap<User>(res);
   },
@@ -106,16 +112,19 @@ export const adminUsersApi = {
   update: async (id: UUID, payload: UpdateUserPayload): Promise<User> => {
     const { profile, ...rest } = payload;
 
-    const fd = toFormData(
-      rest as Readonly<Record<string, FormFieldValue>>,
-      { profile: (profile ?? undefined) as FormFileValue }
-    );
+    if (profile instanceof File) {
+      // Send data fields as JSON so arrays (e.g. roleIds) are properly parsed by the backend.
+      // Then send the profile image separately via FormData.
+      await api.put(`/admin/update-users/${id}`, rest);
+      const fd = new FormData();
+      fd.append("profile", profile);
+      const res = await api.put(`/admin/update-users/${id}`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return unwrap<User>(res);
+    }
 
-    const res = await api.put(`/admin/update-users/${id}`, fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    return unwrap<User>(res);
+    return unwrap<User>(await api.put(`/admin/update-users/${id}`, rest));
   },
 
   remove: async (idOrCommaIds: UUID | CommaIds): Promise<Readonly<{ success: boolean }>> => {

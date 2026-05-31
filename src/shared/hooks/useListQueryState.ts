@@ -56,7 +56,7 @@ export function useListQueryState(defaults?: Partial<ListQueryState>): Readonly<
     if (next.toString() !== sp.toString()) setSp(next, { replace: true });
   }, [state.page, state.limit, state.search, sp, setSp]);
 
-  const debouncedSearch = useDebounced(state.search, 350);
+  const debouncedSearch = useDebounced(state.search, 2000);
 
   return { state, setState, debouncedSearch };
 }

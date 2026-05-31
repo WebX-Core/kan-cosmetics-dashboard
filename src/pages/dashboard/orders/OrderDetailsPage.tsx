@@ -1,184 +1,267 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, PackageCheck } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
-import { confirmAction } from "@/shared/utils/confirm";
+import { Loader2, RefreshCw, Truck, Bell } from "lucide-react";
+import { z } from "zod";
+import { useOrderGet, useUpdateOrderStatus, useSyncOrderDelivery } from "@/features/commerce";
+import { commerceApi } from "@/features/commerce";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { readOrderRecords } from "./orderData";
-import { orderStatuses, saveStoredOrderStatus, type OrderStatus } from "./orderStore";
+import { parseApiError } from "@/shared/utils/apiError";
+import { validateOrToast } from "@/shared/utils/validation";
+import { ModernFormLayout, FormSection, FormField } from "@/shared/components/forms/ModernFormLayout";
+import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 
-const statusClassMap: Readonly<Record<string, string>> = {
-  Pending: "bg-[#fff7e8] text-[#9a6700]",
-  Confirmed: "bg-[#edf5ff] text-[#0066cc]",
-  Packed: "bg-[#edf5ff] text-[#1d4ed8]",
-  Shipped: "bg-[#eef2ff] text-[#4338ca]",
-  Delivered: "bg-[#eefaf5] text-[#0f7a58]",
-  Cancelled: "bg-[#fff1f1] text-[#b42318]",
-  Returned: "bg-[#fff1f1] text-[#b42318]",
-};
+const orderStatusSchema = z.enum(["Pending", "Confirmed", "Packed", "Shipped", "Delivered", "Cancelled", "Returned"]);
+const paymentStatusOptions = ["Pending", "Completed", "Failed", "Refunded"];
+const inputClass = "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
 
-const fieldClassName =
-  "w-full rounded-[12px] border border-[var(--line)] bg-white px-3 py-3 text-sm text-[var(--text)] outline-none transition-colors focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
+const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
+const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
+
+type OrderRecord = Readonly<Record<string, unknown>>;
 
 export const OrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const toast = useToast();
-  const order = React.useMemo(() => readOrderRecords().find((item) => item.id === id), [id]);
-  const [status, setStatus] = React.useState<OrderStatus>(order?.status ?? "Pending");
-  const [isSaving, setIsSaving] = React.useState(false);
+
+  const query = useOrderGet(id, Boolean(id));
+  const updateOrderStatus = useUpdateOrderStatus();
+  const syncDelivery = useSyncOrderDelivery();
+
+  const [orderStatus, setOrderStatus] = React.useState("Pending");
+  const [paymentStatus, setPaymentStatus] = React.useState("Pending");
+  const [paymentId, setPaymentId] = React.useState<string | null>(null);
+  const [syncingPickup, setSyncingPickup] = React.useState(false);
+
+  const record = React.useMemo(() => {
+    const p = query.data;
+    if (!p || typeof p !== "object") return null;
+    return p as OrderRecord;
+  }, [query.data]);
 
   React.useEffect(() => {
-    if (order) setStatus(order.status);
-  }, [order]);
+    if (!record) return;
+    setOrderStatus(text(record.status, "Pending"));
+    const payments = Array.isArray(record.payments) ? record.payments : [];
+    if (payments.length > 0) {
+      const pm = payments[0] as Record<string, unknown>;
+      setPaymentStatus(text(pm.status ?? pm.paymentStatus, "Pending"));
+      setPaymentId(text(pm.id, null as unknown as string) || null);
+    }
+  }, [record]);
 
-  if (!order) {
+  if (!id) {
     return (
-      <div className="rounded-[20px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-        <h1 className="text-[24px] font-semibold text-(--text)">Order not found</h1>
-        <Button variant="ghost" className="mt-3 px-0" onClick={() => navigate("/dashboard/orders")}>
-          <ArrowLeft size={15} />
-          Back To Orders
-        </Button>
+      <div className="flex items-center justify-center p-12 text-sm text-gray-400">
+        Order ID missing.
       </div>
     );
   }
 
-  const onSaveStatus = async () => {
-    if (status === order.status || isSaving) return;
+  if (query.isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12 text-sm text-gray-400">
+        <Loader2 size={18} className="animate-spin mr-2" /> Loading order...
+      </div>
+    );
+  }
 
-    const confirmed = await confirmAction(`Change order ${order.orderNumber} status to ${status}?`);
-    if (!confirmed) return;
+  if (!record) {
+    return (
+      <div className="flex items-center justify-center p-12 text-sm text-gray-400">
+        Order not found.
+      </div>
+    );
+  }
 
-    setIsSaving(true);
-    saveStoredOrderStatus(order.id, status);
-    toast.success(`Order ${order.orderNumber} updated to ${status}.`);
-    setIsSaving(false);
+  const handleUpdateStatus = async () => {
+    const parsed = validateOrToast(orderStatusSchema, orderStatus, toast, "Invalid order status");
+    if (!parsed) return;
+    try {
+      await updateOrderStatus.mutateAsync({ id, payload: { orderStatus: parsed } });
+      await query.refetch();
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
   };
 
-  return (
-    <div className="space-y-6 premium-animate-in">
-      <section className="overflow-hidden rounded-[28px] border border-[#d8dee8] bg-[linear-gradient(180deg,_#fbfcfe_0%,_#eef3f9_100%)] shadow-[0_24px_60px_rgba(17,24,39,0.08)]">
-        <div className="grid gap-6 p-6 sm:p-8 xl:grid-cols-[1.15fr_0.85fr]">
-          <div>
-            <Button variant="ghost" className="mb-4 px-0" onClick={() => navigate("/dashboard/orders")}>
-              <ArrowLeft size={15} />
-              Back To Orders
-            </Button>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5b6473]">Order Command View</p>
-            <h1 className="mt-3 text-[34px] font-semibold tracking-[-0.05em] text-[#1d2430]">{order.orderNumber}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#596273]">
-              Review customer, payment, fulfillment, and line-item details from one operational surface.
-            </p>
+  const handleUpdatePayment = async () => {
+    if (!paymentId) { toast.error("No payment record found"); return; }
+    try {
+      await commerceApi.payments.update(paymentId, { paymentStatus });
+      toast.success("Payment status updated");
+      await query.refetch();
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
+  };
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {[
-                ["Placed", order.placedAt],
-                ["Payment", `${order.paymentMethod} / ${order.paymentStatus}`],
-                ["City", order.city],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-[20px] border border-white/80 bg-white/85 p-4 backdrop-blur-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6a7280]">{label}</p>
-                  <p className="mt-2 text-sm font-semibold text-[#1d2430]">{value}</p>
-                </div>
-              ))}
+  const handleSyncDelivery = async () => {
+    try {
+      await syncDelivery.mutateAsync(id);
+      await query.refetch();
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
+  };
+
+  const handlePickupNotification = async () => {
+    setSyncingPickup(true);
+    try {
+      await commerceApi.orders.pickupNotification(id);
+      toast.success("Pickup notification sent");
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    } finally {
+      setSyncingPickup(false);
+    }
+  };
+
+  const items = Array.isArray(record.items) ? (record.items as Record<string, unknown>[]) : [];
+  const addresses = Array.isArray(record.addresses) ? (record.addresses as Record<string, unknown>[]) : [];
+
+  return (
+    <ModernFormLayout
+      title={text(record.orderNumber ?? record.orderId, "Order")}
+      subtitle={`Customer: ${text(record.customerName ?? record.fullname, "Unknown")} · ${text(record.customerEmail ?? record.email, "—")}`}
+      onBack={() => navigate("/dashboard/orders")}
+    >
+      <div className="space-y-8">
+        {/* Summary */}
+        <FormSection title="Order Summary">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-gray-100 bg-white p-4">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Total</p>
+              <p className="mt-1 text-xl font-bold text-gray-900">Rs {text(record.total ?? record.totalAmount, "0")}</p>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-white p-4">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Order Status</p>
+              <div className="mt-1"><StatusBadge status={text(record.status, "Pending")} /></div>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-white p-4">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Payment Method</p>
+              <p className="mt-1 text-sm font-medium text-gray-900">{text(record.paymentMethod, "—")}</p>
             </div>
           </div>
+        </FormSection>
 
-          <div className="rounded-[24px] border border-[#d5dbe5] bg-white p-5 shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6a7280]">Fulfillment Status</p>
-                <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-[#1d2430]">Update Order State</h2>
-              </div>
-              <span className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${statusClassMap[order.status] ?? statusClassMap.Pending}`}>
-                {order.status}
-              </span>
+        {/* Items */}
+        {items.length > 0 && (
+          <FormSection title="Items">
+            <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">Product</th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">Qty</th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, i) => (
+                    <tr key={i} className="border-b border-gray-50 last:border-0">
+                      <td className="px-5 py-3">{text(item.productName ?? item.name ?? item.title, "—")}</td>
+                      <td className="px-5 py-3">{num(item.quantity, 1)}</td>
+                      <td className="px-5 py-3">Rs {text(item.price ?? item.salePrice, "0")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </FormSection>
+        )}
 
-            <div className="mt-5 space-y-4">
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6a7280]">Order Status</label>
-                <select value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)} className={fieldClassName}>
-                  {orderStatuses.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
+        {/* Addresses */}
+        {addresses.length > 0 && (
+          <FormSection title="Delivery Address">
+            {addresses.map((addr, i) => (
+              <div key={i} className="rounded-xl border border-gray-100 bg-white p-4 text-sm text-gray-700 space-y-0.5">
+                <p className="font-medium">{text(addr.fullName)}</p>
+                <p>{text(addr.phone)}</p>
+                <p>{text(addr.addressLine1)}{addr.addressLine2 ? `, ${text(addr.addressLine2)}` : ""}</p>
+                <p>{text(addr.city)}, {text(addr.state)} {text(addr.postalCode)}</p>
+                <p>{text(addr.country)}</p>
+              </div>
+            ))}
+          </FormSection>
+        )}
+
+        {/* Update Order Status */}
+        <FormSection title="Update Order Status">
+          <div className="flex items-end gap-3">
+            <FormField label="Status">
+              <select value={orderStatus} onChange={(e) => setOrderStatus(e.target.value)} className={inputClass} style={{ maxWidth: 280 }}>
+                {["Pending", "Confirmed", "Packed", "Shipped", "Delivered", "Cancelled", "Returned"].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </FormField>
+            <button
+              type="button"
+              onClick={() => void handleUpdateStatus()}
+              disabled={updateOrderStatus.isPending}
+              className="flex h-11 items-center gap-2 rounded-full bg-[#0071e3] px-6 text-sm font-medium text-white transition-colors hover:bg-[#0066cc] disabled:opacity-50 shrink-0"
+            >
+              {updateOrderStatus.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+              Save Status
+            </button>
+          </div>
+        </FormSection>
+
+        {/* Update Payment Status */}
+        {paymentId && (
+          <FormSection title="Update Payment Status">
+            <div className="flex items-end gap-3">
+              <FormField label="Payment Status">
+                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={inputClass} style={{ maxWidth: 280 }}>
+                  {paymentStatusOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-              </div>
-              <Button className="w-full" onClick={onSaveStatus} disabled={status === order.status || isSaving}>
-                <PackageCheck size={15} />
-                {isSaving ? "Saving..." : "Update Status"}
-              </Button>
+              </FormField>
+              <button
+                type="button"
+                onClick={() => void handleUpdatePayment()}
+                className="flex h-11 items-center gap-2 rounded-full bg-[#0071e3] px-6 text-sm font-medium text-white transition-colors hover:bg-[#0066cc] shrink-0"
+              >
+                Save Payment
+              </button>
             </div>
+          </FormSection>
+        )}
 
-            <div className="mt-5 space-y-3">
-              {[
-                `Order placed on ${order.placedAt}`,
-                `${order.paymentMethod} payment status: ${order.paymentStatus}`,
-                `Current dashboard status: ${order.status}`,
-              ].map((entry) => (
-                <div key={entry} className="flex gap-3 rounded-[16px] bg-[#f5f8fc] px-4 py-3">
-                  <span className="mt-1.5 h-2.5 w-2.5 rounded-full bg-[#1d2430]" />
-                  <p className="text-sm text-[#364152]">{entry}</p>
-                </div>
-              ))}
-            </div>
+        {/* Actions */}
+        <FormSection title="Actions">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSyncDelivery()}
+              disabled={syncDelivery.isPending}
+              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              {syncDelivery.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              Sync Delivery
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePickupNotification()}
+              disabled={syncingPickup}
+              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              {syncingPickup ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
+              Send Pickup Notification
+            </button>
+            <button
+              type="button"
+              onClick={() => void commerceApi.orders.syncBranches().then(() => toast.success("Branches synced")).catch((e: unknown) => toast.error(parseApiError(e).message))}
+              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <Truck size={14} />
+              Sync Branches
+            </button>
           </div>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
-        <article className="rounded-[24px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-(--muted)">Order Parties</p>
-          <div className="mt-4 space-y-4">
-            <div className="rounded-[20px] bg-[#f5f7fa] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Customer</p>
-              <p className="mt-2 text-base font-semibold text-(--text)">{order.customerName}</p>
-              <p className="mt-1 text-sm text-(--muted)">{order.customerEmail}</p>
-              <p className="mt-1 text-sm text-(--muted)">{order.phone}</p>
-            </div>
-            <div className="rounded-[20px] bg-[#f5f7fa] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Shipping Address</p>
-              <p className="mt-2 text-sm leading-7 text-(--text)">{order.shippingAddress}</p>
-              <p className="mt-2 text-sm text-(--muted)">Customer note: {order.notes}</p>
-            </div>
-          </div>
-        </article>
-
-        <article className="rounded-[24px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-(--muted)">Commercial Breakdown</p>
-              <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-(--text)">Line Items</h2>
-            </div>
-            <div className="rounded-[18px] border border-[#d9e5f1] bg-[#f3f7fc] px-4 py-2 text-right text-[#1d2430]">
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#6f7e96]">Order Total</p>
-              <p className="mt-1 text-lg font-semibold">{order.total}</p>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {order.items.map((item) => (
-              <article key={`${item.sku}-${item.name}`} className="grid gap-4 rounded-[22px] border border-(--line) bg-[linear-gradient(180deg,_#ffffff_0%,_#fafafc_100%)] p-4 md:grid-cols-[92px_1fr_auto] md:items-center">
-                <div className="flex h-[92px] w-[92px] items-center justify-center rounded-[18px] bg-[#f3f4f6] p-3">
-                  <img src={item.image} alt={item.name} className="max-h-[68px] w-auto object-contain" />
-                </div>
-                <div>
-                  <p className="text-base font-semibold tracking-[-0.02em] text-(--text)">{item.name}</p>
-                  <p className="mt-1 text-sm text-(--muted)">SKU: {item.sku}</p>
-                  <p className="mt-1 text-sm text-(--muted)">Qty: {item.quantity}</p>
-                </div>
-                <div className="text-left md:text-right">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Unit Price</p>
-                  <p className="mt-2 text-lg font-semibold text-(--text)">{item.unitPrice}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </article>
-      </section>
-    </div>
+        </FormSection>
+      </div>
+    </ModernFormLayout>
   );
 };

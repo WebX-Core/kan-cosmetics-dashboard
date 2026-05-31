@@ -1,9 +1,17 @@
 export type UUID = string;
 
 export type ApiListQuery = Readonly<{
-  page?: number;   
-  limit?: number;  
+  page?: number;
+  limit?: number;
   search?: string;
+  /** backend filter: subcategory list by category id or slug */
+  category?: string;
+  /** backend filter: product list by subcategory id or slug */
+  subcategory?: string;
+  /** backend filter: product-variant list by product id or slug */
+  product?: string;
+  /** backend filter: inventory list by product variant id */
+  productVariantId?: string;
 }>;
 export type PaginationQuery = Readonly<{
   page?: number;

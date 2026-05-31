@@ -1,12 +1,21 @@
 import React from "react";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
+import { Check, Loader2 } from "lucide-react";
 import { useTeamGet, useTeamList, useUpdateTeam } from "@/features/team";
-import { FormLayout } from "@/shared/components/forms/FormLayout";
-import { EntityFormRenderer, type EntityFieldConfig } from "@/shared/components/forms/EntityFormRenderer";
-import { Button } from "@/shared/components/ui/button";
-import { useEntityForm } from "@/shared/hooks/useEntityForm";
+import {
+  ModernFormLayout,
+  FormSection,
+  FormField,
+  FormActions,
+} from "@/shared/components/forms/ModernFormLayout";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
+import RichTextEditor from "@/shared/components/RichTextEditor";
 import { slugify } from "@/shared/utils/slug";
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
 
 const schema = z.object({
   fullname: z.string().min(1, "Full name is required"),
@@ -20,97 +29,378 @@ const schema = z.object({
   instagram: z.string().optional(),
   isLeader: z.boolean().default(false),
   addToHome: z.boolean().default(false),
-  sortOrder: z.string().optional().transform((v) => (v && v.trim() !== "" ? Number(v) : undefined)),
-  image: z.instanceof(File).nullable().optional(),
+  sortOrder: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? Number(v) : undefined)),
 });
 
-type FormValues = Readonly<{ fullname: string; designation: string; countryCode: string; phoneNumber: string; description: string; facebook: string; twitter: string; linkedin: string; instagram: string; isLeader: boolean; addToHome: boolean; sortOrder: string; image: File | null }>;
-type SubmitValues = z.output<typeof schema>;
+type FormState = {
+  fullname: string;
+  designation: string;
+  countryCode: string;
+  phoneNumber: string;
+  description: string;
+  facebook: string;
+  twitter: string;
+  linkedin: string;
+  instagram: string;
+  isLeader: boolean;
+  addToHome: boolean;
+  sortOrder: string;
+};
 
-const fields: ReadonlyArray<EntityFieldConfig> = [
-  { name: "fullname", label: "Full Name", type: "text" },
-  { name: "designation", label: "Designation", type: "text" },
-  { name: "countryCode", label: "Country Code", type: "text" },
-  { name: "phoneNumber", label: "Phone Number", type: "text" },
-  { name: "description", label: "Description", type: "richtext" },
-  { name: "sortOrder", label: "Sort Order", type: "text" },
-  { name: "facebook", label: "Facebook", type: "text" },
-  { name: "twitter", label: "Twitter", type: "text" },
-  { name: "linkedin", label: "LinkedIn", type: "text" },
-  { name: "instagram", label: "Instagram", type: "text" },
-  { name: "image", label: "Image", type: "file", accept: "image/*" },
-  { name: "isLeader", label: "Leader", type: "checkbox" },
-  { name: "addToHome", label: "Show on Home", type: "checkbox" },
-];
+const defaultForm: FormState = {
+  fullname: "",
+  designation: "",
+  countryCode: "+977",
+  phoneNumber: "",
+  description: "",
+  facebook: "",
+  twitter: "",
+  linkedin: "",
+  instagram: "",
+  isLeader: false,
+  addToHome: false,
+  sortOrder: "",
+};
 
 export const TeamEditPage: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { slug } = useParams<{ slug: string }>();
+
   const find = useTeamList({ page: 1, limit: 200, search: slug }, Boolean(slug));
   const id = React.useMemo(() => {
     if (!slug) return undefined;
     const rows = find.data?.data ?? [];
     return rows.find((r) => slugify(r.fullname ?? "") === slug)?.id ?? rows[0]?.id;
   }, [find.data?.data, slug]);
+
   const teamQuery = useTeamGet(id);
   const updateTeam = useUpdateTeam();
-  const [hideExistingImage, setHideExistingImage] = React.useState(false);
 
-  const form = useEntityForm<FormValues, SubmitValues>({
-    schema,
-    initialValues: { fullname: "", designation: "", countryCode: "+1", phoneNumber: "", description: "", facebook: "", twitter: "", linkedin: "", instagram: "", isLeader: false, addToHome: false, sortOrder: "", image: null },
-    successMessage: "Team member updated",
-    onSubmit: async (parsed) => {
-      if (!id) return;
-      await updateTeam.mutateAsync({ id, dto: { ...parsed, image: parsed.image ?? null } });
-      navigate("/dashboard/team", { replace: true });
-    },
-  });
-  const resetForm = form.reset;
+  const [form, setForm] = React.useState<FormState>(defaultForm);
+  const [errors, setErrors] = React.useState<Partial<Record<keyof FormState, string>>>({});
+  const [file, setFile] = React.useState<File | null>(null);
+  const [hideExistingImage, setHideExistingImage] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [seeded, setSeeded] = React.useState(false);
 
   React.useEffect(() => {
-    if (!teamQuery.data) return;
-    resetForm({
-      fullname: teamQuery.data.fullname ?? "", designation: teamQuery.data.designation ?? "", countryCode: teamQuery.data.countryCode ?? "+1", phoneNumber: teamQuery.data.phoneNumber ?? "", description: typeof teamQuery.data.description === "string" ? teamQuery.data.description : "", facebook: teamQuery.data.facebook ?? "", twitter: teamQuery.data.twitter ?? "", linkedin: teamQuery.data.linkedin ?? "", instagram: teamQuery.data.instagram ?? "", isLeader: Boolean(teamQuery.data.isLeader), addToHome: Boolean(teamQuery.data.addToHome), sortOrder: teamQuery.data.sortOrder != null ? String(teamQuery.data.sortOrder) : "", image: null,
+    if (!teamQuery.data || seeded) return;
+    const d = teamQuery.data;
+    setForm({
+      fullname: d.fullname ?? "",
+      designation: d.designation ?? "",
+      countryCode: d.countryCode ?? "+977",
+      phoneNumber: d.phoneNumber ?? "",
+      description: typeof d.description === "string" ? d.description : "",
+      facebook: d.facebook ?? "",
+      twitter: d.twitter ?? "",
+      linkedin: d.linkedin ?? "",
+      instagram: d.instagram ?? "",
+      isLeader: Boolean(d.isLeader),
+      addToHome: Boolean(d.addToHome),
+      sortOrder: d.sortOrder != null ? String(d.sortOrder) : "",
     });
     setHideExistingImage(false);
-  }, [teamQuery.data, resetForm]);
+    setFile(null);
+    setSeeded(true);
+  }, [teamQuery.data, seeded]);
 
-  if (!slug) return <div>Invalid team member slug.</div>;
-  if (find.isLoading) return <div>Loading team member...</div>;
-  if (!id) return <div>Team member not found.</div>;
-  if (teamQuery.isLoading) return <div>Loading team member...</div>;
-  if (teamQuery.isError) return <div style={{ color: "crimson" }}>Failed to load team member.</div>;
+  const existingImageUrl = hideExistingImage
+    ? null
+    : ((teamQuery.data as { imageUrl?: string; image?: string } | undefined)?.imageUrl ??
+      (teamQuery.data as { imageUrl?: string; image?: string } | undefined)?.image ??
+      null);
+
+  const newImagePreview = React.useMemo(
+    () => (file ? URL.createObjectURL(file) : null),
+    [file],
+  );
+  React.useEffect(
+    () => () => {
+      if (newImagePreview) URL.revokeObjectURL(newImagePreview);
+    },
+    [newImagePreview],
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+
+    const result = schema.safeParse({ ...form });
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof FormState, string>> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as keyof FormState;
+        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      toast.error(result.error.issues[0]?.message ?? "Invalid form");
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+    try {
+      const parsed = result.data;
+      await updateTeam.mutateAsync({
+        id,
+        dto: {
+          ...parsed,
+          image: file ?? null,
+          removeImage: hideExistingImage && !file ? true : undefined,
+        },
+      });
+      toast.success("Team member updated");
+      navigate("/dashboard/team");
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!slug) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-[14px] text-[#6e6e73]">
+        Invalid team member slug.
+      </div>
+    );
+  }
+
+  if (find.isLoading || teamQuery.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center gap-2 text-[14px] text-[#6e6e73]">
+        <Loader2 size={16} className="animate-spin" />
+        Loading team member…
+      </div>
+    );
+  }
+
+  if (!id) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-[14px] text-[#6e6e73]">
+        Team member not found.
+      </div>
+    );
+  }
+
+  if (teamQuery.isError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-[14px] text-red-500">
+        Failed to load team member.
+      </div>
+    );
+  }
 
   return (
-    <FormLayout
+    <ModernFormLayout
       title="Edit Team Member"
       subtitle="Update team member profile"
+      onBack={() => navigate("/dashboard/team")}
     >
-      <form onSubmit={(e) => { e.preventDefault(); void form.submit(); }} style={{ display: "grid", gap: 12 }}>
-        <EntityFormRenderer
-          fields={fields}
-          values={form.values as Record<string, unknown>}
-          errors={form.errors}
-          onFieldChange={(name, value) => form.setField(name as keyof FormValues, value as never)}
-          onRemoveExistingPreview={(name) => {
-            if (name !== "image") return;
-            form.setField("image", null);
-            setHideExistingImage(true);
-          }}
-          filePreviewUrls={{
-            image: hideExistingImage
-              ? null
-              : (teamQuery.data as { imageUrl?: string; image?: string } | undefined)?.imageUrl ??
-                (teamQuery.data as { imageUrl?: string; image?: string } | undefined)?.image ??
-                null,
-          }}
+      <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
+        <FormSection title="Profile">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Full Name" required error={errors.fullname}>
+              <input
+                type="text"
+                value={form.fullname}
+                onChange={(e) => setForm((p) => ({ ...p, fullname: e.target.value }))}
+                placeholder="e.g. Jane Smith"
+                className={inputCls}
+              />
+            </FormField>
+            <FormField label="Designation" required error={errors.designation}>
+              <input
+                type="text"
+                value={form.designation}
+                onChange={(e) => setForm((p) => ({ ...p, designation: e.target.value }))}
+                placeholder="e.g. Marketing Director"
+                className={inputCls}
+              />
+            </FormField>
+          </div>
+        </FormSection>
+
+        <FormSection title="Contact">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Country Code" required error={errors.countryCode}>
+              <input
+                type="text"
+                value={form.countryCode}
+                onChange={(e) => setForm((p) => ({ ...p, countryCode: e.target.value }))}
+                placeholder="+977"
+                className={inputCls}
+              />
+            </FormField>
+            <FormField label="Phone Number" required error={errors.phoneNumber}>
+              <input
+                type="text"
+                value={form.phoneNumber}
+                onChange={(e) => setForm((p) => ({ ...p, phoneNumber: e.target.value }))}
+                placeholder="9800000000"
+                className={inputCls}
+              />
+            </FormField>
+          </div>
+        </FormSection>
+
+        <FormSection title="Social Links">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Facebook" error={errors.facebook}>
+              <input
+                type="text"
+                value={form.facebook}
+                onChange={(e) => setForm((p) => ({ ...p, facebook: e.target.value }))}
+                placeholder="https://facebook.com/..."
+                className={inputCls}
+              />
+            </FormField>
+            <FormField label="Twitter" error={errors.twitter}>
+              <input
+                type="text"
+                value={form.twitter}
+                onChange={(e) => setForm((p) => ({ ...p, twitter: e.target.value }))}
+                placeholder="https://twitter.com/..."
+                className={inputCls}
+              />
+            </FormField>
+            <FormField label="LinkedIn" error={errors.linkedin}>
+              <input
+                type="text"
+                value={form.linkedin}
+                onChange={(e) => setForm((p) => ({ ...p, linkedin: e.target.value }))}
+                placeholder="https://linkedin.com/in/..."
+                className={inputCls}
+              />
+            </FormField>
+            <FormField label="Instagram" error={errors.instagram}>
+              <input
+                type="text"
+                value={form.instagram}
+                onChange={(e) => setForm((p) => ({ ...p, instagram: e.target.value }))}
+                placeholder="https://instagram.com/..."
+                className={inputCls}
+              />
+            </FormField>
+          </div>
+        </FormSection>
+
+        <FormSection title="About">
+          <FormField label="Description" error={errors.description}>
+            <RichTextEditor
+              initialContent={form.description}
+              onChange={(v) => setForm((p) => ({ ...p, description: v }))}
+            />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Photo">
+          <FormField label="Image">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const picked = e.target.files?.[0] ?? null;
+                setFile(picked);
+                if (picked) setHideExistingImage(true);
+              }}
+              className="block w-full cursor-pointer rounded-xl border border-[#d2d2d7] bg-white px-4 py-2.5 text-[13px] text-[#1d1d1f] file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#f5f5f7] file:px-3 file:py-1 file:text-[12px] file:font-medium file:text-[#1d1d1f] hover:border-[#0071e3]"
+            />
+            {newImagePreview ? (
+              <div className="mt-3 flex items-start gap-3">
+                <img
+                  src={newImagePreview}
+                  alt="New preview"
+                  className="h-[120px] w-[120px] rounded-xl border border-[#d2d2d7] object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFile(null);
+                    setHideExistingImage(false);
+                  }}
+                  className="mt-1 rounded-full bg-[#f5f5f7] px-3 py-1 text-[11px] font-medium text-[#1d1d1f] transition hover:bg-[#e8e8ed]"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : existingImageUrl ? (
+              <div className="mt-3 flex items-start gap-3">
+                <img
+                  src={existingImageUrl}
+                  alt="Current photo"
+                  className="h-[120px] w-[120px] rounded-xl border border-[#d2d2d7] object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setHideExistingImage(true)}
+                  className="mt-1 rounded-full bg-[#f5f5f7] px-3 py-1 text-[11px] font-medium text-[#1d1d1f] transition hover:bg-[#e8e8ed]"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : null}
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Settings">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FormField label="Sort Order" error={errors.sortOrder}>
+              <input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => setForm((p) => ({ ...p, sortOrder: e.target.value }))}
+                placeholder="0"
+                className={inputCls}
+              />
+            </FormField>
+            <FormField label="Leader">
+              <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 hover:bg-[#f9f9f9]">
+                <div
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isLeader ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}
+                >
+                  {form.isLeader && <Check size={11} strokeWidth={3} className="text-white" />}
+                </div>
+                <span className="text-sm text-[#1d1d1f]">Mark as Leader</span>
+                <input
+                  type="checkbox"
+                  checked={form.isLeader}
+                  onChange={(e) => setForm((p) => ({ ...p, isLeader: e.target.checked }))}
+                  className="sr-only"
+                />
+              </label>
+            </FormField>
+            <FormField label="Home Page">
+              <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 hover:bg-[#f9f9f9]">
+                <div
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.addToHome ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}
+                >
+                  {form.addToHome && <Check size={11} strokeWidth={3} className="text-white" />}
+                </div>
+                <span className="text-sm text-[#1d1d1f]">Show on Home</span>
+                <input
+                  type="checkbox"
+                  checked={form.addToHome}
+                  onChange={(e) => setForm((p) => ({ ...p, addToHome: e.target.checked }))}
+                  className="sr-only"
+                />
+              </label>
+            </FormField>
+          </div>
+        </FormSection>
+
+        <FormActions
+          submitLabel="Update Team Member"
+          isSubmitting={isSubmitting}
+          onCancel={() => navigate("/dashboard/team")}
+          submitIcon={<Loader2 size={11} className="hidden" />}
         />
-        <div style={{ display: "flex", gap: 8 }}>
-          <Button type="submit" disabled={form.isSubmitting}>{form.isSubmitting ? "Saving..." : "Update"}</Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/dashboard/team')}>Cancel</Button>
-        </div>
       </form>
-    </FormLayout>
+    </ModernFormLayout>
   );
 };

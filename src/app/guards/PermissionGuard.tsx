@@ -1,12 +1,25 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
+import { usePermission } from "@/shared/hooks/usePermission";
+import { useAuth } from "../providers/AuthContext";
+import type { AppPermission } from "@/shared/auth/permissions";
 
 type Props = Readonly<{
-  permission: string;
+  permission: AppPermission;
   redirectTo?: string;
 }>;
 
-// Temporary no-auth mode: bypass permission checks.
-export const PermissionGuard: React.FC<Props> = () => {
+export const PermissionGuard: React.FC<Props> = ({ permission, redirectTo = "/dashboard" }) => {
+  const { state } = useAuth();
+  const canAccess = usePermission(permission);
+
+  if (!state.isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!canAccess) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
   return <Outlet />;
 };

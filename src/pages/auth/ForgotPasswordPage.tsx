@@ -1,8 +1,14 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { z } from "zod";
 import { useForgotPassword } from "@/features/auth";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
+import { validateOrToast } from "@/shared/utils/validation";
+
+const schema = z.object({
+  email: z.string().email(),
+});
 
 export const ForgotPasswordPage: React.FC = () => {
   const toast = useToast();
@@ -11,8 +17,10 @@ export const ForgotPasswordPage: React.FC = () => {
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+    const parsed = validateOrToast(schema, { email }, toast, "Invalid email");
+    if (!parsed) return;
     try {
-      await forgot.mutateAsync({ email });
+      await forgot.mutateAsync(parsed);
       toast.success("Reset link requested");
     } catch (err) {
       toast.error(parseApiError(err).message);

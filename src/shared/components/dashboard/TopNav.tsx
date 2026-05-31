@@ -1,6 +1,8 @@
 import React from "react";
-import { Bell, Menu, Search, User, LogOut, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import Breadcrumbs from "@/shared/components/dashboard/BreadCrumbs";
+import { GlobalSearch } from "@/shared/components/dashboard/GlobalSearch";
 
 type Props = Readonly<{
   displayName: string;
@@ -41,164 +43,160 @@ export const TopNav: React.FC<Props> = ({
   }, [profilePicture]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
-      <div className="mx-auto flex w-full items-center gap-4 px-4 py-2 md:px-6">
-        {/* Mobile Menu Button */}
+    <header className="sticky top-0 z-30 h-[55px] border-b border-[#e5e5e7] bg-white">
+      <div className="flex h-full items-center gap-[13px] px-[21px]">
+        {/* Mobile menu */}
         <button
           type="button"
           onClick={onOpenMobile}
-          className="grid h-10 w-10 place-items-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 md:hidden"
+          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7] md:hidden"
         >
-          <Menu size={20} strokeWidth={2} />
+          <Menu size={16} strokeWidth={2} />
         </button>
 
-        {/* Search Bar */}
-        <div className="hidden flex-1 items-center xl:flex">
-          <div className="relative w-full max-w-xl">
-            <Search
-              size={18}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              placeholder="Search products, customers, orders..."
-              className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 pl-12 pr-4 text-sm text-gray-900 placeholder-gray-500 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+        <div className="hidden min-w-0 flex-1 md:block">
+          <Breadcrumbs />
         </div>
 
-        {/* Right Side Actions */}
-        <div className="ml-auto flex items-center gap-3">
+        {/* Right actions */}
+        <div className="ml-auto flex items-center gap-[8px]">
+          <GlobalSearch />
+
           {/* Notifications */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setNotificationsOpen((v) => !v)}
-              className="relative grid h-10 w-10 place-items-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50"
+              className="relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
             >
-              <Bell size={16} strokeWidth={2} />
-              {unreadContactsCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+              <Bell size={15} strokeWidth={2} />
+              {unreadContactsCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-500 px-[3px] text-[9px] font-bold text-white">
                   {unreadContactsCount > 9 ? "9+" : unreadContactsCount}
                 </span>
-              ) : null}
+              )}
             </button>
-            {notificationsOpen ? (
+
+            {notificationsOpen && (
               <>
                 <div
                   className="fixed inset-0 z-40"
                   onClick={() => setNotificationsOpen(false)}
                 />
-                <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-gray-200 bg-white shadow-xl">
-                  <div className="border-b border-gray-100 px-4 py-3">
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Unread Customers
-                    </h3>
+                <div className="absolute right-0 top-[42px] z-50 w-[320px] overflow-hidden rounded-xl border border-[#e5e5e7] bg-white shadow-lg">
+                  <div className="border-b border-[#f0f0f2] px-[21px] py-[13px]">
+                    <p className="text-[14px] font-semibold text-[#1d1d1f]">
+                      Unread Contacts
+                    </p>
                   </div>
                   {unreadContacts.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="px-[21px] py-[34px] text-center text-[13px] text-[#6e6e73]">
                       No unread contacts.
                     </div>
-                  ) : null}
-                  {unreadContacts.length > 0 ? (
-                    <div className="max-h-80 overflow-auto">
+                  ) : (
+                    <div className="max-h-[280px] overflow-auto">
                       {unreadContacts.slice(0, 8).map((contact) => (
                         <Link
-                          to={`/dashboard/customers/${contact.id}`}
+                          to={`/dashboard/support/contacts/${contact.id}`}
                           key={contact.id}
-                          className="block border-b border-gray-50 px-4 py-3 transition-colors hover:bg-gray-50 last:border-0"
+                          className="block border-b border-[#f5f5f7] px-[21px] py-[13px] transition-colors hover:bg-[#fafafa] last:border-0"
                           onClick={() => setNotificationsOpen(false)}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="truncate text-sm font-medium text-gray-900">
+                          <div className="flex items-start justify-between gap-[8px]">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13px] font-medium text-[#1d1d1f]">
                                 {contact.name || contact.email}
                               </p>
-                              <p className="truncate text-xs text-gray-500">
+                              <p className="truncate text-[12px] text-[#6e6e73]">
                                 {contact.email}
                               </p>
                               {contact.createdAt && (
-                                <p className="mt-1 text-xs text-gray-400">
+                                <p className="mt-[3px] text-[11px] text-[#86868b]">
                                   {new Date(contact.createdAt).toLocaleString()}
                                 </p>
                               )}
                             </div>
-                            <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                            <span className="shrink-0 rounded-full bg-red-50 px-[8px] py-px text-[10px] font-semibold text-red-600">
                               New
                             </span>
                           </div>
                         </Link>
                       ))}
                     </div>
-                  ) : null}
-                  <div className="border-t border-gray-100 p-2">
+                  )}
+                  <div className="border-t border-[#f0f0f2] p-[8px]">
                     <Link
-                      to="/dashboard/customers"
+                      to="/dashboard/support/contacts"
                       onClick={() => setNotificationsOpen(false)}
-                      className="block rounded-lg bg-zinc-900 px-4 py-2 text-center text-sm font-medium text-white! transition-colors hover:text-white hover:bg-blue-950"
+                      className="block rounded-full bg-[#1d1d1f] px-[21px] py-[8px] text-center text-[13px] font-medium text-white transition-colors hover:bg-[#0071e3]"
                     >
-                      View All Customers
+                      View All Contacts
                     </Link>
                   </div>
                 </div>
               </>
-            ) : null}
+            )}
           </div>
 
-          {/* User Profile Dropdown */}
+          {/* Profile */}
           <div className="relative">
             <button
               onClick={() => setOpen((v) => !v)}
               type="button"
-              className="flex items-center gap-3 rounded-lg border border-gray-200 px-2 py-1 transition-colors hover:bg-gray-50"
+              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#e5e5e7] pl-[5px] pr-[13px] transition-colors hover:bg-[#f5f5f7]"
             >
               {profilePicture && !avatarBroken ? (
                 <img
                   src={profilePicture}
                   alt={displayName}
-                  className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-100"
+                  className="h-[24px] w-[24px] rounded-full object-cover"
                   onError={() => setAvatarBroken(true)}
                 />
               ) : (
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-linear-to-br from-blue-700 to-blue-900 text-sm font-semibold text-white">
+                <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#0071e3] text-[11px] font-semibold text-white">
                   {(displayName[0] ?? "K").toUpperCase()}
                 </span>
               )}
               <div className="hidden text-left md:block">
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-[13px] font-medium text-[#1d1d1f] leading-none">
                   {displayName}
                 </p>
-                <p className="text-xs text-gray-500">{roleLabel}</p>
               </div>
               <ChevronDown
-                size={16}
-                className="hidden text-gray-400 md:block"
+                size={13}
+                strokeWidth={2}
+                className="hidden text-[#86868b] md:block"
               />
             </button>
-            {open ? (
+
+            {open && (
               <>
                 <div
                   className="fixed inset-0 z-40"
                   onClick={() => setOpen(false)}
                 />
-                <div className="absolute right-0 top-12 z-50 w-64 rounded-xl border border-gray-200 bg-white shadow-xl">
-                  <div className="border-b border-gray-100 px-4 py-3">
-                    <p className="text-sm font-semibold text-gray-900">
+                <div className="absolute right-0 top-[42px] z-50 w-[220px] overflow-hidden rounded-xl border border-[#e5e5e7] bg-white shadow-lg">
+                  <div className="border-b border-[#f0f0f2] px-[21px] py-[13px]">
+                    <p className="text-[14px] font-semibold text-[#1d1d1f]">
                       {displayName}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      {email ?? "No email"}
+                    <p className="mt-[3px] text-[12px] text-[#6e6e73]">
+                      {email ?? "—"}
+                    </p>
+                    <p className="mt-[4px] text-[8px] text-[#6e6e73] leading-none">
+                      {roleLabel}
                     </p>
                   </div>
-                  <div className="p-2">
+                  <div className="p-[8px]">
                     <button
                       type="button"
                       onClick={() => {
                         onProfile();
                         setOpen(false);
                       }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                      className="flex h-[34px] w-full items-center gap-[8px] rounded-lg px-[13px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
                     >
-                      <User size={16} />
+                      <User size={14} strokeWidth={2} />
                       View Profile
                     </button>
                     <button
@@ -208,15 +206,15 @@ export const TopNav: React.FC<Props> = ({
                         setOpen(false);
                       }}
                       disabled={isLoggingOut}
-                      className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                      className="mt-[2px] flex h-[34px] w-full items-center gap-[8px] rounded-lg px-[13px] text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
                     >
-                      <LogOut size={16} />
-                      {isLoggingOut ? "Logging out..." : "Logout"}
+                      <LogOut size={14} strokeWidth={2} />
+                      {isLoggingOut ? "Logging out…" : "Log Out"}
                     </button>
                   </div>
                 </div>
               </>
-            ) : null}
+            )}
           </div>
         </div>
       </div>

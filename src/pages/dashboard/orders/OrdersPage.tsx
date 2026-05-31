@@ -5,306 +5,276 @@ import {
   Package,
   Truck,
   CheckCircle,
-  Search,
-  Edit,
-  Trash2,
+  X,
+  Plus,
 } from "lucide-react";
-import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { confirmAction } from "@/shared/utils/confirm";
-import {
-  hideRowIds,
-  readHiddenRowIds,
-} from "@/pages/dashboard/common/dashboardTableState";
-import { readOrderRecords } from "./orderData";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import { useOrders } from "@/features/commerce";
+import { useListQueryState } from "@/shared/hooks/useListQueryState";
 
-const statusVariantMap: Record<string, any> = {
-  Pending: "pending",
-  Confirmed: "qualified",
-  Packed: "qualified",
-  Shipped: "proposal",
-  Delivered: "completed",
-  Cancelled: "cancelled",
-  Returned: "closedLost",
+type OrderRow = Readonly<{
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  total: string;
+  placedAt: string;
+  status: string;
+}>;
+
+const readString = (value: unknown, fallback = ""): string =>
+  typeof value === "string" ? value : fallback;
+
+const toOrderRow = (record: unknown): OrderRow => {
+  const item = (
+    typeof record === "object" && record !== null ? record : {}
+  ) as Record<string, unknown>;
+  return {
+    id: readString(item.id, crypto.randomUUID()),
+    orderNumber: readString(item.orderNumber ?? item.orderId, "—"),
+    customerName: readString(item.customerName ?? item.fullname, "Unknown"),
+    customerEmail: readString(item.customerEmail ?? item.email, "—"),
+    paymentMethod: readString(item.paymentMethod, "—"),
+    paymentStatus: readString(item.paymentStatus, "—"),
+    total: readString(item.total ?? item.totalAmount, "0"),
+    placedAt: readString(item.placedAt ?? item.createdAt, "—"),
+    status: readString(item.status, "Pending"),
+  };
 };
 
 export const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
-  const toast = useToast();
-  const [search, setSearch] = React.useState("");
-  const [orders, setOrders] = React.useState(readOrderRecords());
+  const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
     [],
   );
+  const { state, setState, debouncedSearch } = useListQueryState({
+    page: 1,
+    limit: 20,
+    search: "",
+  });
 
-  const refreshOrders = React.useCallback(() => {
-    const hiddenIds = readHiddenRowIds("orders");
-    setOrders(readOrderRecords().filter((order) => !hiddenIds.has(order.id)));
-  }, []);
+  const ordersQuery = useOrders({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  });
 
-  React.useEffect(() => {
-    refreshOrders();
-  }, [refreshOrders]);
+  const orders = React.useMemo(() => {
+    const raw = Array.isArray(ordersQuery.data)
+      ? ordersQuery.data
+      : ((ordersQuery.data as { data?: unknown[] } | undefined)?.data ?? []);
+    return raw.map(toOrderRow);
+  }, [ordersQuery.data]);
 
-  const filteredOrders = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return orders;
+  const totalPages =
+    (ordersQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const totalOrders =
+    (ordersQuery.data as { total?: number } | undefined)?.total ??
+    orders.length;
 
-    return orders.filter((order) =>
-      [
-        order.id,
-        order.orderNumber,
-        order.customerName,
-        order.customerEmail,
-        order.city,
-        order.paymentMethod,
-        order.status,
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [orders, search]);
+  const tabFiltered = React.useMemo(() => {
+    if (activeTab === "all") return orders;
+    return orders.filter((o) => o.status.toLowerCase() === activeTab);
+  }, [orders, activeTab]);
+  const visibleIds = React.useMemo(
+    () => tabFiltered.map((row) => row.id),
+    [tabFiltered],
+  );
+  const isAllVisibleSelected = React.useMemo(
+    () =>
+      visibleIds.length > 0 &&
+      visibleIds.every((entry) => selectedIds.includes(entry)),
+    [visibleIds, selectedIds],
+  );
 
-  // Calculate stats
-  const stats = React.useMemo(() => {
-    const total = orders.length;
-    const pending = orders.filter((o) => o.status === "Pending").length;
-    const shipped = orders.filter((o) => o.status === "Shipped").length;
-    const delivered = orders.filter((o) => o.status === "Delivered").length;
-
-    return { total, pending, shipped, delivered };
-  }, [orders]);
-
-  const onDeleteOrders = async (orderIds: ReadonlyArray<string>) => {
-    if (orderIds.length === 0) return;
-
-    const confirmed = await confirmAction(
-      orderIds.length === 1
-        ? "Delete this order?"
-        : `Delete ${orderIds.length} selected orders?`,
-    );
-    if (!confirmed) return;
-
-    hideRowIds("orders", orderIds);
-    refreshOrders();
-    setSelectedIds((current) => current.filter((id) => !orderIds.includes(id)));
-    toast.success(
-      `${orderIds.length} ${orderIds.length === 1 ? "order" : "orders"} deleted.`,
+  const toggleSelectOne = (orderId: string, checked: boolean) => {
+    setSelectedIds((prev) =>
+      checked
+        ? prev.includes(orderId)
+          ? prev
+          : [...prev, orderId]
+        : prev.filter((entry) => entry !== orderId),
     );
   };
 
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      if (!checked) return prev.filter((entry) => !visibleIds.includes(entry));
+      return Array.from(new Set([...prev, ...visibleIds]));
+    });
+  };
+
+  const stats = React.useMemo(
+    () => ({
+      total: totalOrders,
+      pending: orders.filter((o) => o.status === "Pending").length,
+      shipped: orders.filter((o) => o.status === "Shipped").length,
+      delivered: orders.filter((o) => o.status === "Delivered").length,
+    }),
+    [orders, totalOrders],
+  );
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setState((p) => ({ ...p, page: 1 }));
+  };
+
+  const tabs = [
+    { key: "all", label: "All" },
+    { key: "pending", label: "Pending" },
+    { key: "shipped", label: "Shipped" },
+    { key: "delivered", label: "Delivered" },
+  ];
+
+  const columns = [
+    {
+      key: "select",
+      label: (
+        <input
+          type="checkbox"
+          checked={isAllVisibleSelected}
+          onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+          aria-label="Select all orders"
+        />
+      ),
+      render: (row: OrderRow) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(row.id)}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => toggleSelectOne(row.id, event.target.checked)}
+          aria-label={`Select ${row.orderNumber}`}
+        />
+      ),
+      width: "44px",
+    },
+    {
+      key: "orderNumber",
+      label: "Order",
+      render: (row: OrderRow) => (
+        <div>
+          <div className="font-medium text-gray-900">{row.orderNumber}</div>
+          <div className="text-xs text-gray-400">{row.placedAt}</div>
+        </div>
+      ),
+    },
+    {
+      key: "customer",
+      label: "Customer",
+      render: (row: OrderRow) => (
+        <div>
+          <div className="font-medium text-gray-900">{row.customerName}</div>
+          <div className="text-xs text-gray-400">{row.customerEmail}</div>
+        </div>
+      ),
+    },
+    {
+      key: "payment",
+      label: "Payment",
+      render: (row: OrderRow) => (
+        <div>
+          <div className="text-gray-700">{row.paymentMethod}</div>
+          <div className="text-xs text-gray-400">{row.paymentStatus}</div>
+        </div>
+      ),
+    },
+    {
+      key: "total",
+      label: "Total",
+      render: (row: OrderRow) => (
+        <span className="font-medium text-gray-900">{row.total}</span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row: OrderRow) => <StatusBadge status={row.status} />,
+    },
+  ];
+
   return (
-    <PageLayout title="Orders" showDateFilter showExport>
-      {/* Stats Cards */}
+    <PageLayout
+      title="Orders"
+      showExport
+      actions={
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard/orders/create")}
+          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-semibold text-white transition-colors hover:bg-[#0066cc] active:scale-[0.982]"
+        >
+          <Plus size={14} /> New Order
+        </button>
+      }
+      searchValue={state.search}
+      onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
+      searchPlaceholder="Search orders..."
+    >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCardV2
-          label="TOTAL ORDERS"
+          label="Total Orders"
           value={stats.total}
           icon={ShoppingCart}
           colorVariant="blue"
         />
         <StatCardV2
-          label="PENDING"
+          label="Pending"
           value={stats.pending}
           icon={Package}
           colorVariant="amber"
         />
         <StatCardV2
-          label="SHIPPED"
+          label="Shipped"
           value={stats.shipped}
           icon={Truck}
-          colorVariant="purple"
+          colorVariant="blue"
         />
         <StatCardV2
-          label="DELIVERED"
+          label="Delivered"
           value={stats.delivered}
           icon={CheckCircle}
           colorVariant="emerald"
         />
       </div>
-
-      {/* Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">
-              {filteredOrders.length} orders
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search orders..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-64 rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-              />
+      <DataTableV2
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        columns={columns}
+        data={tabFiltered}
+        actions={
+          selectedIds.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[#6e6e73]">
+                {selectedIds.length} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedIds([])}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                aria-label="Clear selected orders"
+              >
+                <X size={12} />
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredOrders.length > 0 &&
-                      selectedIds.length === filteredOrders.length
-                    }
-                    onChange={(e) =>
-                      setSelectedIds(
-                        e.target.checked ? filteredOrders.map((o) => o.id) : [],
-                      )
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Order
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Payment
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    No orders found.
-                  </td>
-                </tr>
-              ) : null}
-              {filteredOrders.map((order, idx) => (
-                <tr
-                  key={order.id}
-                  className="transition-colors hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(order.id)}
-                      onChange={(e) =>
-                        setSelectedIds((current) =>
-                          e.target.checked
-                            ? [...current, order.id]
-                            : current.filter((id) => id !== order.id),
-                        )
-                      }
-                      className="h-4 w-4 rounded border-gray-300"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{idx + 1}</td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {order.orderNumber}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {order.placedAt}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {order.customerName}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {order.customerEmail}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {order.paymentMethod}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {order.paymentStatus}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium text-gray-900">
-                    {order.total}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge
-                      status={order.status}
-                      variant={statusVariantMap[order.status]}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() =>
-                          navigate(`/dashboard/orders/${order.id}`)
-                        }
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => void onDeleteOrders([order.id])}
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 text-red-600 transition-colors hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
-          <p className="text-sm text-gray-600">
-            Showing 1-{filteredOrders.length} of {filteredOrders.length}
-          </p>
-          <div className="flex items-center gap-2">
-            <button className="grid h-9 w-9 place-items-center rounded-lg border border-gray-200 bg-gray-900 text-sm font-medium text-white transition-colors">
-              1
-            </button>
-            <button className="grid h-9 w-9 place-items-center rounded-lg border border-gray-200 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50">
-              2
-            </button>
-            <button className="grid h-9 w-9 place-items-center rounded-lg border border-gray-200 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50">
-              →
-            </button>
-          </div>
-        </div>
-      </div>
+          ) : undefined
+        }
+        searchValue={state.search}
+        onRowClick={(row) => navigate(`/dashboard/orders/${row.id}`)}
+        onEdit={(row) => navigate(`/dashboard/orders/${row.id}`)}
+        emptyMessage={
+          ordersQuery.isLoading ? "Loading orders..." : "No orders found."
+        }
+        showPagination={true}
+        currentPage={state.page}
+        totalPages={totalPages}
+        onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+      />
     </PageLayout>
   );
 };

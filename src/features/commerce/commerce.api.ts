@@ -1,0 +1,77 @@
+import { api, unwrap } from "@/shared/api/api";
+import type { ApiListQuery, UUID } from "@/shared/types/common.types";
+import { makeStandardCrud } from "@/shared/api/standardCrud";
+import type {
+  CartAddItemDto,
+  CartUpdateItemDto,
+  WishlistAddItemDto,
+  CouponDto,
+  CouponIssueToUsersDto,
+  CouponUnassignUsersDto,
+  CouponValidateDto,
+  CouponApplyDto,
+  OrderCreateDto,
+  OrderStatusUpdateDto,
+  PaymentUpdateDto,
+  CustomerBanDto,
+  CustomerAddressDto,
+} from "./commerce.types";
+
+export const commerceApi = {
+  carts: {
+    addItem: async (payload: CartAddItemDto) => unwrap<unknown>(await api.post("/cart/add-item", payload)),
+    my: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/cart/my", { params: q })),
+    byCustomer: async (customerId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/cart/customer/${customerId}`, { params: q })),
+    updateItem: async (itemId: UUID, payload: CartUpdateItemDto) => unwrap<unknown>(await api.patch(`/cart/item/${itemId}`, payload)),
+    removeItem: async (itemId: UUID) => unwrap<unknown>(await api.delete(`/cart/item/${itemId}`)),
+    clear: async () => unwrap<unknown>(await api.delete("/cart/clear")),
+  },
+  wishlists: {
+    addItem: async (payload: WishlistAddItemDto) => unwrap<unknown>(await api.post("/wishlist/add-item", payload)),
+    my: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/wishlist/my", { params: q })),
+    byCustomer: async (customerId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/wishlist/customer/${customerId}`, { params: q })),
+    removeItem: async (itemId: UUID) => unwrap<unknown>(await api.delete(`/wishlist/item/${itemId}`)),
+    clear: async () => unwrap<unknown>(await api.delete("/wishlist/clear")),
+  },
+  coupons: {
+    crud: makeStandardCrud<Record<string, unknown>, CouponDto, CouponDto>({ key: "coupons", basePath: "/coupon" }),
+    issueUsers: async (payload: CouponIssueToUsersDto) => unwrap<unknown>(await api.post("/coupon/issue-users", payload)),
+    unassignUsers: async (payload: CouponUnassignUsersDto) => unwrap<unknown>(await api.post("/coupon/unassign-users", payload)),
+    insights: async (couponId: UUID) => unwrap<unknown>(await api.get(`/coupon/insights/${couponId}`)),
+    validate: async (payload: CouponValidateDto) => unwrap<unknown>(await api.post("/coupon/validate", payload)),
+    myEligible: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon/my-eligible", { params: q })),
+    myUsage: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon/my-usage", { params: q })),
+    apply: async (payload: CouponApplyDto) => unwrap<unknown>(await api.post("/coupon/apply", payload)),
+  },
+  couponUsage: {
+    all: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon-usage/get-all", { params: q })),
+    get: async (id: UUID) => unwrap<unknown>(await api.get(`/coupon-usage/get/${id}`)),
+    myUsage: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon-usage/my-usage", { params: q })),
+  },
+  orders: {
+    create: async (payload: OrderCreateDto) => unwrap<unknown>(await api.post("/order/create", payload)),
+    my: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/my", { params: q })),
+    myById: async (id: UUID) => unwrap<unknown>(await api.get(`/order/my/${id}`)),
+    cancel: async (id: UUID) => unwrap<unknown>(await api.patch(`/order/cancel/${id}`)),
+    all: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/get-all", { params: q })),
+    salesAnalytics: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/sales-analytics", { params: q })),
+    get: async (id: UUID) => unwrap<unknown>(await api.get(`/order/get/${id}`)),
+    updateStatus: async (id: UUID, payload: OrderStatusUpdateDto) => unwrap<unknown>(await api.patch(`/order/status/${id}`, payload)),
+    syncDelivery: async (id: UUID) => unwrap<unknown>(await api.post(`/order/sync-delivery/${id}`)),
+    deliveryWebhook: async (payload: Record<string, unknown>) => unwrap<unknown>(await api.post("/order/delivery-webhook", payload)),
+    syncBranches: async () => unwrap<unknown>(await api.post("/order/sync-branches")),
+    pickupNotification: async (id: UUID) => unwrap<unknown>(await api.post(`/order/pickup-notification/${id}`)),
+  },
+  payments: {
+    byOrder: async (orderId: UUID) => unwrap<unknown>(await api.get(`/payment/order/${orderId}`)),
+    update: async (id: UUID, payload: PaymentUpdateDto) => unwrap<unknown>(await api.patch(`/payment/update/${id}`, payload)),
+  },
+  purchaseHistory: {
+    syncByOrder: async (orderId: UUID) => unwrap<unknown>(await api.post(`/purchase-history/sync/order/${orderId}`)),
+    syncByCustomer: async (customerId: UUID) => unwrap<unknown>(await api.post(`/purchase-history/sync/customer/${customerId}`)),
+    byCustomer: async (customerId: UUID) => unwrap<unknown>(await api.get(`/purchase-history/customer/${customerId}`)),
+    get: async (id: UUID) => unwrap<unknown>(await api.get(`/purchase-history/get/${id}`)),
+  },
+  customerBans: makeStandardCrud<Record<string, unknown>, CustomerBanDto, CustomerBanDto>({ key: "customerBans", basePath: "/customer-ban" }),
+  customerAddresses: makeStandardCrud<Record<string, unknown>, CustomerAddressDto, CustomerAddressDto>({ key: "customerAddresses", basePath: "/customer-address" }),
+};

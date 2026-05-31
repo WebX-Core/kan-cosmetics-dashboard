@@ -9,27 +9,25 @@ import {
 type Props = Readonly<{
   canUsersManage: boolean;
   canContactManage: boolean;
+  hasModuleAccess?: (moduleKey: string) => boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
-  unreadContactsCount?: number;
+  notificationCounts?: Partial<Record<string, number>>;
 }>;
-
-const baseLink =
-  "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-700 transition-all hover:bg-slate-50 hover:text-slate-900";
-
-const activeLink =
-  "bg-blue-300/20 text-blue-950 hover:bg-blue-900/20 [&_.icon-wrapper]:bg-blue-950 [&_.icon]:text-white";
 
 export const Sidebar: React.FC<Props> = ({
   canUsersManage,
   canContactManage,
+  hasModuleAccess,
   mobileOpen,
   onCloseMobile,
-  unreadContactsCount = 0,
+  notificationCounts = {},
 }) => {
   const filtered = ecommerceModules.filter((module) => {
-    if (module.key === "users") return canUsersManage;
-    if (module.key === "customers") return canContactManage;
+    if (hasModuleAccess && !hasModuleAccess(module.key)) return false;
+    if (module.key === "users" || module.key === "permissions")
+      return canUsersManage;
+    if (module.key === "contacts") return canContactManage;
     return true;
   });
 
@@ -41,67 +39,70 @@ export const Sidebar: React.FC<Props> = ({
     .filter((group) => group.modules.length > 0);
 
   const content = (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-gray-100 px-3 py-3.5">
-        <NavLink
-          to="/dashboard"
-          end
-          className="flex justify-start gap-3"
-          onClick={onCloseMobile}
-        >
+    <div className="sidebar-enter flex h-full flex-col bg-white">
+      {/* Logo — golden: 55px height */}
+      <div className="flex h-[55px] items-center justify-between border-b border-[#e5e5e7] px-[21px]">
+        <NavLink to="/dashboard" end onClick={onCloseMobile}>
           <img
-            src="/KANWEBSITE/BRANDINGASSETS/COMPANYLOGO/kan2.png"
-            className="h-8 w-auto"
-            alt="KAN Logo"
+            src="/logo/kan_logo_gold-01.png"
+            className="h-7 w-auto"
+            alt="KAN"
           />
         </NavLink>
         <button
-          className="grid h-8 w-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 md:hidden"
+          className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7] md:hidden"
           onClick={onCloseMobile}
         >
-          <X size={16} strokeWidth={2} />
+          <X size={14} strokeWidth={2} />
         </button>
       </div>
-      <nav className="flex-1 space-y-0 overflow-y-auto px-2 py-3">
+
+      {/* Nav */}
+      <nav className="hide-scrollbar flex-1 overflow-y-auto px-[13px] py-[13px]">
         {grouped.map((group, groupIndex) => (
-          <div key={group.section} className={groupIndex > 0 ? "mt-4" : ""}>
+          <div
+            key={group.section}
+            className={groupIndex > 0 ? "mt-[21px]" : ""}
+          >
             {group.section !== "Main" && (
-              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              <p className="mb-[5px] px-[8px] text-[10px] font-semibold uppercase tracking-widest text-[#86868b]">
                 {group.section}
               </p>
             )}
-            <div className="space-y-0.5">
-              {group.modules.map((module) => {
+            <div className="space-y-[2px]">
+              {group.modules.map((module, moduleIndex) => {
                 const Icon = module.icon;
-                const isContact = module.key === "customers";
-                const shortcut = module.shortcut;
+                const badgeCount = Math.max(
+                  0,
+                  notificationCounts[module.key] ?? 0,
+                );
+                const animationDelay = groupIndex * 90 + moduleIndex * 45;
                 return (
                   <NavLink
                     key={module.key}
                     to={module.path}
                     end={module.path === "/dashboard"}
-                    className={({ isActive }) =>
-                      `${baseLink} ${isActive ? activeLink : ""}`
-                    }
                     onClick={onCloseMobile}
+                    style={{ animationDelay: `${animationDelay}ms` }}
+                    className={({ isActive }) =>
+                      `sidebar-item-enter group flex h-[34px] items-center gap-[8px] rounded-lg px-[8px] text-[13px] font-medium transition-colors ${
+                        isActive
+                          ? "bg-[#0071e3]/10 text-[#0071e3]"
+                          : "text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                      }`
+                    }
                   >
-                    <div className="icon-wrapper flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-900/10 to-blue-950/10 transition-colors">
-                      <Icon
-                        size={16}
-                        strokeWidth={2}
-                        className="icon text-blue-900 transition-colors"
-                      />
-                    </div>
+                    <Icon
+                      size={15}
+                      strokeWidth={module.key === "contacts" ? 2 : 1.75}
+                      className="shrink-0 opacity-70 group-[.bg-\\[\\#0071e3\\]\\/10]:opacity-100"
+                    />
                     <span className="min-w-0 flex-1 truncate">
                       {module.label}
                     </span>
-                    {isContact && unreadContactsCount > 0 ? (
-                      <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        {unreadContactsCount > 99 ? "99+" : unreadContactsCount}
-                      </span>
-                    ) : shortcut ? (
-                      <span className="ml-auto text-[11px] font-medium text-gray-400">
-                        {shortcut}
+                    {badgeCount > 0 ? (
+                      <span className="ml-auto rounded-full bg-red-500 px-[6px] py-px text-[10px] font-bold text-white">
+                        {badgeCount > 99 ? "99+" : badgeCount}
                       </span>
                     ) : null}
                   </NavLink>
@@ -111,10 +112,16 @@ export const Sidebar: React.FC<Props> = ({
           </div>
         ))}
       </nav>
-      <div className="border-t border-gray-100 px-3 py-3">
-        <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
-          <p className="font-medium">Design & Developed by</p>
-          <img src="/logo/webx.svg" alt="Webx" className="h-3.5 w-auto" />
+
+      {/* Footer */}
+      <div className="border-t border-[#e5e5e7] px-[21px] py-[13px]">
+        <div className="flex items-center justify-center gap-[8px] text-[11px] text-[#86868b]">
+          <span>Design & Developed by</span>
+          <img
+            src="/logo/webx.svg"
+            alt="Webx"
+            className="h-3 w-auto opacity-60"
+          />
         </div>
       </div>
     </div>
@@ -122,7 +129,7 @@ export const Sidebar: React.FC<Props> = ({
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-64 border-r border-gray-100 md:block">
+      <aside className="sticky top-0 hidden h-screen w-[220px] border-r border-[#e5e5e7] md:block">
         {content}
       </aside>
       {mobileOpen ? (
@@ -131,7 +138,7 @@ export const Sidebar: React.FC<Props> = ({
           onClick={onCloseMobile}
         >
           <aside
-            className="h-full w-64 shadow-2xl"
+            className="sidebar-enter h-full w-[220px] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {content}

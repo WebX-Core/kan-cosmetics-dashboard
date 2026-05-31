@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2, UploadCloud } from "lucide-react";
 import RichTextEditor from "@/shared/components/RichTextEditor";
 import { Button } from "@/shared/components/ui/button";
 
@@ -26,6 +26,10 @@ type Props = Readonly<{
   filePreviewUrls?: Record<string, unknown>;
   onRemoveExistingPreview?: (name: string, index: number) => void;
 }>;
+
+const inputClass = "h-7 w-full rounded-md border border-gray-200 bg-white px-2.5 text-[12px] text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+const labelClass = "block text-[12px] font-medium text-gray-700";
+const errorClass = "text-[11px] text-red-500";
 
 const FileInputField: React.FC<Readonly<{
   field: EntityFieldConfig;
@@ -70,6 +74,7 @@ const FileInputField: React.FC<Readonly<{
     };
     return pickUrls(existingPreview);
   }, [existingPreview]);
+
   const previews = [
     ...previewUrls.map((url, index) => ({ url, kind: "new" as const, index })),
     ...existingUrls.map((url, index) => ({ url, kind: "existing" as const, index })),
@@ -88,21 +93,36 @@ const FileInputField: React.FC<Readonly<{
   };
 
   return (
-    <label key={field.name} style={{ display: "grid", gap: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "nowrap" }}>
-        <span style={{ fontSize: 13 }}>
-          {field.label}
-          {isRequired ? <span style={{ color: "var(--primary)", marginLeft: 4 }}>*</span> : null}
+    <div className="col-span-full space-y-2">
+      <span className={labelClass}>
+        {field.label}
+        {isRequired && <span className="ml-1 text-red-500">*</span>}
+      </span>
+      {/* Dashed upload zone */}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-8 transition-colors hover:border-[#0071e3]/40 hover:bg-[#0071e3]/5"
+      >
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white">
+          <UploadCloud size={16} className="text-gray-400" />
+        </div>
+        <div className="text-center">
+          <p className="text-[11px] text-gray-400">
+            {field.accept ? `Accepted: ${field.accept}` : "PNG, JPEG, MP3, MP4"}
+            {typeof maxFiles === "number" ? ` · Max ${maxFiles} files` : ""}
+          </p>
+        </div>
+        <span className="rounded-full bg-gray-900 px-3.5 py-1.5 text-[12px] font-medium text-white">
+          Browse File
         </span>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="inline-flex h-8 items-center rounded-[8px] border border-[var(--line)] bg-[var(--surface-soft)] px-3 text-[12px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface-strong)]"
-        >
-          {field.multiple ? "Add Files" : "Choose File"}
-        </button>
-      </div>
-      <input ref={inputRef} type="file" accept={field.accept} multiple={Boolean(field.multiple)} style={{ display: "none" }}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={field.accept}
+        multiple={Boolean(field.multiple)}
+        className="hidden"
         onChange={(e) => {
           if (field.multiple) {
             const incoming = Array.from(e.target.files ?? []);
@@ -110,10 +130,7 @@ const FileInputField: React.FC<Readonly<{
             const unique = [...existing, ...incoming].filter(
               (file, index, arr) =>
                 arr.findIndex(
-                  (f) =>
-                    f.name === file.name &&
-                    f.size === file.size &&
-                    f.lastModified === file.lastModified
+                  (f) => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
                 ) === index
             );
             const availableSlots = typeof maxFiles === "number" ? Math.max(maxFiles - existingUrls.length, 0) : Number.POSITIVE_INFINITY;
@@ -130,92 +147,50 @@ const FileInputField: React.FC<Readonly<{
           onFieldChange(field.name, e.target.files?.[0] ?? null);
         }}
       />
-      {files.length > 0 ? (
-        <div style={{ fontSize: 12, color: "var(--muted)" }}>
-          Selected: {files.map((f) => f.name).join(", ")}
-        </div>
-      ) : null}
-      {field.multiple && typeof maxFiles === "number" ? (
-        <div style={{ fontSize: 12, color: "var(--muted)" }}>
-          {Math.min(totalFilesCount, maxFiles)}/{maxFiles}
-        </div>
-      ) : null}
-      {previews.length > 0 ? (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {files.length > 0 && (
+        <p className="text-[11px] text-gray-400">Selected: {files.map((f) => f.name).join(", ")}</p>
+      )}
+      {field.multiple && typeof maxFiles === "number" && (
+        <p className="text-[11px] text-gray-400">{Math.min(totalFilesCount, maxFiles)}/{maxFiles}</p>
+      )}
+      {previews.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
           {previews.map((item, idx) => (
-            <div key={`${field.name}-preview-${item.kind}-${idx}`} style={{ position: "relative" }}>
+            <div key={`${field.name}-preview-${item.kind}-${idx}`} className="relative">
               <img
                 src={item.url}
                 alt={`${field.label} preview ${idx + 1}`}
-                style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 10, border: "1px solid var(--line)" }}
+                className="h-14 w-14 rounded-md border border-gray-200 object-cover"
               />
               {item.kind === "new" ? (
                 <button
                   type="button"
                   onClick={() => removeNewAt(item.index)}
-                  title="Remove"
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    border: "1px solid #f3b3b8",
-                    background: "#fff2f3",
-                    color: "#b42318",
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600"
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={9} />
                 </button>
               ) : onRemoveExistingPreview ? (
                 <button
                   type="button"
                   onClick={() => onRemoveExistingPreview(field.name, item.index)}
-                  title="Remove existing"
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    border: "1px solid #f3b3b8",
-                    background: "#fff2f3",
-                    color: "#b42318",
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600"
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={9} />
                 </button>
               ) : null}
             </div>
           ))}
         </div>
-      ) : null}
-      {limitMessage ? <span style={{ color: "#b45309", fontSize: 12 }}>{limitMessage}</span> : null}
-      {error ? <span style={{ color: "crimson", fontSize: 12 }}>{error}</span> : null}
-    </label>
+      )}
+      {limitMessage && <p className="text-[11px] text-amber-600">{limitMessage}</p>}
+      {error && <p className={errorClass}>{error}</p>}
+    </div>
   );
 };
 
 export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, onFieldChange, filePreviewUrls, onRemoveExistingPreview }) => {
   const [passwordVisible, setPasswordVisible] = React.useState<Record<string, boolean>>({});
-  const fieldInputStyle: React.CSSProperties = {
-    padding: "10px 12px",
-    borderRadius: 8,
-    border: "1px solid var(--line)",
-    background: "#ffffff",
-    fontSize: 14,
-    color: "var(--text)",
-  };
 
   const isWideField = (field: EntityFieldConfig): boolean =>
     field.type === "textarea" ||
@@ -227,82 +202,80 @@ export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, on
     field.name.toLowerCase().includes("address");
 
   const optionalFieldNames = new Set([
-    "middlename",
-    "sortOrder",
-    "facebook",
-    "twitter",
-    "linkedin",
-    "instagram",
-    "isVerified",
-    "isActive",
-    "addToHome",
-    "isLeader",
+    "middlename", "sortOrder", "facebook", "twitter", "linkedin",
+    "instagram", "isVerified", "isActive", "addToHome", "isLeader",
   ]);
 
   const renderLabel = (field: EntityFieldConfig) => {
     const required =
       field.required ??
-      (!optionalFieldNames.has(field.name) &&
-        !field.name.startsWith("remove") &&
-        field.type !== "checkbox");
+      (!optionalFieldNames.has(field.name) && !field.name.startsWith("remove") && field.type !== "checkbox");
     return (
-      <span style={{ fontSize: 13 }}>
+      <label className={labelClass}>
         {field.label}
-        {required ? <span style={{ color: "var(--primary)", marginLeft: 4 }}>*</span> : null}
-      </span>
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
     );
   };
 
   return (
-    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+    <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
       {fields.map((f) => {
+        if (f.name === "sortOrder") {
+          return null;
+        }
+
         if (f.type === "checkbox") {
           return (
-            <label key={f.name} style={{ gridColumn: "1 / -1", display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 8, background: "var(--surface-soft)" }}>
+            <label
+              key={f.name}
+              className="col-span-full flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 transition-colors hover:bg-gray-100"
+            >
               <input
                 type="checkbox"
                 checked={Boolean(values[f.name])}
                 onChange={(e) => onFieldChange(f.name, e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-[#0071e3]"
               />
-              <span>{f.label}</span>
+              <span className="text-[12px] font-medium text-gray-700">{f.label}</span>
             </label>
           );
         }
 
         if (f.type === "textarea") {
           return (
-            <label key={f.name} style={{ gridColumn: "1 / -1", display: "grid", gap: 6 }}>
+            <div key={f.name} className="col-span-full space-y-1">
               {renderLabel(f)}
               <textarea
                 rows={f.rows ?? 4}
                 value={String(values[f.name] ?? "")}
                 placeholder={f.placeholder}
                 onChange={(e) => onFieldChange(f.name, e.target.value)}
-                style={fieldInputStyle}
+                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-2 text-[12px] text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
               />
-              {errors?.[f.name] ? <span style={{ color: "crimson", fontSize: 12 }}>{errors[f.name]}</span> : null}
-            </label>
+              {errors?.[f.name] && <p className={errorClass}>{errors[f.name]}</p>}
+            </div>
           );
         }
 
         if (f.type === "richtext") {
           return (
-            <label key={f.name} style={{ gridColumn: "1 / -1", display: "grid", gap: 6 }}>
+            <div key={f.name} className="col-span-full space-y-1">
               {renderLabel(f)}
               <RichTextEditor initialContent={String(values[f.name] ?? "")} onChange={(v) => onFieldChange(f.name, v)} />
-              {errors?.[f.name] ? <span style={{ color: "crimson", fontSize: 12 }}>{errors[f.name]}</span> : null}
-            </label>
+              {errors?.[f.name] && <p className={errorClass}>{errors[f.name]}</p>}
+            </div>
           );
         }
 
         if (f.type === "select") {
           return (
-            <label key={f.name} style={{ gridColumn: isWideField(f) ? "1 / -1" : "auto", display: "grid", gap: 6 }}>
+            <div key={f.name} className={`${isWideField(f) ? "col-span-full" : ""} space-y-1`}>
               {renderLabel(f)}
               <select
                 value={String(values[f.name] ?? "")}
                 onChange={(e) => onFieldChange(f.name, e.target.value)}
-                style={fieldInputStyle}
+                className={inputClass}
               >
                 {(f.options ?? []).map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -310,37 +283,36 @@ export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, on
                   </option>
                 ))}
               </select>
-              {errors?.[f.name] ? <span style={{ color: "crimson", fontSize: 12 }}>{errors[f.name]}</span> : null}
-            </label>
+              {errors?.[f.name] && <p className={errorClass}>{errors[f.name]}</p>}
+            </div>
           );
         }
 
         if (f.type === "file") {
           return (
-            <div key={f.name} style={{ gridColumn: "1 / -1" }}>
-              <FileInputField
-                field={f}
-                value={values[f.name]}
-                existingPreview={filePreviewUrls?.[f.name] ?? null}
-                error={errors?.[f.name]}
-                onFieldChange={onFieldChange}
-                onRemoveExistingPreview={onRemoveExistingPreview}
-              />
-            </div>
+            <FileInputField
+              key={f.name}
+              field={f}
+              value={values[f.name]}
+              existingPreview={filePreviewUrls?.[f.name] ?? null}
+              error={errors?.[f.name]}
+              onFieldChange={onFieldChange}
+              onRemoveExistingPreview={onRemoveExistingPreview}
+            />
           );
         }
 
         return (
-          <label key={f.name} style={{ gridColumn: isWideField(f) ? "1 / -1" : "auto", display: "grid", gap: 6 }}>
+          <div key={f.name} className={`${isWideField(f) ? "col-span-full" : ""} space-y-1`}>
             {renderLabel(f)}
             {f.type === "password" ? (
-              <div style={{ position: "relative" }}>
+              <div className="relative">
                 <input
                   type={passwordVisible[f.name] ? "text" : "password"}
                   value={String(values[f.name] ?? "")}
                   placeholder={f.placeholder}
                   onChange={(e) => onFieldChange(f.name, e.target.value)}
-                  style={{ ...fieldInputStyle, paddingRight: 34, width: "100%" }}
+                  className={`${inputClass} pr-10`}
                 />
                 <Button
                   type="button"
@@ -348,9 +320,9 @@ export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, on
                   size="icon"
                   onClick={() => setPasswordVisible((prev) => ({ ...prev, [f.name]: !prev[f.name] }))}
                   aria-label={passwordVisible[f.name] ? "Hide password" : "Show password"}
-                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 border-none bg-transparent p-0 text-[var(--muted)] shadow-none hover:bg-transparent"
+                  className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 border-none bg-transparent p-0 text-gray-400 shadow-none hover:bg-transparent hover:text-gray-600"
                 >
-                  {passwordVisible[f.name] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {passwordVisible[f.name] ? <EyeOff size={12} /> : <Eye size={12} />}
                 </Button>
               </div>
             ) : (
@@ -359,11 +331,11 @@ export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, on
                 value={String(values[f.name] ?? "")}
                 placeholder={f.placeholder}
                 onChange={(e) => onFieldChange(f.name, e.target.value)}
-                style={fieldInputStyle}
+                className={inputClass}
               />
             )}
-            {errors?.[f.name] ? <span style={{ color: "crimson", fontSize: 12 }}>{errors[f.name]}</span> : null}
-          </label>
+            {errors?.[f.name] && <p className={errorClass}>{errors[f.name]}</p>}
+          </div>
         );
       })}
     </div>

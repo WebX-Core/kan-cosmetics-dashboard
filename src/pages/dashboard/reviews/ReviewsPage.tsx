@@ -1,409 +1,260 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Star,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Star, CheckCircle, Clock, XCircle, BarChart2, Trash2, RotateCcw } from "lucide-react";
+import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { engagementApi } from "@/features/engagement";
+import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { useUserStore } from "@/store/UserStore";
+import { parseApiError } from "@/shared/utils/apiError";
 
-type Review = {
-  id: string;
-  productName: string;
-  customerName: string;
-  rating: number;
-  comment: string;
-  status: "Published" | "Pending" | "Rejected";
-  type: "Product" | "Site";
-  date: string;
+const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
+const num = (value: unknown): number => (typeof value === "number" ? value : 0);
+
+type Row = Readonly<{ id: string; productName: string; customerName: string; rating: number; comment: string; status: string; type: string }>;
+
+const mapRows = (payload: unknown): ReadonlyArray<Row> => {
+  const items = Array.isArray(payload) ? payload : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+  return items.map((entry) => {
+    const row = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
+    const s = text(row.status, "Pending");
+    return {
+      id: text(row.id, crypto.randomUUID()),
+      productName: text(row.productName ?? row.title, "Review"),
+      customerName: text(row.customerName ?? row.fullname, "Anonymous"),
+      rating: num(row.rating),
+      comment: text(row.comment ?? row.message, "—"),
+      status: s.toLowerCase().includes("reject") ? "Rejected" : s.toLowerCase().includes("publish") ? "Published" : "Pending",
+      type: text(row.type, "Product").toLowerCase().includes("site") ? "Site" : "Product",
+    };
+  });
 };
 
-// Sample data
-const sampleReviews: Review[] = [
-  {
-    id: "1",
-    productName: "Matte Primer",
-    customerName: "Alice Martin",
-    rating: 5,
-    comment: "Excellent product! Highly recommend.",
-    status: "Published",
-    type: "Product",
-    date: "Mar 19, 2026",
-  },
-  {
-    id: "2",
-    productName: "Foundation",
-    customerName: "Bob Chen",
-    rating: 4,
-    comment: "Good quality, but a bit pricey.",
-    status: "Published",
-    type: "Product",
-    date: "Mar 18, 2026",
-  },
-  {
-    id: "3",
-    productName: "Website Experience",
-    customerName: "Sara Kim",
-    rating: 5,
-    comment: "Great website, easy to navigate!",
-    status: "Published",
-    type: "Site",
-    date: "Mar 17, 2026",
-  },
-  {
-    id: "4",
-    productName: "Lipstick",
-    customerName: "Tom Rivera",
-    rating: 2,
-    comment: "Color doesn't match the description.",
-    status: "Pending",
-    type: "Product",
-    date: "Mar 16, 2026",
-  },
-  {
-    id: "5",
-    productName: "Mascara",
-    customerName: "Nina Patel",
-    rating: 1,
-    comment: "Terrible quality, very disappointed.",
-    status: "Rejected",
-    type: "Product",
-    date: "Mar 15, 2026",
-  },
-];
+const Stars: React.FC<{ rating: number }> = ({ rating }) => (
+  <div className="flex items-center gap-0.5">
+    {[1, 2, 3, 4, 5].map((i) => (
+      <Star key={i} size={12} className={i <= rating ? "fill-amber-400 text-amber-400" : "text-gray-200"} />
+    ))}
+  </div>
+);
 
-const statusVariantMap: Record<string, any> = {
-  Published: "completed",
-  Pending: "pending",
-  Rejected: "cancelled",
-};
+const LIVE_PATH = "/dashboard/reviews";
+const DELETED_PATH = "/dashboard/reviews/deleted";
 
 export const ReviewsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = React.useState("");
-  const [reviews] = React.useState<Review[]>(sampleReviews);
-  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
-    [],
+  const location = useLocation();
+  const toast = useToast();
+  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
+  const isDeletedView = location.pathname === DELETED_PATH;
+
+  const [activeTab, setActiveTab] = React.useState("all");
+  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
+  const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
+  const confirm = useConfirmAction();
+
+  const query = engagementApi.reviews.crud.hooks.useList(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView,
   );
+  const deletedQuery = engagementApi.reviews.crud.hooks.useDeleted(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    isDeletedView,
+  );
+  const softDelete = engagementApi.reviews.crud.hooks.useSoftDelete();
+  const recover = engagementApi.reviews.crud.hooks.useRecover();
+  const destroy = engagementApi.reviews.crud.hooks.useDestroy();
+  const siteQuery = useQuery({
+    queryKey: ["reviews", "site", state.page, state.limit],
+    queryFn: () => engagementApi.reviews.site({ page: state.page, limit: state.limit }),
+    enabled: activeTab === "site" && !isDeletedView,
+  });
 
-  const filteredReviews = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return reviews;
+  const sourceData = isDeletedView ? deletedQuery.data : activeTab === "site" ? siteQuery.data : query.data;
+  const rows = React.useMemo(() => mapRows(sourceData), [sourceData]);
+  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
-    return reviews.filter((review) =>
-      [
-        review.productName,
-        review.customerName,
-        review.comment,
-        review.status,
-        review.type,
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [reviews, search]);
+  const tabFiltered = React.useMemo(() =>
+    activeTab === "all" || activeTab === "site" ? rows : rows.filter((r) => r.status.toLowerCase() === activeTab),
+  [rows, activeTab]);
+  const visibleIds = React.useMemo(() => tabFiltered.map((r) => r.id), [tabFiltered]);
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
-  // Calculate stats
-  const stats = React.useMemo(() => {
-    const total = reviews.length;
-    const published = reviews.filter((r) => r.status === "Published").length;
-    const pending = reviews.filter((r) => r.status === "Pending").length;
-    const rejected = reviews.filter((r) => r.status === "Rejected").length;
-    const avgRating = (
-      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-    ).toFixed(1);
+  const toggleOne = (id: string, checked: boolean) =>
+    setSelectedIds((prev) => checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id));
+  const toggleAll = (checked: boolean) =>
+    setSelectedIds((prev) => checked ? Array.from(new Set([...prev, ...visibleIds])) : prev.filter((id) => !visibleIds.includes(id)));
 
-    return { total, published, pending, rejected, avgRating };
-  }, [reviews]);
+  const stats = React.useMemo(() => ({
+    total,
+    published: rows.filter((r) => r.status === "Published").length,
+    pending: rows.filter((r) => r.status === "Pending").length,
+    rejected: rows.filter((r) => r.status === "Rejected").length,
+    avgRating: rows.length ? (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1) : "0.0",
+  }), [rows, total]);
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            size={14}
-            className={
-              star <= rating
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300"
-            }
-          />
-        ))}
-      </div>
-    );
+  const handleConfirm = async () => {
+    const { action, ids } = confirm;
+    if (!ids.length) return;
+    try {
+      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
+      if (action === "recover") await recover.mutateAsync({ ids });
+      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await query.refetch();
+      await deletedQuery.refetch();
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    } finally {
+      confirm.dismiss();
+    }
   };
 
+  const isLoading = isDeletedView ? deletedQuery.isLoading : activeTab === "site" ? siteQuery.isLoading : query.isLoading;
+  const tabs = [{ key: "all", label: "All" }, { key: "published", label: "Published" }, { key: "pending", label: "Pending" }, { key: "rejected", label: "Rejected" }, { key: "site", label: "Site Reviews" }];
+
+  const columns = [
+    {
+      key: "select",
+      label: <input type="checkbox" checked={isAllSelected} onChange={(e) => toggleAll(e.target.checked)} aria-label="Select all reviews" />,
+      render: (r: Row) => (
+        <input type="checkbox" checked={selectedIds.includes(r.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleOne(r.id, e.target.checked)} aria-label={`Select ${r.id}`} />
+      ),
+      width: "44px",
+    },
+    {
+      key: "review", label: "Review",
+      render: (r: Row) => (
+        <div>
+          <div className="font-medium text-gray-900">{r.productName}</div>
+          <div className="text-xs text-gray-400">{r.customerName} · <span className="line-clamp-1">{r.comment}</span></div>
+        </div>
+      ),
+    },
+    { key: "rating", label: "Rating", render: (r: Row) => <Stars rating={r.rating} /> },
+    { key: "type", label: "Type", render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
+    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    {
+      key: "actions", label: "",
+      render: (r: Row) => (
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          {isDeletedView ? (
+            <>
+              <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                <RotateCcw size={11} /> Recover
+              </button>
+              <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+                <Trash2 size={11} /> Delete Permanently
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => confirm.prompt("delete", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+              <Trash2 size={11} /> Delete
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-[1400px] p-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-gray-900">Reviews</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Moderate customer reviews, publish/unpublish, and manage feedback
-          </p>
+    <PageLayout
+      title={isDeletedView ? "Deleted Reviews" : "Reviews"}
+      subtitle={isDeletedView ? "Deleted review records." : "Moderate product and site reviews."}
+      onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
+      actions={
+        !isDeletedView && isSudoAdmin ? (
+          <button type="button" onClick={() => navigate(DELETED_PATH)} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
+            <Trash2 size={13} strokeWidth={2} /> View Deleted
+          </button>
+        ) : undefined
+      }
+      searchValue={state.search}
+      onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
+      searchPlaceholder="Search reviews..."
+    >
+      {!isDeletedView && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <StatCardV2 label="Total" value={stats.total} icon={Star} colorVariant="blue" />
+          <StatCardV2 label="Published" value={stats.published} icon={CheckCircle} colorVariant="emerald" />
+          <StatCardV2 label="Pending" value={stats.pending} icon={Clock} colorVariant="amber" />
+          <StatCardV2 label="Rejected" value={stats.rejected} icon={XCircle} colorVariant="red" />
+          <StatCardV2 label="Avg Rating" value={stats.avgRating} icon={BarChart2} colorVariant="blue" />
         </div>
+      )}
 
-        {/* Stats Cards */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl bg-blue-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Total Reviews
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.total}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <MessageSquare size={22} className="text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-emerald-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Published
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.published}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <CheckCircle size={22} className="text-emerald-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-amber-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Pending
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.pending}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                <MessageSquare size={22} className="text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-red-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Rejected
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.rejected}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <XCircle size={22} className="text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-yellow-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Avg Rating
-                </p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {stats.avgRating}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-                <Star size={22} className="text-yellow-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-900">
-              {filteredReviews.length} reviews
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search reviews..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-64 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 placeholder-gray-500 outline-none transition-all focus:border-gray-400"
-            />
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-white">
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredReviews.length > 0 &&
-                      selectedIds.length === filteredReviews.length
-                    }
-                    onChange={(e) =>
-                      setSelectedIds(
-                        e.target.checked
-                          ? filteredReviews.map((r) => r.id)
-                          : [],
-                      )
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Product/Site
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Rating
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Comment
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredReviews.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={10}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
-                  >
-                    No reviews found.
-                  </td>
-                </tr>
-              ) : null}
-              {filteredReviews.map((review, idx) => (
-                <tr
-                  key={review.id}
-                  className="transition-colors hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(review.id)}
-                      onChange={(e) =>
-                        setSelectedIds((current) =>
-                          e.target.checked
-                            ? [...current, review.id]
-                            : current.filter((id) => id !== review.id),
-                        )
-                      }
-                      className="h-4 w-4 rounded border-gray-300"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{idx + 1}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {review.productName}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {review.customerName}
-                  </td>
-                  <td className="px-6 py-4">{renderStars(review.rating)}</td>
-                  <td className="px-6 py-4">
-                    <p className="max-w-xs truncate text-sm text-gray-600">
-                      {review.comment}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        review.type === "Product"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-purple-100 text-purple-700"
-                      }`}
-                    >
-                      {review.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge
-                      status={review.status}
-                      variant={statusVariantMap[review.status]}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {review.date}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() =>
-                          navigate(`/dashboard/reviews/${review.id}`)
-                        }
-                        className="text-gray-400 transition-colors hover:text-gray-600"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => console.log("Delete", review.id)}
-                        className="text-gray-400 transition-colors hover:text-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4">
-            <p className="text-sm text-gray-600">
-              Showing 1-5 of {filteredReviews.length}
-            </p>
+      <DataTableV2
+        tabs={!isDeletedView ? tabs : undefined}
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab); setState((p) => ({ ...p, page: 1 })); }}
+        columns={columns}
+        data={tabFiltered}
+        actions={
+          selectedIds.length > 0 ? (
             <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-sm font-medium text-white">
-                1
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                2
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                →
-              </button>
+              {isDeletedView ? (
+                <>
+                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                    <RotateCcw size={12} /> Recover ({selectedIds.length})
+                  </button>
+                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+                  <Trash2 size={12} /> Delete ({selectedIds.length})
+                </button>
+              )}
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          ) : undefined
+        }
+        searchValue={state.search}
+        emptyMessage={isLoading ? "Loading reviews..." : "No reviews found."}
+        showPagination
+        currentPage={state.page}
+        totalPages={totalPages}
+        onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+      />
+
+      <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm.action === "recover" ? "Recover review?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete review?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm.action === "recover" ? "This will restore the selected review." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the review to trash."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
+              onClick={() => void handleConfirm()}
+            >
+              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageLayout>
   );
 };

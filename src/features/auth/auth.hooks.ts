@@ -16,7 +16,7 @@ export const useSignup = () => {
 
 export const useSignin = () => {
   return useMutation({
-    mutationFn: (vars: {dto: SigninDto, recaptchaToken: string}) => authApi.signin(vars.dto, vars.recaptchaToken),
+    mutationFn: (dto: SigninDto) => authApi.signin(dto),
   });
 };
 

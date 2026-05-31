@@ -1,10 +1,21 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { z } from "zod";
 import { useResetPassword } from "@/features/auth";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { Button } from "@/shared/components/ui/button";
+import { validateOrToast } from "@/shared/utils/validation";
+
+const schema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(6),
+  confirmPassword: z.string().min(6),
+}).refine((v) => v.password === v.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
 
 export const ResetPasswordPage: React.FC = () => {
   const nav = useNavigate();
@@ -18,8 +29,10 @@ export const ResetPasswordPage: React.FC = () => {
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+    const parsed = validateOrToast(schema, { token, password, confirmPassword }, toast);
+    if (!parsed) return;
     try {
-      await reset.mutateAsync({ token, password, confirmPassword });
+      await reset.mutateAsync(parsed);
       toast.success("Password reset successful");
       nav("/login", { replace: true });
     } catch (err) {

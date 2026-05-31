@@ -1,19 +1,49 @@
 // src/shared/api/api.ts
 import axios from "axios";
-import type { AxiosResponse } from "axios";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import type { ApiEnvelope } from "../types/common.types";
 import { triggerGlobalLogout } from "../../app/providers/authEvents";
+import { getRecaptchaToken, shouldSkipRecaptcha } from "../security/recaptcha";
+import { getSessionToken } from "../auth/sessionToken";
 
 
 /* =========================
    Axios instance
 ========================= */
-const socketNamespace = import.meta.env.VITE_SOCKET_NAMESPACE as string; // "/api/v1/ecommerce"
+const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const apiBasePath = (import.meta.env.VITE_API_BASE_PATH as string | undefined)?.trim() || "/api/v1/kan";
+const apiBaseUrl = import.meta.env.DEV ? apiBasePath : configuredBaseUrl || apiBasePath;
 
 export const api = axios.create({
-  baseURL: socketNamespace,
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
+
+const withRecaptchaHeader = async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
+  const requestPath = String(config.url ?? "");
+  if (shouldSkipRecaptcha(config.method, requestPath)) {
+    return config;
+  }
+
+  const token = await getRecaptchaToken("dashboard_api");
+  if (!token) {
+    throw new Error("reCAPTCHA token is required for all API requests.");
+  }
+
+  const headers = { ...(config.headers ?? {}) };
+  headers["x-recaptcha-token"] = token;
+  const sessionToken = getSessionToken();
+  if (sessionToken) {
+    headers.Authorization = `Bearer ${sessionToken}`;
+  }
+
+  return {
+    ...config,
+    headers,
+  };
+};
+
+api.interceptors.request.use((config) => withRecaptchaHeader(config));
 
 api.interceptors.response.use(
   (res) => res,

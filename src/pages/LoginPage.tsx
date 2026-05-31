@@ -1,9 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
+import { gsap } from "gsap";
 import { useAuth } from "../app/providers/AuthContext";
-import { Button } from "@/shared/components/ui/button";
+import { useSignin, type User } from "@/features/auth";
+import { identityApi } from "@/features/identity";
+import { parseApiError } from "@/shared/utils/apiError";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { setSessionToken } from "@/shared/auth/sessionToken";
+import { resolveProfileImageUrl } from "@/shared/utils/profileImage";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
@@ -22,103 +28,213 @@ function toFieldErrors(err: z.ZodError<LoginValues>): FieldErrors {
   return out;
 }
 
-export const LoginPage: React.FC = () => {
-  const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const inputCls =
+  "h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 text-[14px] text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10";
 
-  const navigate = useNavigate();
-  const location = useLocation();
+export const LoginPage: React.FC = () => {
+  const [values, setValues]       = useState<LoginValues>({ email: "", password: "" });
+  const [errors, setErrors]       = useState<FieldErrors>({});
+  const [showPwd, setShowPwd]     = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const navigate   = useNavigate();
+  const toast      = useToast();
+  const location   = useLocation();
+  const signin     = useSignin();
   const from = useMemo(() => {
     const st = location.state as { from?: string } | null;
     return st?.from ?? "/dashboard";
   }, [location.state]);
-
   const { setAuthenticated } = useAuth();
 
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
-    e.preventDefault();
-
-    const parsed = loginSchema.safeParse(values);
-    if (!parsed.success) {
-      setErrors(toFieldErrors(parsed.error));
-      return;
-    }
-
-    setErrors({});
-    setIsSubmitting(true);
-
-    const email = parsed.data.email.trim().toLowerCase();
-    const nameSeed = email.split("@")[0] || "Demo";
-    const firstname = nameSeed.charAt(0).toUpperCase() + nameSeed.slice(1);
-
-    // Demo-mode login: bypass backend auth and store a local user session.
-    setAuthenticated({
-      id: "demo-user",
-      firstname,
-      lastname: "User",
-      email,
-      phone: "",
-      address: "",
-      gender: "OTHER",
-      role: "SUDOADMIN",
-      isVerified: true,
+  /* ── form stagger entrance ──────────────────────────────────── */
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const ctx = gsap.context(() => {
+        gsap.from(Array.from(wrapRef.current?.children ?? []), {
+          y: 12,
+          opacity: 0,
+          stagger: 0.07,
+          duration: 0.4,
+          ease: "power3.out",
+          delay: 0.5,
+        });
+      }, wrapRef);
+      return () => ctx.revert();
     });
+    return () => mm.revert();
+  }, []);
 
-    navigate(from, { replace: true });
-    setIsSubmitting(false);
+  /* ── helpers ─────────────────────────────────────────────────── */
+  const asUser = (payload: unknown, email: string): User => {
+    const s = typeof payload === "object" && payload !== null
+      ? (payload as Record<string, unknown>) : {};
+    const roleValue = s.role;
+    const role = roleValue === "SUDOADMIN" || roleValue === "ADMIN" || roleValue === "USER"
+      ? roleValue : "USER";
+    const emailPrefix = email.split("@")[0] ?? "";
+    const inferredName =
+      (typeof s.username === "string" && s.username.trim()) ||
+      (typeof s.name    === "string" && s.name.trim())    ||
+      emailPrefix;
+    return {
+      id:         typeof s.id        === "string" ? s.id : email,
+      firstname:  typeof s.firstname === "string" && s.firstname.trim().length > 0
+                    ? s.firstname : inferredName || "User",
+      middlename: typeof s.middlename === "string" ? s.middlename : undefined,
+      lastname:   typeof s.lastname  === "string" ? s.lastname  : "",
+      email:      typeof s.email     === "string" ? s.email     : email,
+      phone:      typeof s.phone     === "string" ? s.phone     : "",
+      address:    typeof s.address   === "string" ? s.address   : "",
+      gender:     s.gender === "MALE" || s.gender === "FEMALE" || s.gender === "OTHER"
+                    ? s.gender : "OTHER",
+      role,
+      isVerified: s.isVerified === true,
+      sortOrder:  typeof s.sortOrder === "number" ? s.sortOrder : undefined,
+      profileUrl: resolveProfileImageUrl(s) || undefined,
+      isDeleted:  s.isDeleted === true,
+      createdAt:  typeof s.createdAt === "string" ? s.createdAt : undefined,
+      updatedAt:  typeof s.updatedAt === "string" ? s.updatedAt : undefined,
+    };
+  };
+
+  const getToken = (payload: unknown): string | null => {
+    if (typeof payload !== "object" || payload === null) return null;
+    const s = payload as Record<string, unknown>;
+    const val = (["accessToken", "token", "jwt", "idToken"] as const)
+      .map(k => s[k]).find(v => typeof v === "string" && v.length > 0);
+    return typeof val === "string" ? val : null;
+  };
+
+  const extractPerms = (payload: unknown): ReadonlyArray<string> => {
+    if (!Array.isArray(payload)) return [];
+    return payload.map(row => {
+      if (typeof row !== "object" || row === null) return "";
+      const rec = row as Record<string, unknown>;
+      const perm = typeof rec.permission === "object" && rec.permission !== null
+        ? (rec.permission as Record<string, unknown>) : rec;
+      return typeof perm.key === "string" ? perm.key : "";
+    }).filter(Boolean);
+  };
+
+  const handleSubmit = async (e: { preventDefault(): void }) => {
+    e.preventDefault();
+    const parsed = loginSchema.safeParse(values);
+    if (!parsed.success) { setErrors(toFieldErrors(parsed.error)); return; }
+    setErrors({});
+    setSubmitting(true);
+    setSubmitError(null);
+    const email = parsed.data.email.trim().toLowerCase();
+    try {
+      const response = await signin.mutateAsync({ email, password: parsed.data.password });
+      const token = getToken(response);
+      if (token) setSessionToken(token);
+      const user = asUser(response, email);
+      let permissions: ReadonlyArray<string> = [];
+      if (user.id) {
+        try {
+          permissions = extractPerms(await identityApi.userPermissions.listByUser(user.id));
+        } catch { /* non-fatal */ }
+      }
+      setAuthenticated(user, permissions);
+      navigate(from, { replace: true });
+      toast.success("Signed in");
+    } catch (err) {
+      const msg = parseApiError(err).message;
+      setSubmitError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800 }}>Sign in</h1>
-      <p style={{ margin: 0, color: "var(--muted)", fontSize: 13 }}>Demo mode is enabled. Enter any valid email/password to continue.</p>
+    <div ref={wrapRef}>
+      {/* Heading */}
+      <div className="mb-7">
+        <h2 className="text-[20px] font-bold tracking-tight text-gray-900">
+          Sign in
+        </h2>
+        <p className="mt-1 text-[13px] text-gray-500">
+          Welcome back to KAN dashboard.
+        </p>
+      </div>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 10 }} noValidate>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Email</span>
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
+        {/* Email */}
+        <div className="space-y-1.5">
+          <label className="block text-[12px] font-medium text-gray-700">
+            Email
+          </label>
           <input
             value={values.email}
-            onChange={(e) => setValues((p) => ({ ...p, email: e.target.value }))}
+            onChange={(e) => setValues(p => ({ ...p, email: e.target.value }))}
             type="email"
             autoComplete="email"
-            style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd" }}
+            placeholder="you@example.com"
+            className={inputCls}
           />
-          {errors.email ? <span style={{ color: "crimson", fontSize: 12 }}>{errors.email}</span> : null}
-        </label>
+          {errors.email && (
+            <p className="text-[11px] text-red-500">{errors.email}</p>
+          )}
+        </div>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Password</span>
-          <div style={{ position: "relative" }}>
+        {/* Password */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="block text-[12px] font-medium text-gray-700">
+              Password
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-[12px] text-blue-600 transition-colors hover:text-blue-700"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative">
             <input
               value={values.password}
-              onChange={(e) => setValues((p) => ({ ...p, password: e.target.value }))}
-              type={showPassword ? "text" : "password"}
+              onChange={(e) => setValues(p => ({ ...p, password: e.target.value }))}
+              type={showPwd ? "text" : "password"}
               autoComplete="current-password"
-              style={{ width: "100%", padding: "10px 40px 10px 10px", borderRadius: 10, border: "1px solid #ddd" }}
+              placeholder="••••••••"
+              className={`${inputCls} pr-10`}
             />
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 border-none bg-transparent p-0 text-[var(--muted)] shadow-none hover:bg-transparent"
+              onClick={() => setShowPwd(v => !v)}
+              aria-label={showPwd ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </Button>
+              {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
           </div>
-          {errors.password ? <span style={{ color: "crimson", fontSize: 12 }}>{errors.password}</span> : null}
-        </label>
+          {errors.password && (
+            <p className="text-[11px] text-red-500">{errors.password}</p>
+          )}
+        </div>
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
+        {/* Submit error */}
+        {submitError && (
+          <p className="rounded-lg bg-red-50 px-3.5 py-2.5 text-[12px] text-red-600">
+            {submitError}
+          </p>
+        )}
 
-        <Link to="/forgot-password" style={{ fontSize: 13, color: "var(--primary)" }}>
-          Forgot password?
-        </Link>
+        {/* Submit */}
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="h-11 w-full rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          >
+            {submitting ? "Signing in…" : "Sign in"}
+          </button>
+        </div>
       </form>
     </div>
   );

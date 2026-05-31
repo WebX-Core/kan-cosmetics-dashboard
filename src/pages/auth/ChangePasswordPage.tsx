@@ -1,11 +1,58 @@
 import React from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 import { useChangePassword } from "@/features/auth";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
-import { Button } from "@/shared/components/ui/button";
+import { validateOrToast } from "@/shared/utils/validation";
+import { ModernFormLayout, FormSection, FormField, FormActions } from "@/shared/components/forms/ModernFormLayout";
+
+const schema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    password: z.string().min(6, "New password must be at least 6 characters"),
+    confirmPassword: z.string().min(6),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 pr-11 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+
+const PasswordField: React.FC<{
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  show: boolean;
+  onToggle: () => void;
+  placeholder?: string;
+}> = ({ label, value, onChange, show, onToggle, placeholder }) => (
+  <FormField label={label} required>
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={inputCls}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={show ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+      >
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  </FormField>
+);
 
 export const ChangePasswordPage: React.FC = () => {
+  const navigate = useNavigate();
   const toast = useToast();
   const change = useChangePassword();
   const [currentPassword, setCurrentPassword] = React.useState("");
@@ -17,9 +64,11 @@ export const ChangePasswordPage: React.FC = () => {
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+    const parsed = validateOrToast(schema, { currentPassword, password, confirmPassword }, toast);
+    if (!parsed) return;
     try {
-      await change.mutateAsync({ currentPassword, password, confirmPassword });
-      toast.success("Password changed");
+      await change.mutateAsync(parsed);
+      toast.success("Password changed successfully.");
       setCurrentPassword("");
       setPassword("");
       setConfirmPassword("");
@@ -29,47 +78,46 @@ export const ChangePasswordPage: React.FC = () => {
   };
 
   return (
-    <div style={{ display: "grid", gap: 12, maxWidth: 520 }}>
-      <h1 style={{ margin: 0 }}>Change Password</h1>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 8 }}>
-        <div style={{ position: "relative" }}>
-          <input
-            type={showCurrent ? "text" : "password"}
-            placeholder="Current password"
+    <ModernFormLayout
+      title="Change Password"
+      subtitle="Use a strong password with at least 6 characters."
+      onBack={() => navigate("/dashboard/profile")}
+    >
+      <form onSubmit={onSubmit} className="space-y-6">
+        <FormSection title="Update Password">
+          <PasswordField
+            label="Current Password"
             value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            style={{ width: "100%", border: "1px solid var(--line)", background: "#fff", borderRadius: 10, padding: "10px 40px 10px 12px" }}
+            onChange={setCurrentPassword}
+            show={showCurrent}
+            onToggle={() => setShowCurrent((v) => !v)}
+            placeholder="Enter your current password"
           />
-          <Button type="button" variant="ghost" size="icon" onClick={() => setShowCurrent((v) => !v)} aria-label={showCurrent ? "Hide current password" : "Show current password"} className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 border-none bg-transparent p-0 text-[var(--muted)] shadow-none hover:bg-transparent">
-            {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
-          </Button>
-        </div>
-        <div style={{ position: "relative" }}>
-          <input
-            type={showNext ? "text" : "password"}
-            placeholder="New password"
+          <PasswordField
+            label="New Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: "100%", border: "1px solid var(--line)", background: "#fff", borderRadius: 10, padding: "10px 40px 10px 12px" }}
+            onChange={setPassword}
+            show={showNext}
+            onToggle={() => setShowNext((v) => !v)}
+            placeholder="At least 6 characters"
           />
-          <Button type="button" variant="ghost" size="icon" onClick={() => setShowNext((v) => !v)} aria-label={showNext ? "Hide new password" : "Show new password"} className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 border-none bg-transparent p-0 text-[var(--muted)] shadow-none hover:bg-transparent">
-            {showNext ? <EyeOff size={16} /> : <Eye size={16} />}
-          </Button>
-        </div>
-        <div style={{ position: "relative" }}>
-          <input
-            type={showConfirm ? "text" : "password"}
-            placeholder="Confirm new password"
+          <PasswordField
+            label="Confirm New Password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            style={{ width: "100%", border: "1px solid var(--line)", background: "#fff", borderRadius: 10, padding: "10px 40px 10px 12px" }}
+            onChange={setConfirmPassword}
+            show={showConfirm}
+            onToggle={() => setShowConfirm((v) => !v)}
+            placeholder="Re-enter new password"
           />
-          <Button type="button" variant="ghost" size="icon" onClick={() => setShowConfirm((v) => !v)} aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"} className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 border-none bg-transparent p-0 text-[var(--muted)] shadow-none hover:bg-transparent">
-            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-          </Button>
-        </div>
-        <button type="submit" disabled={change.isPending}>{change.isPending ? "Updating..." : "Change Password"}</button>
+        </FormSection>
+
+        <FormActions
+          submitLabel={change.isPending ? "Updating…" : "Change Password"}
+          submitIcon={change.isPending ? <Loader2 size={14} className="animate-spin" /> : undefined}
+          isSubmitting={change.isPending}
+          onCancel={() => navigate("/dashboard/profile")}
+        />
       </form>
-    </div>
+    </ModernFormLayout>
   );
 };

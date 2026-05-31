@@ -1,380 +1,244 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  HelpCircle,
-  CheckCircle,
-  XCircle,
-  Package,
-  Globe,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { HelpCircle, CheckCircle, XCircle, Package, Globe, X, RotateCcw, Trash2 } from "lucide-react";
+import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import { engagementApi } from "@/features/engagement";
+import { useListQueryState } from "@/shared/hooks/useListQueryState";
 
-type Faq = {
-  id: string;
-  question: string;
-  answer: string;
-  type: "Product" | "Site";
-  status: "Active" | "Inactive";
-  category: string;
-  views: number;
-  date: string;
-};
+const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
+type Row = Readonly<{ id: string; question: string; answer: string; type: string; isSite: boolean; isActive: boolean; status: string; category: string; views: number }>;
 
-// Sample data
-const sampleFaqs: Faq[] = [
-  {
-    id: "1",
-    question: "What is your return policy?",
-    answer: "We accept returns within 30 days of purchase...",
-    type: "Site",
-    status: "Active",
-    category: "Returns",
-    views: 1234,
-    date: "Mar 1, 2026",
-  },
-  {
-    id: "2",
-    question: "How do I apply the foundation?",
-    answer: "Start with a clean, moisturized face...",
-    type: "Product",
-    status: "Active",
-    category: "Usage",
-    views: 856,
-    date: "Mar 5, 2026",
-  },
-  {
-    id: "3",
-    question: "Do you ship internationally?",
-    answer: "Yes, we ship to over 50 countries worldwide...",
-    type: "Site",
-    status: "Active",
-    category: "Shipping",
-    views: 642,
-    date: "Feb 28, 2026",
-  },
-  {
-    id: "4",
-    question: "Is this product cruelty-free?",
-    answer: "Yes, all our products are cruelty-free and vegan...",
-    type: "Product",
-    status: "Active",
-    category: "Product Info",
-    views: 423,
-    date: "Mar 10, 2026",
-  },
-  {
-    id: "5",
-    question: "How long does shipping take?",
-    answer: "Standard shipping takes 5-7 business days...",
-    type: "Site",
-    status: "Inactive",
-    category: "Shipping",
-    views: 312,
-    date: "Feb 15, 2026",
-  },
-];
-
-const statusVariantMap: Record<string, any> = {
-  Active: "qualified",
-  Inactive: "closedLost",
+const toRow = (entry: unknown): Row => {
+  const item = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
+  const descriptionRaw = item.description;
+  const product = (typeof item.product === "object" && item.product !== null ? item.product : {}) as Record<string, unknown>;
+  const productId = text(item.productId ?? product.id, "");
+  const answer =
+    typeof descriptionRaw === "string"
+      ? descriptionRaw
+      : descriptionRaw && typeof descriptionRaw === "object" && typeof (descriptionRaw as Record<string, unknown>).text === "string"
+      ? text((descriptionRaw as Record<string, unknown>).text)
+      : descriptionRaw && typeof descriptionRaw === "object"
+      ? JSON.stringify(descriptionRaw)
+      : "—";
+  const isSite = Boolean(item.isSite ?? true);
+  return {
+    id: text(item.id, crypto.randomUUID()),
+    question: text(item.title, "Untitled question"),
+    answer,
+    type: isSite ? "Site" : "Product",
+    isSite,
+    isActive: Boolean(item.isActive ?? true),
+    status: Boolean(item.isActive ?? true) ? "Active" : "Inactive",
+    category: productId || "General",
+    views: 0,
+  };
 };
 
 export const FaqsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = React.useState("");
-  const [faqs] = React.useState<Faq[]>(sampleFaqs);
-  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
-    [],
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = React.useState("all");
+  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
+  const isDeletedView = location.pathname.endsWith("/deleted");
+  const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
+  const productIdFilter = searchParams.get("productId") ?? "";
+  const productNameFilter = searchParams.get("productName") ?? "";
+
+  const listQuery = engagementApi.faqs.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  }, !isDeletedView);
+  const deletedQuery = engagementApi.faqs.hooks.useDeleted({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  }, isDeletedView);
+  const recoverMutation = engagementApi.faqs.hooks.useRecover();
+  const destroyMutation = engagementApi.faqs.hooks.useDestroy();
+  const updateMutation = engagementApi.faqs.hooks.useUpdate();
+
+  const query = isDeletedView ? deletedQuery : listQuery;
+
+  const rows = React.useMemo(() => (query.data?.data ?? []).map(toRow), [query.data?.data]);
+  const scopedRows = React.useMemo(() => {
+    if (!productIdFilter) return rows;
+    return rows.filter((row) => row.category === productIdFilter);
+  }, [rows, productIdFilter]);
+  const totalPages = query.data?.totalPages ?? 1;
+  const totalFaqs = productIdFilter ? scopedRows.length : (query.data?.total ?? rows.length);
+
+  const tabFiltered = React.useMemo(() => {
+    if (activeTab === "all") return scopedRows;
+    if (activeTab === "product") return scopedRows.filter((r) => r.type === "Product");
+    if (activeTab === "site") return scopedRows.filter((r) => r.type === "Site");
+    return scopedRows.filter((r) => r.status.toLowerCase() === activeTab);
+  }, [scopedRows, activeTab]);
+  const visibleIds = React.useMemo(() => tabFiltered.map((row) => row.id), [tabFiltered]);
+  const isAllVisibleSelected = React.useMemo(
+    () => visibleIds.length > 0 && visibleIds.every((entry) => selectedIds.includes(entry)),
+    [visibleIds, selectedIds],
   );
+  const toggleSelectOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => (checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((entry) => entry !== id)));
+  };
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      if (!checked) return prev.filter((entry) => !visibleIds.includes(entry));
+      return Array.from(new Set([...prev, ...visibleIds]));
+    });
+  };
 
-  const filteredFaqs = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return faqs;
+  const stats = React.useMemo(() => ({
+    total: totalFaqs,
+    active: scopedRows.filter((r) => r.status === "Active").length,
+    inactive: scopedRows.filter((r) => r.status === "Inactive").length,
+    product: scopedRows.filter((r) => r.type === "Product").length,
+    site: scopedRows.filter((r) => r.type === "Site").length,
+  }), [scopedRows, totalFaqs]);
 
-    return faqs.filter((faq) =>
-      [faq.question, faq.answer, faq.category, faq.type, faq.status].some(
-        (value) => value.toLowerCase().includes(query),
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setState((p) => ({ ...p, page: 1 }));
+  };
+
+  const tabs = isDeletedView
+    ? [{ key: "all", label: "All Deleted" }, { key: "product", label: "Product" }, { key: "site", label: "Site" }]
+    : [{ key: "all", label: "All" }, { key: "product", label: "Product" }, { key: "site", label: "Site" }, { key: "inactive", label: "Inactive" }];
+
+  const columns = [
+    {
+      key: "select",
+      label: <input type="checkbox" checked={isAllVisibleSelected} onChange={(e) => toggleSelectAllVisible(e.target.checked)} aria-label="Select all faqs" />,
+      render: (r: Row) => (
+        <input type="checkbox" checked={selectedIds.includes(r.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleSelectOne(r.id, e.target.checked)} aria-label={`Select ${r.id}`} />
       ),
-    );
-  }, [faqs, search]);
-
-  // Calculate stats
-  const stats = React.useMemo(() => {
-    const total = faqs.length;
-    const active = faqs.filter((f) => f.status === "Active").length;
-    const inactive = faqs.filter((f) => f.status === "Inactive").length;
-    const productFaqs = faqs.filter((f) => f.type === "Product").length;
-    const siteFaqs = faqs.filter((f) => f.type === "Site").length;
-
-    return { total, active, inactive, productFaqs, siteFaqs };
-  }, [faqs]);
+      width: "44px",
+    },
+    { key: "question", label: "Question", render: (r: Row) => (
+      <div>
+        <div className="font-medium text-gray-900">{r.question}</div>
+        <div className="text-xs text-gray-400 line-clamp-1">{r.answer}</div>
+      </div>
+    )},
+    { key: "type", label: "Type", render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
+    { key: "category", label: "Category", render: (r: Row) => <span className="text-gray-600">{r.category}</span> },
+    { key: "status", label: "Status", render: (r: Row) => (
+      isDeletedView ? (
+        <StatusBadge status={r.status} />
+      ) : (
+        <div className="inline-flex items-center gap-2">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={r.isActive}
+            onClick={async (event) => {
+              event.stopPropagation();
+              await updateMutation.mutateAsync({
+                id: r.id,
+                dto: { isActive: !r.isActive },
+              });
+              await query.refetch();
+            }}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+              r.isActive ? "bg-emerald-500" : "bg-zinc-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                r.isActive ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className={`text-xs font-medium ${r.isActive ? "text-emerald-700" : "text-zinc-600"}`}>
+            {r.isActive ? "Active" : "Inactive"}
+          </span>
+        </div>
+      )
+    ) },
+  ];
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-[1400px] p-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-zinc-900">FAQs</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Manage frequently asked questions for products and site
-          </p>
+    <PageLayout
+      title="FAQs"
+      subtitle={productIdFilter ? `Manage FAQs for ${productNameFilter || "selected product"}.` : isDeletedView ? "View deleted FAQ records." : "Manage FAQ records."}
+      onNew={isDeletedView ? undefined : () => navigate(`/dashboard/faqs/create`)}
+      newButtonLabel={isDeletedView ? undefined : "New FAQ"}
+      actions={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(isDeletedView ? "/dashboard/faqs" : "/dashboard/faqs/deleted")}
+            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <Trash2 size={13} />
+            {isDeletedView ? "Back to FAQs" : "View Deleted"}
+          </button>
         </div>
-
-        {/* Stats Cards */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl bg-blue-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Total FAQs
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.total}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <HelpCircle size={22} className="text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-emerald-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Active
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.active}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <CheckCircle size={22} className="text-emerald-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-red-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Inactive
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.inactive}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <XCircle size={22} className="text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-purple-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Product FAQs
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.productFaqs}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                <Package size={22} className="text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-cyan-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Site FAQs
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.siteFaqs}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-100">
-                <Globe size={22} className="text-cyan-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-zinc-900">
-              {filteredFaqs.length} FAQs
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search FAQs..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-64 rounded-lg border border-zinc-300 bg-white px-4 text-sm text-zinc-900 placeholder-gray-500 outline-none transition-all focus:border-gray-400"
-            />
-            <button
-              onClick={() => navigate("/dashboard/faqs/create")}
-              className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
-            >
-              + New FAQ
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-200 bg-white">
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredFaqs.length > 0 &&
-                      selectedIds.length === filteredFaqs.length
-                    }
-                    onChange={(e) =>
-                      setSelectedIds(
-                        e.target.checked ? filteredFaqs.map((f) => f.id) : [],
-                      )
-                    }
-                    className="h-4 w-4 rounded border-zinc-300"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Question
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Views
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredFaqs.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-6 py-12 text-center text-sm text-slate-500"
-                  >
-                    No FAQs found.
-                  </td>
-                </tr>
-              ) : null}
-              {filteredFaqs.map((faq, idx) => (
-                <tr key={faq.id} className="transition-colors hover:bg-zinc-50">
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(faq.id)}
-                      onChange={(e) =>
-                        setSelectedIds((current) =>
-                          e.target.checked
-                            ? [...current, faq.id]
-                            : current.filter((id) => id !== faq.id),
-                        )
-                      }
-                      className="h-4 w-4 rounded border-zinc-300"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{idx + 1}</td>
-                  <td className="px-6 py-4">
-                    <p className="max-w-md text-sm font-medium text-zinc-900">
-                      {faq.question}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {faq.category}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        faq.type === "Product"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-purple-100 text-purple-700"
-                      }`}
-                    >
-                      {faq.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center text-sm font-medium text-zinc-900">
-                    {faq.views}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge
-                      status={faq.status}
-                      variant={statusVariantMap[faq.status]}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {faq.date}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => navigate(`/dashboard/faqs/${faq.id}`)}
-                        className="text-slate-400 transition-colors hover:text-zinc-600"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => console.log("Delete", faq.id)}
-                        className="text-slate-400 transition-colors hover:text-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-zinc-200 bg-white px-6 py-4">
-            <p className="text-sm text-slate-600">
-              Showing 1-5 of {filteredFaqs.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white">
-                1
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-slate-600 hover:bg-zinc-50">
-                2
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-slate-600 hover:bg-zinc-50">
-                →
-              </button>
-            </div>
-          </div>
-        </div>
+      }
+      searchValue={state.search}
+      onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
+      searchPlaceholder="Search FAQs..."
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCardV2 label="Total" value={stats.total} icon={HelpCircle} colorVariant="blue" />
+        <StatCardV2 label="Active" value={stats.active} icon={CheckCircle} colorVariant="emerald" />
+        <StatCardV2 label="Inactive" value={stats.inactive} icon={XCircle} colorVariant="red" />
+        <StatCardV2 label="Product FAQs" value={stats.product} icon={Package} colorVariant="amber" />
+        <StatCardV2 label="Site FAQs" value={stats.site} icon={Globe} colorVariant="blue" />
       </div>
-    </div>
+      <DataTableV2
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        columns={columns}
+        data={tabFiltered}
+        actions={selectedIds.length > 0 ? (
+          <div className="flex items-center gap-2">
+            {isDeletedView ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void recoverMutation.mutateAsync({ ids: selectedIds })}
+                  className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                >
+                  <RotateCcw size={12} />
+                  Recover ({selectedIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await Promise.all(selectedIds.map((id) => destroyMutation.mutateAsync(id)));
+                  }}
+                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+                >
+                  <Trash2 size={12} />
+                  Delete Permanently ({selectedIds.length})
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-medium text-[#6e6e73]">{selectedIds.length} selected</span>
+                <button type="button" onClick={() => setSelectedIds([])} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]" aria-label="Clear selected faqs">
+                  <X size={12} />
+                </button>
+              </>
+            )}
+          </div>
+        ) : undefined}
+        searchValue={state.search}
+        onEdit={isDeletedView ? undefined : (r) => navigate(`/dashboard/faqs/${r.id}/edit`)}
+        emptyMessage={query.isLoading ? "Loading FAQs..." : "No FAQs found."}
+        showPagination={true}
+        currentPage={state.page}
+        totalPages={totalPages}
+        onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+      />
+    </PageLayout>
   );
 };

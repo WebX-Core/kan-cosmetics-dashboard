@@ -1,0 +1,1182 @@
+{
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/App.tsx": {
+    "mtime": 1779548207.0992312,
+    "ast_hash": "06ce795592d386904c60ae9c480f1942",
+    "semantic_hash": "06ce795592d386904c60ae9c480f1942"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/main.tsx": {
+    "mtime": 1779548207.0994616,
+    "ast_hash": "3e1c9cd194c25b4a7dfd6bc28c2d5bd5",
+    "semantic_hash": "3e1c9cd194c25b4a7dfd6bc28c2d5bd5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/config/ecommerceModules.ts": {
+    "mtime": 1779877544.7631898,
+    "ast_hash": "7617a445a07a9fd214a0251e9d9eb071",
+    "semantic_hash": "7617a445a07a9fd214a0251e9d9eb071"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/providers/RecaptchaProvider.tsx": {
+    "mtime": 1779548207.1018128,
+    "ast_hash": "eee6e8ec7d63a90db745bb4f906180da",
+    "semantic_hash": "eee6e8ec7d63a90db745bb4f906180da"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/providers/AuthContext.tsx": {
+    "mtime": 1779625092.7626464,
+    "ast_hash": "674467a601f68c46bf34298913bbb4fe",
+    "semantic_hash": "674467a601f68c46bf34298913bbb4fe"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/providers/authEvents.tsx": {
+    "mtime": 1779548207.1023035,
+    "ast_hash": "59e754968a9afba9dd860aef2b4b1560",
+    "semantic_hash": "59e754968a9afba9dd860aef2b4b1560"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/layouts/AuthLayout.tsx": {
+    "mtime": 1779602166.912504,
+    "ast_hash": "68b9bbc6875e476ea5c4d48d74de1a45",
+    "semantic_hash": "68b9bbc6875e476ea5c4d48d74de1a45"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/layouts/DashboardLayout.tsx": {
+    "mtime": 1779629245.152465,
+    "ast_hash": "07f93e3300868dfa259ed7b949795277",
+    "semantic_hash": "07f93e3300868dfa259ed7b949795277"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/guards/RoleGuard.tsx": {
+    "mtime": 1779877279.2092707,
+    "ast_hash": "73d9f84ca5c33321929f900ab697f14d",
+    "semantic_hash": "73d9f84ca5c33321929f900ab697f14d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/guards/ProtectedRoute.tsx": {
+    "mtime": 1779877281.701629,
+    "ast_hash": "fd266edbe0107efa9a7f1dea2a896bbc",
+    "semantic_hash": "fd266edbe0107efa9a7f1dea2a896bbc"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/guards/PermissionGuard.tsx": {
+    "mtime": 1779877279.1753726,
+    "ast_hash": "c51820b89e7a70ff643d25796373961d",
+    "semantic_hash": "c51820b89e7a70ff643d25796373961d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/app/router/AppRouter.tsx": {
+    "mtime": 1779877488.8077593,
+    "ast_hash": "c3e10824b5518aab9e15d749089abfcf",
+    "semantic_hash": "c3e10824b5518aab9e15d749089abfcf"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/commerce/commerce.hooks.ts": {
+    "mtime": 1779548207.1047082,
+    "ast_hash": "bb2d8cce8de76dcc4c75b6d97325fcdc",
+    "semantic_hash": "bb2d8cce8de76dcc4c75b6d97325fcdc"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/commerce/commerce.types.ts": {
+    "mtime": 1779610210.4689379,
+    "ast_hash": "7dfc821509243422621c806a7b423f64",
+    "semantic_hash": "7dfc821509243422621c806a7b423f64"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/commerce/commerce.api.ts": {
+    "mtime": 1779610224.1758938,
+    "ast_hash": "6322a13ec5201361bc72fcf07c849795",
+    "semantic_hash": "6322a13ec5201361bc72fcf07c849795"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/commerce/index.ts": {
+    "mtime": 1779548207.1055353,
+    "ast_hash": "071540a04c1878165798f775f88c8154",
+    "semantic_hash": "071540a04c1878165798f775f88c8154"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/contact/contact.api.ts": {
+    "mtime": 1779548207.1057587,
+    "ast_hash": "c12f71afb217f04709d5fd73e39a372d",
+    "semantic_hash": "c12f71afb217f04709d5fd73e39a372d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/contact/contact.hooks.ts": {
+    "mtime": 1779548207.1059592,
+    "ast_hash": "eba0b54955de245f514276a417eb2303",
+    "semantic_hash": "eba0b54955de245f514276a417eb2303"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/contact/index.ts": {
+    "mtime": 1779548207.106156,
+    "ast_hash": "3fb09c6a164a466a958ec3b15862b7e5",
+    "semantic_hash": "3fb09c6a164a466a958ec3b15862b7e5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/contact/contact.types.ts": {
+    "mtime": 1779548207.1063576,
+    "ast_hash": "2db421cfaefa78b26a1c629bd11d8fb1",
+    "semantic_hash": "2db421cfaefa78b26a1c629bd11d8fb1"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/csr/csr.api.ts": {
+    "mtime": 1779548207.1065748,
+    "ast_hash": "914410cc53bff9355b1b181ff62779d6",
+    "semantic_hash": "914410cc53bff9355b1b181ff62779d6"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/csr/csr.hooks.ts": {
+    "mtime": 1779548207.1067946,
+    "ast_hash": "60b03af29c2872df98c27ebce4f0b88b",
+    "semantic_hash": "60b03af29c2872df98c27ebce4f0b88b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/csr/csr.types.ts": {
+    "mtime": 1779548207.1070228,
+    "ast_hash": "15089147460766b044bd8777d9558d45",
+    "semantic_hash": "15089147460766b044bd8777d9558d45"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/csr/index.ts": {
+    "mtime": 1779548207.1072345,
+    "ast_hash": "8f36f7bcbcddf9fb2a26e50e032fce08",
+    "semantic_hash": "8f36f7bcbcddf9fb2a26e50e032fce08"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/identity/identity.hooks.ts": {
+    "mtime": 1779548207.1074464,
+    "ast_hash": "34e08ecbd9e0de2eea1dd42f7f7a55d3",
+    "semantic_hash": "34e08ecbd9e0de2eea1dd42f7f7a55d3"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/identity/identity.types.ts": {
+    "mtime": 1779548207.1076598,
+    "ast_hash": "f238f8cdf00661702dfdd04fa348795d",
+    "semantic_hash": "f238f8cdf00661702dfdd04fa348795d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/identity/identity.api.ts": {
+    "mtime": 1779548207.107871,
+    "ast_hash": "bc3dd2e275c670a59057ab013e27fe24",
+    "semantic_hash": "bc3dd2e275c670a59057ab013e27fe24"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/identity/index.ts": {
+    "mtime": 1779548207.1080623,
+    "ast_hash": "340a4e9c5e9df8fa85da011c9f6d77f9",
+    "semantic_hash": "340a4e9c5e9df8fa85da011c9f6d77f9"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/auth/auth.types.ts": {
+    "mtime": 1779548207.108366,
+    "ast_hash": "ed22f68ff28d0747851c8dc2d2fcb2f4",
+    "semantic_hash": "ed22f68ff28d0747851c8dc2d2fcb2f4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/auth/auth.api.ts": {
+    "mtime": 1779548207.1086032,
+    "ast_hash": "85b71d19fda1d00960a9899104ae0c63",
+    "semantic_hash": "85b71d19fda1d00960a9899104ae0c63"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/auth/index.ts": {
+    "mtime": 1779548207.1088228,
+    "ast_hash": "68d1ab2dbd7000004830d1fb709a63a2",
+    "semantic_hash": "68d1ab2dbd7000004830d1fb709a63a2"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/auth/auth.hooks.ts": {
+    "mtime": 1779548207.109065,
+    "ast_hash": "9c0e82573f8813d9f2587468409d2823",
+    "semantic_hash": "9c0e82573f8813d9f2587468409d2823"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/faq/faq.types.ts": {
+    "mtime": 1779548207.1092658,
+    "ast_hash": "5185471eadb8f04ff291eab3b9dd9af2",
+    "semantic_hash": "5185471eadb8f04ff291eab3b9dd9af2"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/faq/index.ts": {
+    "mtime": 1779548207.1094577,
+    "ast_hash": "1b668f3d0cd3f6f51d4c3aeae45e33b9",
+    "semantic_hash": "1b668f3d0cd3f6f51d4c3aeae45e33b9"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/faq/faq.hooks.ts": {
+    "mtime": 1779548207.1096573,
+    "ast_hash": "0745bc991d236a04f80f376d8329099c",
+    "semantic_hash": "0745bc991d236a04f80f376d8329099c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/faq/faq.api.ts": {
+    "mtime": 1779548207.1098506,
+    "ast_hash": "efb3be59ed71e909662887e9ce773095",
+    "semantic_hash": "efb3be59ed71e909662887e9ce773095"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/catalog/catalog.types.ts": {
+    "mtime": 1779621660.7979004,
+    "ast_hash": "ca84a201483881302dd83439628c14c8",
+    "semantic_hash": "ca84a201483881302dd83439628c14c8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/catalog/catalog.api.ts": {
+    "mtime": 1779611490.0470982,
+    "ast_hash": "875866f896ac4455ac87b638611aaeee",
+    "semantic_hash": "875866f896ac4455ac87b638611aaeee"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/catalog/catalog.hooks.ts": {
+    "mtime": 1779548207.1105993,
+    "ast_hash": "6f113bdfbe5bd65c510a10bf1e5e0f91",
+    "semantic_hash": "6f113bdfbe5bd65c510a10bf1e5e0f91"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/catalog/index.ts": {
+    "mtime": 1779548207.1108356,
+    "ast_hash": "573ee0faa26a2a5f5349c9a6f6786d48",
+    "semantic_hash": "573ee0faa26a2a5f5349c9a6f6786d48"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/newsroom/newsroom.api.ts": {
+    "mtime": 1779548207.1111054,
+    "ast_hash": "ad3f4bedc6bc048dc8773133c535b163",
+    "semantic_hash": "ad3f4bedc6bc048dc8773133c535b163"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/newsroom/newsroom.hooks.ts": {
+    "mtime": 1779548207.1113245,
+    "ast_hash": "2760704fa89440dbe7bf4186635eaa00",
+    "semantic_hash": "2760704fa89440dbe7bf4186635eaa00"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/newsroom/index.ts": {
+    "mtime": 1779548207.1115005,
+    "ast_hash": "c9c9747f50e73922ff496659c91d2d64",
+    "semantic_hash": "c9c9747f50e73922ff496659c91d2d64"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/newsroom/newsroom.types.ts": {
+    "mtime": 1779548207.1117327,
+    "ast_hash": "da0e406c7dd67746beaa12a12ce007a0",
+    "semantic_hash": "da0e406c7dd67746beaa12a12ce007a0"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/engagement/engagement.types.ts": {
+    "mtime": 1779622348.395002,
+    "ast_hash": "3576706d2667281f6c10095d123f9cbe",
+    "semantic_hash": "3576706d2667281f6c10095d123f9cbe"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/engagement/index.ts": {
+    "mtime": 1779548207.112169,
+    "ast_hash": "1fdcb799b0a23161625aad3cf9a7f128",
+    "semantic_hash": "1fdcb799b0a23161625aad3cf9a7f128"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/engagement/engagement.api.ts": {
+    "mtime": 1779616058.721856,
+    "ast_hash": "697809835b691eca187411ca59293cc6",
+    "semantic_hash": "697809835b691eca187411ca59293cc6"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/engagement/engagement.hooks.ts": {
+    "mtime": 1779616063.087402,
+    "ast_hash": "0f00e910d6abcb18797845ea104b0077",
+    "semantic_hash": "0f00e910d6abcb18797845ea104b0077"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/adminUsers/adminUsers.types.ts": {
+    "mtime": 1779877286.6160033,
+    "ast_hash": "2c0c3c44d1f48163d1f6040df6b4a38b",
+    "semantic_hash": "2c0c3c44d1f48163d1f6040df6b4a38b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/adminUsers/index.ts": {
+    "mtime": 1779548207.1129777,
+    "ast_hash": "9309ed3e2260b53cc7db5ba10f62c93e",
+    "semantic_hash": "9309ed3e2260b53cc7db5ba10f62c93e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/adminUsers/adminUsers.hooks.ts": {
+    "mtime": 1779877286.535023,
+    "ast_hash": "b7119675cd13287c7fe00167a5dcd53a",
+    "semantic_hash": "b7119675cd13287c7fe00167a5dcd53a"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/adminUsers/adminUsers.api.ts": {
+    "mtime": 1779877286.566252,
+    "ast_hash": "24a9e60b3bf00a6f3e9e3c7bcd753554",
+    "semantic_hash": "24a9e60b3bf00a6f3e9e3c7bcd753554"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/team/team.hooks.ts": {
+    "mtime": 1779548207.113709,
+    "ast_hash": "90a2162e3c0c8ff4a50d2ca4887b0f55",
+    "semantic_hash": "90a2162e3c0c8ff4a50d2ca4887b0f55"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/team/team.api.ts": {
+    "mtime": 1779548207.1139002,
+    "ast_hash": "39e8910691cfcb265bc26d5b0818454c",
+    "semantic_hash": "39e8910691cfcb265bc26d5b0818454c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/team/index.ts": {
+    "mtime": 1779548207.1141038,
+    "ast_hash": "d6979e9a7f62604bac8d104a266a1b7d",
+    "semantic_hash": "d6979e9a7f62604bac8d104a266a1b7d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/team/team.types.ts": {
+    "mtime": 1779548207.1143553,
+    "ast_hash": "2b5454050a7b71564301b90ebbbe4bcd",
+    "semantic_hash": "2b5454050a7b71564301b90ebbbe4bcd"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/customerAuth/customerAuth.hooks.ts": {
+    "mtime": 1779548207.114578,
+    "ast_hash": "ecd13258d37822631c9b9513c1548783",
+    "semantic_hash": "ecd13258d37822631c9b9513c1548783"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/customerAuth/customerAuth.api.ts": {
+    "mtime": 1779548207.1147597,
+    "ast_hash": "dc7c25fc6d7d145712871f26316a4846",
+    "semantic_hash": "dc7c25fc6d7d145712871f26316a4846"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/customerAuth/customerAuth.types.ts": {
+    "mtime": 1779548207.114953,
+    "ast_hash": "9a6d6324740a2afff1c1420bd21d11a8",
+    "semantic_hash": "9a6d6324740a2afff1c1420bd21d11a8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/customerAuth/index.ts": {
+    "mtime": 1779548207.1151175,
+    "ast_hash": "85680d19a5f523964567076d2ae6c92d",
+    "semantic_hash": "85680d19a5f523964567076d2ae6c92d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/delivery/delivery.types.ts": {
+    "mtime": 1779548207.1154158,
+    "ast_hash": "3ca76717e123d6d47463460b178166f1",
+    "semantic_hash": "3ca76717e123d6d47463460b178166f1"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/delivery/index.ts": {
+    "mtime": 1779548207.1156132,
+    "ast_hash": "47e53fe8f6475cb52bb6d3d1a4b94e4d",
+    "semantic_hash": "47e53fe8f6475cb52bb6d3d1a4b94e4d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/delivery/delivery.api.ts": {
+    "mtime": 1779548207.115817,
+    "ast_hash": "e16878e04f0603cc43c7be183b6ec005",
+    "semantic_hash": "e16878e04f0603cc43c7be183b6ec005"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/delivery/delivery.hooks.ts": {
+    "mtime": 1779548207.1160495,
+    "ast_hash": "79be82c4e50e4ebdd1759a6a8ee97559",
+    "semantic_hash": "79be82c4e50e4ebdd1759a6a8ee97559"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/marketing/marketing.types.ts": {
+    "mtime": 1779616021.9906273,
+    "ast_hash": "4752009476a04fdbc229ddfbae7e7716",
+    "semantic_hash": "4752009476a04fdbc229ddfbae7e7716"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/marketing/marketing.hooks.ts": {
+    "mtime": 1779616036.2546954,
+    "ast_hash": "a11b2106ea2fdd80b84662e516f5ea22",
+    "semantic_hash": "a11b2106ea2fdd80b84662e516f5ea22"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/marketing/marketing.api.ts": {
+    "mtime": 1779616032.213348,
+    "ast_hash": "0989cb69d8346cb114b48c2b1389be86",
+    "semantic_hash": "0989cb69d8346cb114b48c2b1389be86"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/marketing/index.ts": {
+    "mtime": 1779616039.7671592,
+    "ast_hash": "b630c1b3d5bb2de60a2e58d0a037b5ca",
+    "semantic_hash": "b630c1b3d5bb2de60a2e58d0a037b5ca"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/telemetry/telemetry.api.ts": {
+    "mtime": 1779548207.116297,
+    "ast_hash": "c4a827242cbf9654e4bd80a9c79a108a",
+    "semantic_hash": "c4a827242cbf9654e4bd80a9c79a108a"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/telemetry/telemetry.hooks.ts": {
+    "mtime": 1779548207.1164758,
+    "ast_hash": "ddea1900b34f95fd0b8866fa9aae94a9",
+    "semantic_hash": "ddea1900b34f95fd0b8866fa9aae94a9"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/telemetry/index.ts": {
+    "mtime": 1779548207.1166446,
+    "ast_hash": "c09838bcfaba2595a3e2b7e4adc6b6db",
+    "semantic_hash": "c09838bcfaba2595a3e2b7e4adc6b6db"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/telemetry/telemetry.types.ts": {
+    "mtime": 1779548207.1168365,
+    "ast_hash": "b5e009c5675d24aeaf76e0a2755b40c8",
+    "semantic_hash": "b5e009c5675d24aeaf76e0a2755b40c8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/company/company.api.ts": {
+    "mtime": 1779548207.117073,
+    "ast_hash": "d62e51158244161be0fd8e76ad021d5d",
+    "semantic_hash": "d62e51158244161be0fd8e76ad021d5d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/company/company.hooks.ts": {
+    "mtime": 1779548207.1172636,
+    "ast_hash": "5b869ceb2d16919f1b2063945c66c816",
+    "semantic_hash": "5b869ceb2d16919f1b2063945c66c816"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/company/index.ts": {
+    "mtime": 1779548207.117441,
+    "ast_hash": "c1c8d3798332f8bafb5842a44cb4e732",
+    "semantic_hash": "c1c8d3798332f8bafb5842a44cb4e732"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/features/company/company.types.ts": {
+    "mtime": 1779548207.1176512,
+    "ast_hash": "7fd28a463767a5aec0cd21e1fd4c7697",
+    "semantic_hash": "7fd28a463767a5aec0cd21e1fd4c7697"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/types/common.types.ts": {
+    "mtime": 1779567792.6555943,
+    "ast_hash": "bb3426f900c9406d3a172ab4429c6e09",
+    "semantic_hash": "bb3426f900c9406d3a172ab4429c6e09"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/types/grecaptcha.d.ts": {
+    "mtime": 1779548207.118047,
+    "ast_hash": "8ce414ddc0b98e397e51f61cae127b2e",
+    "semantic_hash": "8ce414ddc0b98e397e51f61cae127b2e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/types/color-thief-browser.d.ts": {
+    "mtime": 1779548207.118203,
+    "ast_hash": "9e4716af9498356c7330ce728b90350d",
+    "semantic_hash": "9e4716af9498356c7330ce728b90350d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/security/recaptcha.ts": {
+    "mtime": 1779548207.1184514,
+    "ast_hash": "8cc0fe05fc045150233dccfbdb935327",
+    "semantic_hash": "8cc0fe05fc045150233dccfbdb935327"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/auth/permissions.ts": {
+    "mtime": 1779548207.1186821,
+    "ast_hash": "e4bf93711a803c5255a5cda3e27b0160",
+    "semantic_hash": "e4bf93711a803c5255a5cda3e27b0160"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/auth/sessionToken.ts": {
+    "mtime": 1779548207.1188967,
+    "ast_hash": "3368b026da3cab731cc6e01f001fff93",
+    "semantic_hash": "3368b026da3cab731cc6e01f001fff93"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/utils/validation.ts": {
+    "mtime": 1779548207.1191063,
+    "ast_hash": "3970d84d496ca83aeab7532c5d89a0e4",
+    "semantic_hash": "3970d84d496ca83aeab7532c5d89a0e4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/utils/confirm.ts": {
+    "mtime": 1779621830.2587326,
+    "ast_hash": "7b9675431829bdb56dcf425b3b78fd26",
+    "semantic_hash": "7b9675431829bdb56dcf425b3b78fd26"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/utils/slug.ts": {
+    "mtime": 1779548207.1196008,
+    "ast_hash": "7c03bd8c051992885c6bd8c131969bfe",
+    "semantic_hash": "7c03bd8c051992885c6bd8c131969bfe"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/utils/date.ts": {
+    "mtime": 1779548207.119789,
+    "ast_hash": "67dced7f5b1b7390288776124b956415",
+    "semantic_hash": "67dced7f5b1b7390288776124b956415"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/utils/apiError.ts": {
+    "mtime": 1779548207.1200197,
+    "ast_hash": "0fae8af2c95c92afcaaef7931ca1df32",
+    "semantic_hash": "0fae8af2c95c92afcaaef7931ca1df32"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/styles/ui.ts": {
+    "mtime": 1779548207.1202517,
+    "ast_hash": "d15142edc59f7a1ac916b353aaf440db",
+    "semantic_hash": "d15142edc59f7a1ac916b353aaf440db"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/styles/dashboardTheme.ts": {
+    "mtime": 1779548609.9754202,
+    "ast_hash": "e27f7f8db37d756664124e5dc3382316",
+    "semantic_hash": "e27f7f8db37d756664124e5dc3382316"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/RecordView.tsx": {
+    "mtime": 1779548207.1208916,
+    "ast_hash": "5a812f5c3712fdfaaf89a7187c66010e",
+    "semantic_hash": "5a812f5c3712fdfaaf89a7187c66010e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/PaginationBar.tsx": {
+    "mtime": 1779548207.1210957,
+    "ast_hash": "6c8cf2af523b84214a046ccaa5294b7e",
+    "semantic_hash": "6c8cf2af523b84214a046ccaa5294b7e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/SoftDeleteList.tsx": {
+    "mtime": 1779548207.1216278,
+    "ast_hash": "00af8a403e3db62d14803755f21c82fa",
+    "semantic_hash": "00af8a403e3db62d14803755f21c82fa"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/GlobalLoadingBar.tsx": {
+    "mtime": 1779548207.1218963,
+    "ast_hash": "d83709f9a527d4e5d08d66625dd3b591",
+    "semantic_hash": "d83709f9a527d4e5d08d66625dd3b591"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ListToolbar.tsx": {
+    "mtime": 1779548207.1221547,
+    "ast_hash": "ad6cd8c9cbc6f60ee3e996cf2d5e231b",
+    "semantic_hash": "ad6cd8c9cbc6f60ee3e996cf2d5e231b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/TableShimmer.tsx": {
+    "mtime": 1779548207.122429,
+    "ast_hash": "d456c7522a8bcce38b244868811faa41",
+    "semantic_hash": "d456c7522a8bcce38b244868811faa41"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/color-thief.tsx": {
+    "mtime": 1779548207.1227365,
+    "ast_hash": "24d7d376f3aac399152fe2eada6162ef",
+    "semantic_hash": "24d7d376f3aac399152fe2eada6162ef"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/RichTextEditor.tsx": {
+    "mtime": 1779548207.123166,
+    "ast_hash": "a34a0dc3b96d70f5a5ef35f4ad97ae1e",
+    "semantic_hash": "a34a0dc3b96d70f5a5ef35f4ad97ae1e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/AppIcons.tsx": {
+    "mtime": 1779548207.123364,
+    "ast_hash": "47d827563f8144cb5bea66f8d2a2275c",
+    "semantic_hash": "47d827563f8144cb5bea66f8d2a2275c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ui/alert-dialog.tsx": {
+    "mtime": 1779621807.1615958,
+    "ast_hash": "b7615d89dcef6083b43390875857b335",
+    "semantic_hash": "b7615d89dcef6083b43390875857b335"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ui/table.tsx": {
+    "mtime": 1779548207.1521204,
+    "ast_hash": "8c1afdff1ad7bb00a3f0521a5b763fdb",
+    "semantic_hash": "8c1afdff1ad7bb00a3f0521a5b763fdb"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ui/button.tsx": {
+    "mtime": 1779548207.1523137,
+    "ast_hash": "b786f8dd97984808f29147b01aae3e4b",
+    "semantic_hash": "b786f8dd97984808f29147b01aae3e4b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ui/checkbox.tsx": {
+    "mtime": 1779548207.1524866,
+    "ast_hash": "f7fc230dc367099b6abdb0b46a7fd8c7",
+    "semantic_hash": "f7fc230dc367099b6abdb0b46a7fd8c7"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ui/dropdown-menu.tsx": {
+    "mtime": 1779548207.1528175,
+    "ast_hash": "cf051699bc17739e03ba9f3d162fc575",
+    "semantic_hash": "cf051699bc17739e03ba9f3d162fc575"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/ui/input.tsx": {
+    "mtime": 1779572319.856748,
+    "ast_hash": "20dc64ed8a55821da0a9ae01efe3da52",
+    "semantic_hash": "20dc64ed8a55821da0a9ae01efe3da52"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/forms/RecordSnapshotCard.tsx": {
+    "mtime": 1779548207.1532104,
+    "ast_hash": "3fe22a97cf9a2bdaadd85246605a4085",
+    "semantic_hash": "3fe22a97cf9a2bdaadd85246605a4085"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/forms/FormLayout.tsx": {
+    "mtime": 1779602908.599468,
+    "ast_hash": "65564f132cd37eafbd9d2e449da34fde",
+    "semantic_hash": "65564f132cd37eafbd9d2e449da34fde"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/forms/RichTextEditor.tsx": {
+    "mtime": 1779548207.1535723,
+    "ast_hash": "82c043cf83ce2a169164509f5330dfa7",
+    "semantic_hash": "82c043cf83ce2a169164509f5330dfa7"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/forms/ModernFormLayout.tsx": {
+    "mtime": 1779602929.0190182,
+    "ast_hash": "ba374c9f8e1097deba45ab8911386177",
+    "semantic_hash": "ba374c9f8e1097deba45ab8911386177"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/forms/EntityFormRenderer.tsx": {
+    "mtime": 1779602898.942661,
+    "ast_hash": "e3de76c3dc43cf33d38bcb78921fa858",
+    "semantic_hash": "e3de76c3dc43cf33d38bcb78921fa858"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/charts/Sparkline.tsx": {
+    "mtime": 1779548207.1545737,
+    "ast_hash": "aff1920a4d5c8887e05ce5e2967161d9",
+    "semantic_hash": "aff1920a4d5c8887e05ce5e2967161d9"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/feedback/ToastProvider.tsx": {
+    "mtime": 1779548207.1548207,
+    "ast_hash": "654f072e0565b12e36381a9a2f645544",
+    "semantic_hash": "654f072e0565b12e36381a9a2f645544"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/PageLayout.tsx": {
+    "mtime": 1779577920.8173544,
+    "ast_hash": "3810b4d88e744c57ae9407ae02e02828",
+    "semantic_hash": "3810b4d88e744c57ae9407ae02e02828"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/StatusToggle.tsx": {
+    "mtime": 1779621600.4724274,
+    "ast_hash": "7ee5adb546c84754eaf07c78d55272e6",
+    "semantic_hash": "7ee5adb546c84754eaf07c78d55272e6"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/StatCard.tsx": {
+    "mtime": 1779548207.1552773,
+    "ast_hash": "c8da264f59cf2c99871809237da783e8",
+    "semantic_hash": "c8da264f59cf2c99871809237da783e8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/BreadCrumbs.tsx": {
+    "mtime": 1779548207.15549,
+    "ast_hash": "f916f5db1036575b2665297542800d9f",
+    "semantic_hash": "f916f5db1036575b2665297542800d9f"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/TableActionsMenu.tsx": {
+    "mtime": 1779548207.1557167,
+    "ast_hash": "dbdd1ccd3bc56faf6a883529610c6bc5",
+    "semantic_hash": "dbdd1ccd3bc56faf6a883529610c6bc5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/StatusBadge.tsx": {
+    "mtime": 1779548542.2164347,
+    "ast_hash": "edf8d2db0124d19f15c44d5b1b0daa2f",
+    "semantic_hash": "edf8d2db0124d19f15c44d5b1b0daa2f"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/DataTable.tsx": {
+    "mtime": 1779548207.156181,
+    "ast_hash": "8c0bf94911bc288f5a60631895a4b9ea",
+    "semantic_hash": "8c0bf94911bc288f5a60631895a4b9ea"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/Sidebar.tsx": {
+    "mtime": 1779625121.0590334,
+    "ast_hash": "31ce2c730347d8b8893685de501a64d4",
+    "semantic_hash": "31ce2c730347d8b8893685de501a64d4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/GlobalSearch.tsx": {
+    "mtime": 1779574252.6066341,
+    "ast_hash": "e5bf615d339fc532a98e8ded2c285954",
+    "semantic_hash": "e5bf615d339fc532a98e8ded2c285954"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/StatCardV2.tsx": {
+    "mtime": 1779570433.4266107,
+    "ast_hash": "ef623c45a0d3dc22f9f33fb80fad8540",
+    "semantic_hash": "ef623c45a0d3dc22f9f33fb80fad8540"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/DataTableV2.tsx": {
+    "mtime": 1779601932.9469838,
+    "ast_hash": "c320121a67325936dfa56698a7829845",
+    "semantic_hash": "c320121a67325936dfa56698a7829845"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/dashboard/TopNav.tsx": {
+    "mtime": 1779577321.688681,
+    "ast_hash": "721408affc7be130b0a2266da4c2de57",
+    "semantic_hash": "721408affc7be130b0a2266da4c2de57"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/support/ReplyDialog.tsx": {
+    "mtime": 1779621446.3314726,
+    "ast_hash": "4b5872c3102d3c624260a96d963790e7",
+    "semantic_hash": "4b5872c3102d3c624260a96d963790e7"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/soft-delete-list/SoftDeleteListPagination.tsx": {
+    "mtime": 1779548207.1577845,
+    "ast_hash": "9975275d38e8f7145253d8ca16dfc61d",
+    "semantic_hash": "9975275d38e8f7145253d8ca16dfc61d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/soft-delete-list/SoftDeleteListToolbar.tsx": {
+    "mtime": 1779548207.158054,
+    "ast_hash": "8ab30bf3319aa4bd639e7e3e6ceed50b",
+    "semantic_hash": "8ab30bf3319aa4bd639e7e3e6ceed50b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/soft-delete-list/softDeleteList.utils.tsx": {
+    "mtime": 1779548207.1583264,
+    "ast_hash": "1d8d062dac1c8d7585abc3b1d641c726",
+    "semantic_hash": "1d8d062dac1c8d7585abc3b1d641c726"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/components/soft-delete-list/SoftDeleteListBulkActions.tsx": {
+    "mtime": 1779548207.1585677,
+    "ast_hash": "c68ab5354d7f5a93d83b316b3c43dad8",
+    "semantic_hash": "c68ab5354d7f5a93d83b316b3c43dad8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/hooks/useListQueryState.ts": {
+    "mtime": 1779566210.2009957,
+    "ast_hash": "429012dbdaa079e64ac3df125d8d7657",
+    "semantic_hash": "429012dbdaa079e64ac3df125d8d7657"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/hooks/usePermission.ts": {
+    "mtime": 1779625098.9760897,
+    "ast_hash": "b3ceae622127a86f8b4399ede167b350",
+    "semantic_hash": "b3ceae622127a86f8b4399ede167b350"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/hooks/useCustomerOptions.ts": {
+    "mtime": 1779611621.9934695,
+    "ast_hash": "61fea436121d1a79367f09cfff4de391",
+    "semantic_hash": "61fea436121d1a79367f09cfff4de391"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/hooks/useEntityForm.ts": {
+    "mtime": 1779548207.124034,
+    "ast_hash": "558052e4181757c46970be0e8d07be74",
+    "semantic_hash": "558052e4181757c46970be0e8d07be74"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/hooks/useConfirmAction.ts": {
+    "mtime": 1779611628.5589077,
+    "ast_hash": "1675f401c3eae8466b3a15a51399315c",
+    "semantic_hash": "1675f401c3eae8466b3a15a51399315c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/api/standardCrud.ts": {
+    "mtime": 1779557126.827621,
+    "ast_hash": "855819e551b615824ee35b8b1128aa34",
+    "semantic_hash": "855819e551b615824ee35b8b1128aa34"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/api/api.ts": {
+    "mtime": 1779877276.3230317,
+    "ast_hash": "dc847f0c6b48556e0cfe543419112417",
+    "semantic_hash": "dc847f0c6b48556e0cfe543419112417"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/api/queryClient.ts": {
+    "mtime": 1779548207.1247141,
+    "ast_hash": "a941c5f708e3f8cdcbf9546e7ec4ea75",
+    "semantic_hash": "a941c5f708e3f8cdcbf9546e7ec4ea75"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/shared/api/crudFactory.ts": {
+    "mtime": 1779548207.1251855,
+    "ast_hash": "0eb5aa497a3d4368b1a2b39f00f22636",
+    "semantic_hash": "0eb5aa497a3d4368b1a2b39f00f22636"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/lib/utils.ts": {
+    "mtime": 1779548207.0996747,
+    "ast_hash": "a201fb9f1c5fefe41b771aa8d7f99957",
+    "semantic_hash": "a201fb9f1c5fefe41b771aa8d7f99957"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/LoginPage.tsx": {
+    "mtime": 1779625109.1740909,
+    "ast_hash": "8aac731a576ac35d78ee751cd277d73d",
+    "semantic_hash": "8aac731a576ac35d78ee751cd277d73d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/auth/ForgotPasswordPage.tsx": {
+    "mtime": 1779557537.4669929,
+    "ast_hash": "ce4a076c974bbcf932643a21a04b4166",
+    "semantic_hash": "ce4a076c974bbcf932643a21a04b4166"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/auth/ChangePasswordPage.tsx": {
+    "mtime": 1779575271.7413266,
+    "ast_hash": "cb16484f640148ccd8da30da50a322b0",
+    "semantic_hash": "cb16484f640148ccd8da30da50a322b0"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/auth/ResetPasswordPage.tsx": {
+    "mtime": 1779557537.4671407,
+    "ast_hash": "295c4b5836250896702a6dfc267ae2d0",
+    "semantic_hash": "295c4b5836250896702a6dfc267ae2d0"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/auth/SignupPage.tsx": {
+    "mtime": 1779557566.468451,
+    "ast_hash": "67ed8b04bc038ed533eef8086bd17641",
+    "semantic_hash": "67ed8b04bc038ed533eef8086bd17641"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/customers/CustomerBanFormPage.tsx": {
+    "mtime": 1779616431.2980719,
+    "ast_hash": "55e472cbbd2d7dbbe6f7aff68d837447",
+    "semantic_hash": "55e472cbbd2d7dbbe6f7aff68d837447"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/customers/CustomerAddressesPage.tsx": {
+    "mtime": 1779610358.626266,
+    "ast_hash": "a5fed6b01dd6f391913edd5b13cd68ad",
+    "semantic_hash": "a5fed6b01dd6f391913edd5b13cd68ad"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/customers/CustomerDetailsPage.tsx": {
+    "mtime": 1779611320.9697351,
+    "ast_hash": "4c92d3f9b497b1c558ae9e3eb2834770",
+    "semantic_hash": "4c92d3f9b497b1c558ae9e3eb2834770"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/customers/CustomerBanPage.tsx": {
+    "mtime": 1779610941.8025115,
+    "ast_hash": "b6990e50ee39707aa977318827f62e34",
+    "semantic_hash": "b6990e50ee39707aa977318827f62e34"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/customers/CustomersPage.tsx": {
+    "mtime": 1779611954.4329822,
+    "ast_hash": "bb3f9ae7df91f34040ad7ceb9752be1a",
+    "semantic_hash": "bb3f9ae7df91f34040ad7ceb9752be1a"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/payments/PaymentsPage.tsx": {
+    "mtime": 1779618411.498762,
+    "ast_hash": "1283fc2f9edd12888ba83c1739a0f715",
+    "semantic_hash": "1283fc2f9edd12888ba83c1739a0f715"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/payments/index.ts": {
+    "mtime": 1779548207.1264806,
+    "ast_hash": "8537b5381cb5b356b15c059a0db3af07",
+    "semantic_hash": "8537b5381cb5b356b15c059a0db3af07"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/contact/ContactCreatePage.tsx": {
+    "mtime": 1779557537.4073422,
+    "ast_hash": "ae3a7ccecd67de5f5e2710dfbaad9c5c",
+    "semantic_hash": "ae3a7ccecd67de5f5e2710dfbaad9c5c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/contact/ContactPage.tsx": {
+    "mtime": 1779622645.4531024,
+    "ast_hash": "cb87d7a7a51991b261381a46a715687c",
+    "semantic_hash": "cb87d7a7a51991b261381a46a715687c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/products/ProductDetailsPage.tsx": {
+    "mtime": 1779615467.613417,
+    "ast_hash": "1a78e4b6f56170351377ac73c98f0aa5",
+    "semantic_hash": "1a78e4b6f56170351377ac73c98f0aa5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/products/ProductFaqFormPage.tsx": {
+    "mtime": 1779621025.4998214,
+    "ast_hash": "62a24a76ac9ac29d191b52b46ba534e4",
+    "semantic_hash": "62a24a76ac9ac29d191b52b46ba534e4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/products/ProductCreatePage.tsx": {
+    "mtime": 1779616240.6725976,
+    "ast_hash": "5f62adf1a28f14ba9767531052ac54b5",
+    "semantic_hash": "5f62adf1a28f14ba9767531052ac54b5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/products/ProductsListPage.tsx": {
+    "mtime": 1779622259.4501765,
+    "ast_hash": "280a0a9c9bb3ec441dfe31fc73e0c80a",
+    "semantic_hash": "280a0a9c9bb3ec441dfe31fc73e0c80a"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/products/ProductFaqsPage.tsx": {
+    "mtime": 1779621206.708321,
+    "ast_hash": "b8cd7363ad3d0fa39388a8c915bc6cb1",
+    "semantic_hash": "b8cd7363ad3d0fa39388a8c915bc6cb1"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/csr/CsrPage.tsx": {
+    "mtime": 1779578041.6377351,
+    "ast_hash": "5c13a12848252db45f0b6b2879c04fad",
+    "semantic_hash": "5c13a12848252db45f0b6b2879c04fad"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/csr/CsrEditPage.tsx": {
+    "mtime": 1779557537.4381268,
+    "ast_hash": "d91c5d3a10819c964695b277c3c86408",
+    "semantic_hash": "d91c5d3a10819c964695b277c3c86408"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/csr/CsrCreatePage.tsx": {
+    "mtime": 1779557537.437612,
+    "ast_hash": "28f879e1e3c1ca3a8947eadebb976d52",
+    "semantic_hash": "28f879e1e3c1ca3a8947eadebb976d52"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/inquiries/SiteInquiriesPage.tsx": {
+    "mtime": 1779622631.1542122,
+    "ast_hash": "9819f9ecfcdd2fe3e8a4e40e99ac7878",
+    "semantic_hash": "9819f9ecfcdd2fe3e8a4e40e99ac7878"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/inquiries/ProductInquiriesPage.tsx": {
+    "mtime": 1779622616.114105,
+    "ast_hash": "7b9a0734bbc55be3caad279c3aacfbc0",
+    "semantic_hash": "7b9a0734bbc55be3caad279c3aacfbc0"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/wishlists/index.ts": {
+    "mtime": 1779548207.1304233,
+    "ast_hash": "c94709273b7f6f20a619ea2ad9e7df6d",
+    "semantic_hash": "c94709273b7f6f20a619ea2ad9e7df6d"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/wishlists/WishlistsPage.tsx": {
+    "mtime": 1779618598.4651394,
+    "ast_hash": "1e3ac2370d6f3627f86188041a34b999",
+    "semantic_hash": "1e3ac2370d6f3627f86188041a34b999"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/catalog/ProductVariantsCrudPages.tsx": {
+    "mtime": 1779578156.2780282,
+    "ast_hash": "203b61d4fe966103736964966b49a678",
+    "semantic_hash": "203b61d4fe966103736964966b49a678"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/catalog/ProductTagAttributeCrudPages.tsx": {
+    "mtime": 1779578134.1360228,
+    "ast_hash": "f993fcae173012a7989c596fcbebf438",
+    "semantic_hash": "f993fcae173012a7989c596fcbebf438"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/permissions/PermissionsUsersPage.tsx": {
+    "mtime": 1779607895.1756663,
+    "ast_hash": "54de7fa87bd75f706ee2910dacbcf682",
+    "semantic_hash": "54de7fa87bd75f706ee2910dacbcf682"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/permissions/UserPermissionsSetPage.tsx": {
+    "mtime": 1779607856.5829716,
+    "ast_hash": "a4a8866016202849cbb2f60670d22782",
+    "semantic_hash": "a4a8866016202849cbb2f60670d22782"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/newsroom/NewsroomEditPage.tsx": {
+    "mtime": 1779557537.4507923,
+    "ast_hash": "0820693b2073d9255af37aec0c61a2ad",
+    "semantic_hash": "0820693b2073d9255af37aec0c61a2ad"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/newsroom/NewsroomPage.tsx": {
+    "mtime": 1779578074.3053825,
+    "ast_hash": "69b92676580ed567540134dccebf6b72",
+    "semantic_hash": "69b92676580ed567540134dccebf6b72"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/newsroom/NewsroomCreatePage.tsx": {
+    "mtime": 1779557537.4505923,
+    "ast_hash": "bd2150cadbf4a9dcf8f61f40e6c18e34",
+    "semantic_hash": "bd2150cadbf4a9dcf8f61f40e6c18e34"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/faqs/FaqsPage.tsx": {
+    "mtime": 1779621194.2012818,
+    "ast_hash": "7a3ede9e4c03c9130292cd722c675968",
+    "semantic_hash": "7a3ede9e4c03c9130292cd722c675968"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/faqs/FaqFormPage.tsx": {
+    "mtime": 1779620798.6393242,
+    "ast_hash": "d3f2ace4be9aabfd6a1c57f19bae08f4",
+    "semantic_hash": "d3f2ace4be9aabfd6a1c57f19bae08f4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/faqs/index.ts": {
+    "mtime": 1779557380.8889859,
+    "ast_hash": "e94167956d907038bfe20b8017ae61e0",
+    "semantic_hash": "e94167956d907038bfe20b8017ae61e0"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/carts/CartsPage.tsx": {
+    "mtime": 1779618584.1532078,
+    "ast_hash": "5b5da2c2d0ea5d54aa7a43ccbb2c53a4",
+    "semantic_hash": "5b5da2c2d0ea5d54aa7a43ccbb2c53a4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/carts/index.ts": {
+    "mtime": 1779548207.1348782,
+    "ast_hash": "bedd1a614ca752572063848a375d3a4e",
+    "semantic_hash": "bedd1a614ca752572063848a375d3a4e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/system/TempCatalogSeederPage.tsx": {
+    "mtime": 1779565001.258043,
+    "ast_hash": "4ccd678cd76a403628232b78f0b5b8a5",
+    "semantic_hash": "4ccd678cd76a403628232b78f0b5b8a5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/system/RolesCreatePage.tsx": {
+    "mtime": 1779938788.35212,
+    "ast_hash": "42e9b7fd5c0721414622b9e6616328d1",
+    "semantic_hash": "42e9b7fd5c0721414622b9e6616328d1"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/system/TempEngagementSeederPage.tsx": {
+    "mtime": 1779622506.237489,
+    "ast_hash": "a01d4a6e01e187044f4e11b5af6e6eab",
+    "semantic_hash": "a01d4a6e01e187044f4e11b5af6e6eab"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/system/SystemModulesPage.tsx": {
+    "mtime": 1779938772.0619571,
+    "ast_hash": "68732cadd9f03b9165657c06f9c4e0ed",
+    "semantic_hash": "68732cadd9f03b9165657c06f9c4e0ed"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/system/ApiOpsPage.tsx": {
+    "mtime": 1779616190.605841,
+    "ast_hash": "2584fed058d1ff77b8568e6c2213e793",
+    "semantic_hash": "2584fed058d1ff77b8568e6c2213e793"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/coupons/CouponDetailPage.tsx": {
+    "mtime": 1779557537.4090304,
+    "ast_hash": "04fba4bbd1c9f2578af29e32bb0546f4",
+    "semantic_hash": "04fba4bbd1c9f2578af29e32bb0546f4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/coupons/CouponCreatePage.tsx": {
+    "mtime": 1779557537.4087508,
+    "ast_hash": "8661133d9ca478166e40ed439969b674",
+    "semantic_hash": "8661133d9ca478166e40ed439969b674"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/coupons/CouponsPage.tsx": {
+    "mtime": 1779578104.2019105,
+    "ast_hash": "84519d3ea5e93b8ab48848466736d687",
+    "semantic_hash": "84519d3ea5e93b8ab48848466736d687"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/coupons/index.ts": {
+    "mtime": 1779548207.1377432,
+    "ast_hash": "98027569de1c1411ff5618ae9ff34887",
+    "semantic_hash": "98027569de1c1411ff5618ae9ff34887"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/common/SimpleApiTablePage.tsx": {
+    "mtime": 1779557537.401784,
+    "ast_hash": "38b01122218a2cc76b83495831f6dd5a",
+    "semantic_hash": "38b01122218a2cc76b83495831f6dd5a"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/common/CrudRouteStubPage.tsx": {
+    "mtime": 1779557537.4008262,
+    "ast_hash": "79d4eb3ab9644f55c0caf4878a089ebe",
+    "semantic_hash": "79d4eb3ab9644f55c0caf4878a089ebe"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/common/dashboardTableState.ts": {
+    "mtime": 1779548207.1395648,
+    "ast_hash": "39d505bd22dd93df012c744eea5f4567",
+    "semantic_hash": "39d505bd22dd93df012c744eea5f4567"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/profile/ProfilePage.tsx": {
+    "mtime": 1779621176.2433393,
+    "ast_hash": "8b4e083cdb6b841312fc88b99cdaff34",
+    "semantic_hash": "8b4e083cdb6b841312fc88b99cdaff34"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/team/TeamEditPage.tsx": {
+    "mtime": 1779557537.465358,
+    "ast_hash": "52669c9cf37775a99b796c797b3e7851",
+    "semantic_hash": "52669c9cf37775a99b796c797b3e7851"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/team/TeamPage.tsx": {
+    "mtime": 1779578111.367589,
+    "ast_hash": "fa91f7f1fc97afa7854ef12c681ccc20",
+    "semantic_hash": "fa91f7f1fc97afa7854ef12c681ccc20"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/team/TeamCreatePage.tsx": {
+    "mtime": 1779557537.4651377,
+    "ast_hash": "0b0e93a71391ecfe713e90795b4b5b66",
+    "semantic_hash": "0b0e93a71391ecfe713e90795b4b5b66"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/support/RepliesCrudPages.tsx": {
+    "mtime": 1779557537.464213,
+    "ast_hash": "149fa018ad7fe0f4aa5562310879db5b",
+    "semantic_hash": "149fa018ad7fe0f4aa5562310879db5b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/inventory/InventoryPage.tsx": {
+    "mtime": 1779601210.3040745,
+    "ast_hash": "e62df2fc09911760c5c8a6dd0a5c4108",
+    "semantic_hash": "e62df2fc09911760c5c8a6dd0a5c4108"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/inventory/InventoryDetailsPage.tsx": {
+    "mtime": 1779568403.6399183,
+    "ast_hash": "b512b8b2820495e294746590e84e6594",
+    "semantic_hash": "b512b8b2820495e294746590e84e6594"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/users/UsersEditPage.tsx": {
+    "mtime": 1779557537.465978,
+    "ast_hash": "d5529b36ac5a24c0a24f0dccd252c815",
+    "semantic_hash": "d5529b36ac5a24c0a24f0dccd252c815"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/users/UsersCreatePage.tsx": {
+    "mtime": 1779607801.5715716,
+    "ast_hash": "4b346dc6ed3f633d8cd16490ce664314",
+    "semantic_hash": "4b346dc6ed3f633d8cd16490ce664314"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/users/UsersPage.tsx": {
+    "mtime": 1779610033.590305,
+    "ast_hash": "8e9b2b2aa1ef746192b4b975f5deee62",
+    "semantic_hash": "8e9b2b2aa1ef746192b4b975f5deee62"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/delivery/DeliveryCrudPages.tsx": {
+    "mtime": 1779618501.0303829,
+    "ast_hash": "cf9c01d34e6ace8fde16d28a73f2e54f",
+    "semantic_hash": "cf9c01d34e6ace8fde16d28a73f2e54f"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/blog/BlogPostsCrudPages.tsx": {
+    "mtime": 1779621513.727939,
+    "ast_hash": "f19d63fea80b9b8288b5719acd4f829e",
+    "semantic_hash": "f19d63fea80b9b8288b5719acd4f829e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/blog/BlogPostsPage.tsx": {
+    "mtime": 1779616159.5321546,
+    "ast_hash": "ce9b18ddf116955298a330f086f97206",
+    "semantic_hash": "ce9b18ddf116955298a330f086f97206"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/web-push/WebPushNotificationFormPage.tsx": {
+    "mtime": 1779616159.588617,
+    "ast_hash": "a681c39ed31ad682aae2054c1fe29791",
+    "semantic_hash": "a681c39ed31ad682aae2054c1fe29791"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/web-push/WebPushNotificationsPage.tsx": {
+    "mtime": 1779616159.59488,
+    "ast_hash": "bbd91b42f5238359ea83c908dfef531b",
+    "semantic_hash": "bbd91b42f5238359ea83c908dfef531b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/web-push/WebPushSubscriptionsPage.tsx": {
+    "mtime": 1779616159.600914,
+    "ast_hash": "e8b48d9156e9d73742d2e68237e5f1a7",
+    "semantic_hash": "e8b48d9156e9d73742d2e68237e5f1a7"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/newsletter/NewsletterPage.tsx": {
+    "mtime": 1779616159.582541,
+    "ast_hash": "12b47c754a279244270bd168e25f9e11",
+    "semantic_hash": "12b47c754a279244270bd168e25f9e11"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/email/EmailRecipientFormPage.tsx": {
+    "mtime": 1779616159.5699835,
+    "ast_hash": "0cb75e2084c62410f844bfa76299fbef",
+    "semantic_hash": "0cb75e2084c62410f844bfa76299fbef"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/email/EmailQueuePage.tsx": {
+    "mtime": 1779616159.5641832,
+    "ast_hash": "f90306e0691ffa40b395b57559cbf278",
+    "semantic_hash": "f90306e0691ffa40b395b57559cbf278"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/email/EmailLogsPage.tsx": {
+    "mtime": 1779616159.558198,
+    "ast_hash": "f4234de448b7f632e7192b6d33cd19c7",
+    "semantic_hash": "f4234de448b7f632e7192b6d33cd19c7"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/email/EmailCampaignsPage.tsx": {
+    "mtime": 1779616159.5521495,
+    "ast_hash": "0ff6370a0aec8f892574d0afe87f7dca",
+    "semantic_hash": "0ff6370a0aec8f892574d0afe87f7dca"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/email/EmailRecipientsPage.tsx": {
+    "mtime": 1779616159.5760267,
+    "ast_hash": "24ae63b317b613307098e584491002c8",
+    "semantic_hash": "24ae63b317b613307098e584491002c8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/marketing/email/EmailCampaignFormPage.tsx": {
+    "mtime": 1779616159.5451396,
+    "ast_hash": "e21b2f0c13684857716e20fb1955fee8",
+    "semantic_hash": "e21b2f0c13684857716e20fb1955fee8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/orders/OrderDetailsPage.tsx": {
+    "mtime": 1779557537.4511995,
+    "ast_hash": "57dc0106b2b5ff4bdab1b3d89fe8e3f4",
+    "semantic_hash": "57dc0106b2b5ff4bdab1b3d89fe8e3f4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/orders/orderStore.ts": {
+    "mtime": 1779548207.1453836,
+    "ast_hash": "c1c636e447be7e1e45508a3ff59fb127",
+    "semantic_hash": "c1c636e447be7e1e45508a3ff59fb127"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/orders/OrdersPage.tsx": {
+    "mtime": 1779618205.8764312,
+    "ast_hash": "e5a4138fc8b331877b8e1dfde48ac318",
+    "semantic_hash": "e5a4138fc8b331877b8e1dfde48ac318"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/overview/DashboardOverviewPage.tsx": {
+    "mtime": 1779577474.5243888,
+    "ast_hash": "b50620ebeb4be6f315a895468f6310f3",
+    "semantic_hash": "b50620ebeb4be6f315a895468f6310f3"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/views/EntityViewPages.tsx": {
+    "mtime": 1779557537.4663618,
+    "ast_hash": "f2649fe91f5ee96a8abcf97249530626",
+    "semantic_hash": "f2649fe91f5ee96a8abcf97249530626"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/SubcategoriesPage.tsx": {
+    "mtime": 1779621638.6374576,
+    "ast_hash": "9df42422371d7d85d31ef3f2f45b7dd5",
+    "semantic_hash": "9df42422371d7d85d31ef3f2f45b7dd5"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/CategoriesPage.tsx": {
+    "mtime": 1779621617.7201176,
+    "ast_hash": "3a5475de025bce7bd11b3fb14bb8b38c",
+    "semantic_hash": "3a5475de025bce7bd11b3fb14bb8b38c"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/SubcategoryEditPage.tsx": {
+    "mtime": 1779561197.750302,
+    "ast_hash": "e004bf1274bf793176b519a9826df0c4",
+    "semantic_hash": "e004bf1274bf793176b519a9826df0c4"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/SubcategoryDetailPage.tsx": {
+    "mtime": 1779620617.8588762,
+    "ast_hash": "45421e5e8952737314c6984035b595c2",
+    "semantic_hash": "45421e5e8952737314c6984035b595c2"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/CategoryEditPage.tsx": {
+    "mtime": 1779559452.9702573,
+    "ast_hash": "9cd52e8e82df8309857ca251a96feba8",
+    "semantic_hash": "9cd52e8e82df8309857ca251a96feba8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/CategoryDetailPage.tsx": {
+    "mtime": 1779578212.8012967,
+    "ast_hash": "563603acc6766df693a6f4fb4da74384",
+    "semantic_hash": "563603acc6766df693a6f4fb4da74384"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/index.ts": {
+    "mtime": 1779561009.3453667,
+    "ast_hash": "344f84b7ec2c64ee0cc0a23fa8cd354b",
+    "semantic_hash": "344f84b7ec2c64ee0cc0a23fa8cd354b"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/CategoryCreatePage.tsx": {
+    "mtime": 1779559068.589618,
+    "ast_hash": "8cbf248fb46c24e00f5915c8054011b3",
+    "semantic_hash": "8cbf248fb46c24e00f5915c8054011b3"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/categories/SubcategoryCreatePage.tsx": {
+    "mtime": 1779561197.7503052,
+    "ast_hash": "7574a856ae67f8648bdf7fa0960379a7",
+    "semantic_hash": "7574a856ae67f8648bdf7fa0960379a7"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/reports/ActivityLogsPage.tsx": {
+    "mtime": 1779557537.4501033,
+    "ast_hash": "d27858d80b2a256a663ad49edaceb396",
+    "semantic_hash": "d27858d80b2a256a663ad49edaceb396"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/reports/ReportsPage.tsx": {
+    "mtime": 1779557537.4632308,
+    "ast_hash": "2cc11f59963a28d27c567663e051bb71",
+    "semantic_hash": "2cc11f59963a28d27c567663e051bb71"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/reports/AuditLogsPage.tsx": {
+    "mtime": 1779578255.7555404,
+    "ast_hash": "7bc07083da5314d5132b9a1ea93087a9",
+    "semantic_hash": "7bc07083da5314d5132b9a1ea93087a9"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/reports/ReportDetailsPage.tsx": {
+    "mtime": 1779557537.4626682,
+    "ast_hash": "6869ce730e51dab0fe27b77861fceed0",
+    "semantic_hash": "6869ce730e51dab0fe27b77861fceed0"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/company/CompanyCreatePage.tsx": {
+    "mtime": 1779557537.4021726,
+    "ast_hash": "cac3d2b61ddba884bf1edfb760a8497e",
+    "semantic_hash": "cac3d2b61ddba884bf1edfb760a8497e"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/company/CompanyEditPage.tsx": {
+    "mtime": 1779557537.4038937,
+    "ast_hash": "a06a6c8aad42db00e3014ab0fb716504",
+    "semantic_hash": "a06a6c8aad42db00e3014ab0fb716504"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/company/CompanyPage.tsx": {
+    "mtime": 1779578262.7217512,
+    "ast_hash": "13b212d01818a7ab481cf7acf9b54b22",
+    "semantic_hash": "13b212d01818a7ab481cf7acf9b54b22"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/reviews/index.ts": {
+    "mtime": 1779548207.151191,
+    "ast_hash": "ea7c35daadf90452220f30a3305826d8",
+    "semantic_hash": "ea7c35daadf90452220f30a3305826d8"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/pages/dashboard/reviews/ReviewsPage.tsx": {
+    "mtime": 1779621990.7060077,
+    "ast_hash": "d0596efbad4a03d5ccde943a58848525",
+    "semantic_hash": "d0596efbad4a03d5ccde943a58848525"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/store/UserStore.tsx": {
+    "mtime": 1779548207.1002216,
+    "ast_hash": "72d60a0b13187c5a3f434b1971a8beda",
+    "semantic_hash": "72d60a0b13187c5a3f434b1971a8beda"
+  },
+  "/Users/sauravshrestha/REPO/WEBX/kan/kan-cosmetics-dashboard/src/assets/react.svg": {
+    "mtime": 1779385652.3770955,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": "f0402b67b6ce880f65666bb49e841696"
+  }
+}

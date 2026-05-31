@@ -32,7 +32,8 @@ export type CreateUserDto = Readonly<{
   password: string;
   address: string;
   gender: Gender;
-  role?: Role;
+  roleIds?: ReadonlyArray<string>;
+  permissionIds?: ReadonlyArray<string>;
   isVerified?: boolean;
   sortOrder?: number;
 }>;

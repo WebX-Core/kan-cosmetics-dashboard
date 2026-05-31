@@ -1,6 +1,5 @@
 import React from "react";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 type ModernFormLayoutProps = Readonly<{
   title: string;
@@ -14,66 +13,28 @@ type ModernFormLayoutProps = Readonly<{
 export const ModernFormLayout: React.FC<ModernFormLayoutProps> = ({
   title,
   subtitle,
-  eyebrow = "Form",
   onBack,
-  stats,
   children,
 }) => {
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <div className="mx-auto max-w-[1400px] p-6">
-        {/* Header Section */}
-        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-white to-zinc-50 shadow-sm">
-          <div className="p-6 sm:p-8">
-            {onBack && (
-              <Button
-                variant="ghost"
-                className="mb-4 px-0 text-slate-600 hover:text-zinc-900"
-                onClick={onBack}
-              >
-                <ArrowLeft size={16} />
-                Back
-              </Button>
-            )}
+    <div className="compact-form min-h-screen bg-[#f5f5f7]">
+      <div className="w-full space-y-[14px] p-[24px] pb-[38px]">
+        <div>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mb-[6px] flex items-center gap-[4px] text-[11px] text-[#6e6e73] transition-colors hover:text-[#1d1d1f]"
+            >
+              <ArrowLeft size={11} strokeWidth={2} />
+              Back
+            </button>
+          )}
+          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">{title}</h1>
+          {subtitle && <p className="mt-[3px] text-[11px] text-[#6e6e73]">{subtitle}</p>}
+        </div>
 
-            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  {eyebrow}
-                </p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900">
-                  {title}
-                </h1>
-                {subtitle && (
-                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
-                    {subtitle}
-                  </p>
-                )}
-              </div>
-
-              {stats && stats.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {stats.map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {stat.label}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Form Content */}
-        <div className="mt-6">{children}</div>
+        {children}
       </div>
     </div>
   );
@@ -82,24 +43,27 @@ export const ModernFormLayout: React.FC<ModernFormLayoutProps> = ({
 type FormSectionProps = Readonly<{
   title: string;
   description?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }>;
 
 export const FormSection: React.FC<FormSectionProps> = ({
   title,
   description,
+  action,
   children,
 }) => {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 border-b border-zinc-100 pb-4">
-        <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>
-        {description && (
-          <p className="mt-1 text-sm text-slate-600">{description}</p>
-        )}
+    <div className="space-y-3">
+      <div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-gray-900">{title}</h2>
+          {action}
+        </div>
+        {description && <p className="mt-0.5 text-[11px] text-gray-500">{description}</p>}
       </div>
-      <div className="space-y-4">{children}</div>
-    </section>
+      <div className="space-y-3">{children}</div>
+    </div>
   );
 };
 
@@ -119,14 +83,14 @@ export const FormField: React.FC<FormFieldProps> = ({
   children,
 }) => {
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-zinc-900">
+    <div className="space-y-1">
+      <label className="block text-[12px] font-medium text-gray-700">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
       {children}
-      {hint && !error && <p className="text-xs text-slate-500">{hint}</p>}
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {hint && !error && <p className="text-[11px] text-gray-400">{hint}</p>}
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
     </div>
   );
 };
@@ -147,26 +111,25 @@ export const FormActions: React.FC<FormActionsProps> = ({
   submitIcon,
 }) => {
   return (
-    <div className="flex items-center justify-end gap-3 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <div className="flex items-center gap-[6px] pt-[6px]">
       {onCancel && (
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="border-zinc-300 text-slate-600 hover:bg-zinc-50"
+          className="flex min-h-[30px] items-center rounded-full border border-[#d2d2d7] bg-white px-[14px] py-[7px] text-[11px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
         >
           {cancelLabel}
-        </Button>
+        </button>
       )}
-      <Button
+      <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-zinc-900 text-white hover:bg-zinc-800"
+        className="flex min-h-[30px] items-center gap-[6px] rounded-full bg-[#0071e3] px-[14px] py-[7px] text-[11px] font-medium text-white transition-colors hover:bg-[#0066cc] disabled:opacity-50 active:scale-[0.982]"
       >
-        {submitIcon}
-        {isSubmitting ? "Saving..." : submitLabel}
-      </Button>
+        {isSubmitting ? <Loader2 size={11} className="animate-spin" /> : submitIcon}
+        {isSubmitting ? "Saving…" : submitLabel}
+      </button>
     </div>
   );
 };

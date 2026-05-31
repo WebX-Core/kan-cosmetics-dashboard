@@ -1,7 +1,14 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../providers/AuthContext";
 
-// Temporary no-auth mode: allow all dashboard routes without login.
 export const ProtectedRoute: React.FC = () => {
+  const { state } = useAuth();
+  const location = useLocation();
+
+  if (!state.isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
   return <Outlet />;
 };

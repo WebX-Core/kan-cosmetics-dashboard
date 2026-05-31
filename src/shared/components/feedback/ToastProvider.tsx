@@ -17,9 +17,54 @@ type ToastContextValue = Readonly<{
 
 const ToastContext = React.createContext<ToastContextValue | null>(null);
 
+const TOAST_THEME: Readonly<
+  Record<
+    ToastKind,
+    Readonly<{
+      title: string;
+      icon: React.ReactNode;
+      railClass: string;
+      iconWrapClass: string;
+      borderClass: string;
+    }>
+  >
+> = {
+  success: {
+    title: "Success",
+    icon: <CheckCircle2 size={16} className="text-[#166534]" />,
+    railClass: "bg-[#34c759]",
+    iconWrapClass: "bg-[#ecfdf3]",
+    borderClass: "border-[#bbf7d0]",
+  },
+  error: {
+    title: "Action Failed",
+    icon: <TriangleAlert size={16} className="text-[#b42318]" />,
+    railClass: "bg-[#ff3b30]",
+    iconWrapClass: "bg-[#fef2f2]",
+    borderClass: "border-[#fecaca]",
+  },
+  info: {
+    title: "Notice",
+    icon: <Info size={16} className="text-[#075985]" />,
+    railClass: "bg-[#0ea5e9]",
+    iconWrapClass: "bg-[#f0f9ff]",
+    borderClass: "border-[#bae6fd]",
+  },
+};
+
 export const ToastProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [toasts, setToasts] = React.useState<ReadonlyArray<ToastItem>>([]);
   const lastToastRef = React.useRef<Readonly<{ kind: ToastKind; message: string; at: number }> | null>(null);
+  const timeoutHandlesRef = React.useRef<Map<number, number>>(new Map());
+
+  const removeToast = React.useCallback((id: number) => {
+    const handle = timeoutHandlesRef.current.get(id);
+    if (handle) {
+      window.clearTimeout(handle);
+      timeoutHandlesRef.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((item) => item.id !== id));
+  }, []);
 
   const push = React.useCallback((message: string, kind: ToastKind = "info") => {
     const now = Date.now();
@@ -32,52 +77,62 @@ export const ToastProvider: React.FC<React.PropsWithChildren> = ({ children }) =
     const id = Date.now() + Math.floor(Math.random() * 10000);
     setToasts((prev) => [...prev, { id, kind, message }]);
 
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
-  }, []);
+    const timeoutHandle = window.setTimeout(() => {
+      removeToast(id);
+    }, 4200);
+    timeoutHandlesRef.current.set(id, timeoutHandle);
+  }, [removeToast]);
+
+  React.useEffect(
+    () => () => {
+      for (const handle of timeoutHandlesRef.current.values()) {
+        window.clearTimeout(handle);
+      }
+      timeoutHandlesRef.current.clear();
+    },
+    [],
+  );
 
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
       <div
-        style={{
-          position: "fixed",
-          bottom: 14,
-          right: 14,
-          zIndex: 3000,
-          display: "grid",
-          gap: 8,
-          maxWidth: 420,
-        }}
+        className="fixed bottom-[13px] right-[13px] z-[3000] grid w-[min(92vw,396px)] gap-[8px]"
+        aria-live="polite"
+        aria-atomic="true"
       >
         {toasts.map((t) => (
           <div
             key={t.id}
-            style={{
-              borderRadius: 12,
-              border: t.kind === "error" ? "1px solid #fecaca" : t.kind === "success" ? "1px solid #bbf7d0" : "1px solid #cbd5e1",
-              background: "#ffffff",
-              color: "#0f172a",
-              padding: "10px 12px 8px",
-              boxShadow: "0 12px 30px rgba(15,23,42,0.14)",
-              fontSize: 14,
-              display: "grid",
-              gap: 8,
-            }}
+            role={t.kind === "error" ? "alert" : "status"}
+            className={`motion-reduce:animate-none animate-[toast-enter_220ms_cubic-bezier(0.16,1,0.3,1)] relative overflow-hidden rounded-[12px] border bg-white shadow-[0_16px_34px_rgba(2,6,23,0.16)] ${TOAST_THEME[t.kind].borderClass}`}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {t.kind === "success" ? <CheckCircle2 size={16} color="#166534" /> : t.kind === "error" ? <TriangleAlert size={16} color="#be123c" /> : <Info size={16} color="#0f172a" />}
-              <div style={{ flex: 1 }}>{t.message}</div>
+            <span className={`absolute inset-y-0 left-0 w-[3px] ${TOAST_THEME[t.kind].railClass}`} />
+            <div className="flex items-start gap-[10px] px-[13px] py-[11px] pl-[12px]">
+              <span className={`mt-[1px] inline-flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full ${TOAST_THEME[t.kind].iconWrapClass}`}>
+                {TOAST_THEME[t.kind].icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6e6e73]">
+                  {TOAST_THEME[t.kind].title}
+                </p>
+                <p className="mt-[2px] break-words text-[13px] font-medium leading-[1.35] text-[#1d1d1f]">
+                  {t.message}
+                </p>
+              </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
-                className="h-8 w-8 border-none bg-transparent p-0 text-[var(--muted)] shadow-none hover:bg-[var(--surface-soft)]"
+                onClick={() => removeToast(t.id)}
+                aria-label="Dismiss notification"
+                className="h-[24px] w-[24px] shrink-0 rounded-full border-none bg-transparent p-0 text-[#86868b] shadow-none hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
               >
-                <X size={14} />
+                <X size={12} />
               </Button>
+            </div>
+            <div className="h-[2px] w-full bg-[#f0f0f2]" aria-hidden="true">
+              <div className={`motion-reduce:animate-none h-full animate-[toast-life_4200ms_linear_forwards] ${TOAST_THEME[t.kind].railClass}`} />
             </div>
           </div>
         ))}

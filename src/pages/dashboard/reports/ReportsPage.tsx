@@ -1,81 +1,107 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Download } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { readReportRecords } from "./reportsData";
+import { Search } from "lucide-react";
+import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { useOrders } from "@/features/commerce";
+import { catalogApi } from "@/features/catalog";
+import { useAuditLogList, useUserActivityList } from "@/features/telemetry";
 
-const statusClassMap: Readonly<Record<string, string>> = {
-  Ready: "bg-[#eefaf5] text-[#0f7a58]",
-  Draft: "bg-[#f5f5f7] text-[#4b5563]",
+type ReportCard = Readonly<{
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  value: string;
+  trend: string;
+  status: "Ready" | "Draft";
+}>;
+
+const readArray = (value: unknown): ReadonlyArray<Record<string, unknown>> => {
+  if (Array.isArray(value)) return value as ReadonlyArray<Record<string, unknown>>;
+  if (!value || typeof value !== "object") return [];
+  const record = value as Record<string, unknown>;
+  if (Array.isArray(record.data)) return record.data as ReadonlyArray<Record<string, unknown>>;
+  return [];
+};
+
+const toAmount = (value: unknown): number => {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value) || 0;
+  return 0;
 };
 
 export const ReportsPage: React.FC = () => {
   const [search, setSearch] = React.useState("");
-  const reports = React.useMemo(() => readReportRecords(), []);
+  const ordersQuery = useOrders();
+  const productsQuery = catalogApi.products.hooks.useList();
+  const inventoryQuery = catalogApi.inventory.hooks.useList();
+  const auditQuery = useAuditLogList();
+  const activityQuery = useUserActivityList();
 
-  const filteredReports = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return reports;
+  const reports = React.useMemo<ReadonlyArray<ReportCard>>(() => {
+    const orders = readArray(ordersQuery.data);
+    const inventory = readArray(inventoryQuery.data);
+    const products = readArray(productsQuery.data);
+    const audits = readArray(auditQuery.data);
+    const activities = readArray(activityQuery.data);
+    const revenue = orders.reduce((sum, row) => sum + toAmount(row.total ?? row.totalAmount), 0);
 
-    return reports.filter((report) =>
-      [report.title, report.category, report.description, report.status].some((value) =>
-        value.toLowerCase().includes(query)
-      )
-    );
+    return [
+      { id: "sales", category: "Sales", title: "Sales Overview", description: "Order volume and gross revenue from live orders.", value: `Rs ${revenue.toLocaleString()}`, trend: `${orders.length} orders`, status: "Ready" },
+      { id: "inventory", category: "Inventory", title: "Inventory Health", description: "Current inventory records and stock posture.", value: `${inventory.length}`, trend: "Live records", status: "Ready" },
+      { id: "catalog", category: "Catalog", title: "Catalog Coverage", description: "Total product entries currently available.", value: `${products.length}`, trend: "Product count", status: "Ready" },
+      { id: "telemetry", category: "Telemetry", title: "Audit & Activity", description: "Admin audit and user activity stream volume.", value: `${audits.length + activities.length}`, trend: `${audits.length} audit + ${activities.length} activity`, status: "Ready" },
+    ];
+  }, [ordersQuery.data, inventoryQuery.data, productsQuery.data, auditQuery.data, activityQuery.data]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return reports;
+    return reports.filter((r) => [r.title, r.category, r.description].some((v) => v.toLowerCase().includes(q)));
   }, [reports, search]);
 
+  const loading = ordersQuery.isLoading || productsQuery.isLoading || inventoryQuery.isLoading || auditQuery.isLoading || activityQuery.isLoading;
+
   return (
-    <div className="space-y-5">
-      <section className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-(--text)">Reports</h1>
-          <p className="mt-1 max-w-2xl text-sm text-(--muted)">
-            Revenue, inventory, customer, and catalog reporting surfaces with detail views for operational drill-down.
-          </p>
-        </div>
-        <Button variant="outline">
-          <Download size={14} />
-          Export Snapshot
-        </Button>
-      </section>
-
-      <section className="rounded-[16px] border border-(--line) bg-white p-4">
-        <Input
-          placeholder="Search report, category, status..."
+    <PageLayout title="Reports" subtitle="Live operational snapshots from integrated APIs.">
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="max-w-sm"
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search reports..."
+          className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
         />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        {filteredReports.map((report) => (
-          <Link
-            key={report.id}
-            to={`/dashboard/reports/${report.id}`}
-            className="rounded-[18px] border border-(--line) bg-white p-5 transition-colors hover:bg-[#fafafc]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-(--muted)">{report.category}</p>
-                <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-(--text)">{report.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-(--muted)">{report.description}</p>
+      </div>
+      {loading ? (
+        <div className="rounded-xl border border-gray-100 bg-white p-5 text-sm text-gray-400">Loading reports...</div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {filtered.map((report) => (
+            <Link
+              key={report.id}
+              to={`/dashboard/reports/${report.id}`}
+              className="rounded-xl border border-gray-100 bg-white p-5 transition-colors hover:border-[#0071e3]/20 hover:bg-[#0071e3]/5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">{report.category}</p>
+                  <h2 className="mt-2 text-lg font-semibold text-gray-900">{report.title}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{report.description}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{report.status}</span>
               </div>
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClassMap[report.status] ?? statusClassMap.Ready}`}>
-                {report.status}
-              </span>
-            </div>
-            <div className="mt-5 flex items-end justify-between gap-4 rounded-[14px] bg-[#f5f5f7] px-4 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-(--muted)">Primary Metric</p>
-                <p className="mt-2 text-[24px] font-semibold text-(--text)">{report.value}</p>
+              <div className="mt-5 flex items-end justify-between gap-4 rounded-xl bg-gray-50 px-4 py-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Primary Metric</p>
+                  <p className="mt-1 text-2xl font-semibold text-gray-900">{report.value}</p>
+                </div>
+                <p className="text-sm font-medium text-[#0071e3]">{report.trend}</p>
               </div>
-              <p className="text-sm font-medium text-[#0066cc]">{report.trend}</p>
-            </div>
-          </Link>
-        ))}
-      </section>
-    </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </PageLayout>
   );
 };

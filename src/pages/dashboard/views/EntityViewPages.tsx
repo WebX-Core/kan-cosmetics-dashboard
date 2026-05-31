@@ -2,9 +2,9 @@ import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Pencil } from "lucide-react";
+import { z } from "zod";
 import { useFaqGet, useFaqList } from "@/features/faq";
 import { useTeamGet, useTeamList } from "@/features/team";
-import { useBrandGet, useBrandList } from "@/features/brand";
 import { useCompanyGet, useCompanyList } from "@/features/company";
 import { useCsrGet, useCsrList } from "@/features/csr";
 import { useNewsroomGet, useNewsroomList } from "@/features/newsroom";
@@ -12,6 +12,8 @@ import { useContactGet } from "@/features/contact";
 import { useAdminUsersGet } from "@/features/adminUsers";
 import { RecordView } from "@/shared/components/RecordView";
 import { slugify } from "@/shared/utils/slug";
+
+const viewedContactIdsSchema = z.array(z.string());
 
 function renderView(title: string, backHref: string, editBase: string, q: { isLoading: boolean; isError: boolean; data?: unknown }, id?: string) {
   if (!id) return <div>Invalid id.</div>;
@@ -60,7 +62,7 @@ export const FaqViewPage: React.FC = () => {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Link
-            to={`/dashboard/faq/${slug}/edit`}
+            to={`/dashboard/faqs/${slug}/edit`}
             title="Edit FAQ"
             aria-label="Edit FAQ"
             style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--primary)", color: "#fff", background: "var(--primary)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -68,7 +70,7 @@ export const FaqViewPage: React.FC = () => {
             <Pencil size={15} />
           </Link>
           <Link
-            to="/dashboard/faq"
+            to="/dashboard/faqs"
             title="Back"
             aria-label="Back"
             style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--line)", color: "var(--text)", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
@@ -109,20 +111,6 @@ export const TeamViewPage: React.FC = () => {
   if (teamFind.isLoading) return <div>Loading...</div>;
   if (!id) return <div>Not found.</div>;
   return renderView("Team Details", "/dashboard/team", "/dashboard/team", q, slug);
-};
-export const BrandViewPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const find = useBrandList({ page: 1, limit: 1, search: slug }, Boolean(slug));
-  const id = React.useMemo(() => {
-    if (isIdLike(slug)) return slug;
-    const rows = find.data?.data ?? [];
-    return rows.find((r) => r.slug === slug)?.id ?? rows[0]?.id;
-  }, [find.data?.data, slug]);
-  const q = useBrandGet(id);
-  if (!slug) return <div>Invalid slug.</div>;
-  if (find.isLoading) return <div>Loading...</div>;
-  if (!id) return <div>Not found.</div>;
-  return renderView("Brand Details", "/dashboard/brand", "/dashboard/brand", q, slug);
 };
 export const CompanyViewPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -176,7 +164,8 @@ export const ContactViewPage: React.FC = () => {
 
     try {
       const raw = sessionStorage.getItem("viewedContactIds");
-      const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+      const candidate = raw ? JSON.parse(raw) : [];
+      const parsed = viewedContactIdsSchema.safeParse(candidate).success ? candidate : [];
       const next = Array.from(new Set([...(Array.isArray(parsed) ? parsed : []), id]));
       sessionStorage.setItem("viewedContactIds", JSON.stringify(next));
       window.dispatchEvent(new Event("viewed-contacts-changed"));

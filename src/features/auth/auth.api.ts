@@ -26,12 +26,8 @@ export const authApi = {
     return unwrap<SignupResponse>(res);
   },
 
-  signin: async (dto: SigninDto, recaptchaToken: string): Promise<SuccessResponse> => {
-    const res = await api.post("/auth/signin", dto, {
-      headers: {
-        "x-recaptcha-token": recaptchaToken,
-      }
-    });
+  signin: async (dto: SigninDto): Promise<SuccessResponse> => {
+    const res = await api.post("/auth/signin", dto);
     return unwrap<SuccessResponse>(res);
   },
 

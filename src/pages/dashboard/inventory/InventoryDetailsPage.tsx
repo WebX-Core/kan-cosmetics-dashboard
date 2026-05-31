@@ -1,184 +1,299 @@
 import React from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Boxes } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { confirmAction } from "@/shared/utils/confirm";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { z } from "zod";
+import { Loader2, Package } from "lucide-react";
+import { catalogApi } from "@/features/catalog";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { appendInventoryMovement, saveInventoryAdjustment } from "./inventoryStore";
-import { findInventoryRecord } from "./inventoryData";
+import { validateOrToast } from "@/shared/utils/validation";
+import { parseApiError } from "@/shared/utils/apiError";
+import { ModernFormLayout, FormSection, FormField, FormActions } from "@/shared/components/forms/ModernFormLayout";
 
-const statusClassMap: Readonly<Record<string, string>> = {
-  "In Stock": "bg-[#eefaf5] text-[#0f7a58]",
-  "Low Stock": "bg-[#fff7e8] text-[#9a6700]",
-  Reserved: "bg-[#edf5ff] text-[#0066cc]",
-  "Out Of Stock": "bg-[#fff1f1] text-[#b42318]",
-};
+const schema = z.object({
+  stockQuantity: z.coerce.number().min(0, "Must be >= 0"),
+  reservedQuantity: z.coerce.number().min(0, "Must be >= 0"),
+  lowStockThreshold: z.coerce.number().min(0, "Must be >= 0"),
+  isInStock: z.boolean(),
+});
 
-const fieldClassName =
-  "w-full rounded-[12px] border border-[var(--line)] bg-white px-3 py-3 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
+type Form = Readonly<{
+  productId: string;
+  productVariantId: string;
+  stockQuantity: string;
+  reservedQuantity: string;
+  lowStockThreshold: string;
+  isInStock: boolean;
+}>;
+
+const str = (v: unknown): string => (typeof v === "string" ? v : "");
+const num = (v: unknown): string => (typeof v === "number" ? String(v) : "0");
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const inputClass =
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
 
 export const InventoryDetailsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
   const toast = useToast();
-  const [quantityDelta, setQuantityDelta] = React.useState("0");
-  const [reason, setReason] = React.useState("");
-  const [refreshKey, setRefreshKey] = React.useState(0);
-  const inventory = React.useMemo(() => (id ? findInventoryRecord(id) : undefined), [id, refreshKey]);
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
 
-  if (!inventory) {
+  const isCreate = !id;
+  const prefillProductId = searchParams.get("productId") ?? "";
+  const prefillProductName = searchParams.get("productName") ?? "";
+  const prefillProductVariantId = searchParams.get("productVariantId") ?? "";
+  // returnPath is passed from ProductCreatePage so we can go back to the right subcategory
+  const returnPath = searchParams.get("returnPath") ?? "";
+
+  const [form, setForm] = React.useState<Form>({
+    productId: "",
+    productVariantId: "",
+    stockQuantity: "0",
+    reservedQuantity: "0",
+    lowStockThreshold: "0",
+    isInStock: true,
+  });
+
+  const getQuery = catalogApi.inventory.hooks.useGet(id, Boolean(id));
+  const productQuery = catalogApi.products.hooks.useGet(
+    prefillProductId || undefined,
+    Boolean(prefillProductId) && isCreate,
+  );
+  const variantGetQuery = catalogApi.productVariants.hooks.useGet(
+    form.productVariantId || undefined,
+    Boolean(form.productVariantId),
+  );
+  const variantsQuery = catalogApi.productVariants.hooks.useList(
+    {
+      page: 1,
+      limit: 200,
+      product: form.productId || undefined,
+    },
+    Boolean(form.productId),
+  );
+  const createMutation = catalogApi.inventory.hooks.useCreate();
+  const updateMutation = catalogApi.inventory.hooks.useUpdate();
+
+  // Pre-fill productId from URL on create
+  React.useEffect(() => {
+    if (!isCreate) return;
+    setForm((prev) => ({
+      ...prev,
+      productId: prefillProductId || prev.productId,
+      productVariantId: prefillProductVariantId || prev.productVariantId,
+    }));
+  }, [isCreate, prefillProductId, prefillProductVariantId]);
+
+  // Load existing inventory for edit
+  React.useEffect(() => {
+    if (isCreate || !getQuery.data) return;
+    const row = getQuery.data as Record<string, unknown>;
+    // Backend returns product/productVariant as nested objects
+    const pId = str((row.product as Record<string, unknown>)?.id ?? row.productId);
+    const vId = str((row.productVariant as Record<string, unknown>)?.id ?? row.productVariantId);
+    setForm({
+      productId: pId,
+      productVariantId: vId,
+      stockQuantity: num(row.stockQuantity ?? row.stock ?? row.quantity),
+      reservedQuantity: num(row.reservedQuantity ?? row.reserved),
+      lowStockThreshold: num(row.lowStockThreshold),
+      isInStock: typeof row.isInStock === "boolean" ? row.isInStock : true,
+    });
+  }, [getQuery.data, isCreate]);
+
+  React.useEffect(() => {
+    const variant = variantGetQuery.data as Record<string, unknown> | undefined;
+    if (!variant || form.productId) return;
+    const variantProductId = str((variant.product as Record<string, unknown> | undefined)?.id);
+    if (!variantProductId) return;
+    setForm((prev) => ({ ...prev, productId: variantProductId }));
+  }, [form.productId, variantGetQuery.data]);
+
+  const saving = createMutation.isPending || updateMutation.isPending;
+
+  // Product name display from multiple API envelope shapes
+  const productData = productQuery.data as Record<string, unknown> | undefined;
+  const inventoryData = getQuery.data as Record<string, unknown> | undefined;
+  const variantData = variantGetQuery.data as Record<string, unknown> | undefined;
+  const inventoryProduct = toRecord(inventoryData?.product);
+  const variantProduct = toRecord(variantData?.product);
+  const productEntity = React.useMemo(() => {
+    const root = toRecord(productData);
+    const nestedProduct = toRecord(root.product);
+    const nestedData = toRecord(root.data);
+    const nestedItem = toRecord(root.item);
+    return nestedProduct.id
+      ? nestedProduct
+      : nestedData.id
+      ? nestedData
+      : nestedItem.id
+      ? nestedItem
+      : root;
+  }, [productData]);
+  const productName =
+    str(
+      inventoryProduct.title ??
+      inventoryProduct.name ??
+      variantProduct.title ??
+      variantProduct.name ??
+      productEntity.title ??
+      productEntity.name,
+    ) || prefillProductName || prefillProductId || form.productId;
+
+  const variantRows = (variantsQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
+
+  const backPath = returnPath || "/dashboard/inventory";
+
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
+    event.preventDefault();
+    const parsed = validateOrToast(schema, form, toast);
+    if (!parsed) return;
+    if (!form.productVariantId) {
+      toast.error("Please select a variant.");
+      return;
+    }
+    if (parsed.reservedQuantity > parsed.stockQuantity) {
+      toast.error("Reserved quantity must be less than or equal to stock quantity.");
+      return;
+    }
+
+    const dto = {
+      productVariantId: form.productVariantId.trim(),
+      stockQuantity: parsed.stockQuantity,
+      reservedQuantity: parsed.reservedQuantity,
+      lowStockThreshold: parsed.lowStockThreshold,
+      isInStock: parsed.isInStock,
+    };
+
+    try {
+      if (isCreate) {
+        await createMutation.mutateAsync(dto);
+      } else if (id) {
+        await updateMutation.mutateAsync({ id, dto });
+      }
+      toast.success(isCreate ? "Inventory created." : "Inventory updated.");
+      navigate(backPath, { replace: true });
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
+  };
+
+  if (!isCreate && getQuery.isLoading) {
     return (
-      <div className="rounded-[20px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-        <h1 className="text-[24px] font-semibold text-(--text)">Inventory item not found</h1>
-        <Button variant="ghost" className="mt-3 px-0" onClick={() => navigate("/dashboard/inventory")}>
-          <ArrowLeft size={15} />
-          Back To Inventory
-        </Button>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#0071e3] border-t-transparent" />
       </div>
     );
   }
 
-  const onAdjustStock = async () => {
-    const parsedDelta = Number(quantityDelta);
-    if (!Number.isFinite(parsedDelta) || parsedDelta === 0 || !reason.trim()) return;
-
-    const confirmed = await confirmAction(`Apply ${parsedDelta > 0 ? "+" : ""}${parsedDelta} stock adjustment to ${inventory.productName} ${inventory.variant}?`);
-    if (!confirmed) return;
-
-    saveInventoryAdjustment(inventory.id, parsedDelta);
-    appendInventoryMovement({
-      id: `MVT-${Date.now()}`,
-      inventoryId: inventory.id,
-      type: "manual_adjustment",
-      quantityDelta: parsedDelta,
-      reason: reason.trim(),
-      createdAt: new Date().toISOString(),
-    });
-
-    toast.success(`Inventory updated for ${inventory.productName} ${inventory.variant}.`);
-    setQuantityDelta("0");
-    setReason("");
-    setRefreshKey((current) => current + 1);
-  };
-
   return (
-    <div className="space-y-6 premium-animate-in">
-      <section className="overflow-hidden rounded-[28px] border border-[#dae3ef] bg-[linear-gradient(180deg,_#f8fbff_0%,_#ebf2fb_100%)] shadow-[0_28px_64px_rgba(30,64,175,0.08)]">
-        <div className="grid gap-6 p-6 sm:p-8 xl:grid-cols-[1fr_1fr]">
+    <ModernFormLayout
+      title={isCreate ? "Create Inventory" : "Edit Inventory"}
+      subtitle={isCreate ? "Set stock levels for a product." : "Update stock quantities and thresholds."}
+      onBack={() => navigate(backPath)}
+    >
+      <form onSubmit={onSubmit} className="space-y-[21px]">
+
+        {/* Product context */}
+        <div className="grid gap-[13px] md:grid-cols-2">
           <div>
-            <Button variant="ghost" className="mb-4 px-0" onClick={() => navigate("/dashboard/inventory")}>
-              <ArrowLeft size={15} />
-              Back To Inventory
-            </Button>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5d6f8d]">Stock Control Record</p>
-            <h1 className="mt-3 text-[34px] font-semibold tracking-[-0.05em] text-[#1f2a3d]">{inventory.productName}</h1>
-            <p className="mt-3 text-sm leading-7 text-[#5f6f88]">{inventory.variant} • {inventory.sku} • {inventory.branch}</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${statusClassMap[inventory.status] ?? statusClassMap["In Stock"]}`}>
-                {inventory.status}
-              </span>
-              <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#39537f] shadow-[0_10px_20px_rgba(59,130,246,0.08)]">
-                {inventory.category}
-              </span>
+            <label className="mb-[6px] block text-[13px] font-medium text-[#1d1d1f]">Product</label>
+            <div className="flex h-11 w-full items-center gap-[10px] rounded-xl border border-[#e5e5e7] bg-[#f5f5f7] px-4">
+              <Package size={14} className="shrink-0 text-[#86868b]" />
+              <span className="text-[14px] text-[#1d1d1f]">{productName || "—"}</span>
             </div>
           </div>
+          <FormField label="Variant" required>
+            <select
+              value={form.productVariantId}
+              onChange={(e) => setForm((p) => ({ ...p, productVariantId: e.target.value }))}
+              className={inputClass}
+              disabled={!form.productId || variantsQuery.isLoading}
+            >
+              <option value="">
+                {!form.productId
+                  ? "No product context"
+                  : variantsQuery.isLoading
+                  ? "Loading variants..."
+                  : "Select variant"}
+              </option>
+              {variantRows.map((variant) => {
+                const variantId = str(variant.id);
+                const variantTitle = str(variant.title);
+                const variantSku = str(variant.sku);
+                return (
+                  <option key={variantId} value={variantId}>
+                    {variantTitle} {variantSku ? `(${variantSku})` : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </FormField>
+        </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[
-              ["On Hand", String(inventory.onHand)],
-              ["Available", String(inventory.available)],
-              ["Reserved", String(inventory.reserved)],
-              ["Incoming", String(inventory.incoming)],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-[22px] border border-white/80 bg-white/82 p-5 shadow-[0_18px_34px_rgba(59,130,246,0.08)]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6980a5]">{label}</p>
-                <p className="mt-3 text-[28px] font-semibold tracking-[-0.05em] text-[#1f2a3d]">{value}</p>
-              </div>
-            ))}
+        {/* Stock levels */}
+        <FormSection title="Stock Levels" description="Enter quantities. Reserved must not exceed stock.">
+          <div className="grid gap-[13px] md:grid-cols-3">
+            <FormField label="Stock Quantity" required>
+              <input
+                type="number"
+                min={0}
+                value={form.stockQuantity}
+                onChange={(e) => setForm((p) => ({ ...p, stockQuantity: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Reserved Quantity">
+              <input
+                type="number"
+                min={0}
+                value={form.reservedQuantity}
+                onChange={(e) => setForm((p) => ({ ...p, reservedQuantity: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Low Stock Threshold">
+              <input
+                type="number"
+                min={0}
+                value={form.lowStockThreshold}
+                onChange={(e) => setForm((p) => ({ ...p, lowStockThreshold: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
           </div>
-        </div>
-      </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.84fr_1.16fr]">
-        <div className="space-y-6">
-          <article className="rounded-[24px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-(--muted)">Variant Context</p>
-            <div className="mt-4 flex items-center gap-4 rounded-[22px] bg-[#f4f7fb] p-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-[18px] bg-white p-3 shadow-[0_14px_24px_rgba(15,23,42,0.06)]">
-                <img src={inventory.coverImage} alt={inventory.productName} className="max-h-14 w-auto object-contain" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold text-(--text)">{inventory.productName}</p>
-                <p className="mt-1 text-sm text-(--muted)">{inventory.variant} • {inventory.category}</p>
-                <p className="mt-1 text-sm text-(--muted)">Branch: {inventory.branch}</p>
-              </div>
+          {/* In Stock toggle */}
+          <label className="mt-[8px] flex cursor-pointer items-center gap-[10px]">
+            <div
+              role="checkbox"
+              aria-checked={form.isInStock}
+              tabIndex={0}
+              onClick={() => setForm((p) => ({ ...p, isInStock: !p.isInStock }))}
+              onKeyDown={(e) => e.key === " " && setForm((p) => ({ ...p, isInStock: !p.isInStock }))}
+              className={`relative h-[22px] w-[40px] shrink-0 rounded-full transition-colors ${
+                form.isInStock ? "bg-[#0071e3]" : "bg-[#d2d2d7]"
+              }`}
+            >
+              <span
+                className={`absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white shadow transition-transform ${
+                  form.isInStock ? "translate-x-[19px]" : "translate-x-[3px]"
+                }`}
+              />
             </div>
-            <Link to={`/dashboard/products/${inventory.productId}`} className="mt-4 inline-flex text-sm font-semibold text-[#0066cc]">
-              View Product
-            </Link>
-          </article>
-
-          <article className="rounded-[24px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-(--muted)">Adjustment Panel</p>
-            <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-(--text)">Manual Stock Update</h2>
-            <div className="mt-5 space-y-4">
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Quantity Delta</label>
-                <Input value={quantityDelta} onChange={(event) => setQuantityDelta(event.target.value)} placeholder="Use positive to add, negative to deduct" />
-              </div>
-              <div>
-                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Reason</label>
-                <textarea
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="Example: cycle count correction, damaged units removed, new stock received"
-                  rows={4}
-                  className={fieldClassName}
-                />
-              </div>
-              <Button className="w-full" onClick={onAdjustStock}>
-                <Boxes size={15} />
-                Apply Adjustment
-              </Button>
-            </div>
-          </article>
-        </div>
-
-        <article className="rounded-[24px] border border-(--line) bg-white p-6 shadow-[var(--card-shadow)]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-(--muted)">Operations Timeline</p>
-              <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-(--text)">Movement History</h2>
-            </div>
-            <span className="rounded-full bg-[#eef4fb] px-3 py-1.5 text-[11px] font-semibold text-[#526b92]">
-              {inventory.movements.length} entries
+            <span className="text-[14px] font-medium text-[#1d1d1f]">
+              {form.isInStock ? "In Stock" : "Out of Stock"}
             </span>
-          </div>
+          </label>
+        </FormSection>
 
-          <div className="mt-5 space-y-4">
-            {inventory.movements.map((movement) => (
-              <div key={movement.id} className="grid gap-4 rounded-[22px] border border-(--line) bg-[linear-gradient(180deg,_#ffffff_0%,_#f7f9fc_100%)] p-4 md:grid-cols-[auto_1fr_auto] md:items-start">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#dfeaf7] text-[#315d8f]">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#315d8f]" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold capitalize text-(--text)">{movement.type.replace(/_/g, " ")}</p>
-                  <p className="mt-1 text-sm leading-7 text-(--muted)">{movement.reason}</p>
-                  <p className="mt-2 text-[12px] text-(--muted)">{new Date(movement.createdAt).toLocaleString()}</p>
-                </div>
-                <div className="text-left md:text-right">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">Delta</p>
-                  <p className="mt-2 text-lg font-semibold text-(--text)">
-                    {movement.quantityDelta > 0 ? "+" : ""}
-                    {movement.quantityDelta}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-    </div>
+        <FormActions
+          submitLabel={saving ? "Saving…" : isCreate ? "Create Inventory" : "Update Inventory"}
+          submitIcon={saving ? <Loader2 size={14} className="animate-spin" /> : undefined}
+          isSubmitting={saving}
+          onCancel={() => navigate(backPath)}
+        />
+      </form>
+    </ModernFormLayout>
   );
 };

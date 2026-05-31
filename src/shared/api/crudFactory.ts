@@ -11,7 +11,7 @@ import { parseApiError } from "@/shared/utils/apiError";
 ------------------------- */
 export type CrudPaths = Readonly<{
   getAll: string;
-  getOne: (id: UUID) => string;
+  getOne?: (id: UUID) => string;
 
   create: string;
   update?: (id: UUID) => string;
@@ -166,6 +166,9 @@ export function makeCrud<TItem, TCreate, TUpdate>(
     },
 
     get: async (id: UUID) => {
+      if (!paths.getOne) {
+        throw new Error(`Get one not implemented for ${key}`);
+      }
       const res = await api.get(paths.getOne(id));
       return normalizeOne(unwrap<unknown>(res));
     },
@@ -253,7 +256,7 @@ export function makeCrud<TItem, TCreate, TUpdate>(
       useQuery({
         queryKey: [key, "get", id],
         queryFn: () => service.get(id as UUID),
-        enabled: enabled && typeof id === "string" && id.length > 0,
+        enabled: Boolean(paths.getOne) && enabled && typeof id === "string" && id.length > 0,
       }),
 
     useDeleted: (q?: ApiListQuery, enabled = true) => {

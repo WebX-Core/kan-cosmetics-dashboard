@@ -1,408 +1,293 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Globe,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { MessageSquare, Trash2, RotateCcw } from "lucide-react";
+import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import { ReplyDialog } from "@/shared/components/support/ReplyDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { engagementApi } from "@/features/engagement";
+import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { useUserStore } from "@/store/UserStore";
+import { parseApiError } from "@/shared/utils/apiError";
 
-type SiteInquiry = {
-  id: string;
-  customerName: string;
-  email: string;
-  inquiryType: string;
-  subject: string;
-  message: string;
-  status: "New" | "In Progress" | "Resolved" | "Closed";
-  priority: "Low" | "Medium" | "High";
-  createdAt: string;
-  updatedAt: string;
+const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
+const toRowsArray = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
+  if (Array.isArray(payload)) {
+    return payload.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
+  }
+  if (typeof payload !== "object" || payload === null) return [];
+  const row = payload as Record<string, unknown>;
+  const directCandidates = [row.data, row.items, row.siteInquiries, row.results];
+  for (const candidate of directCandidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
+    }
+    if (typeof candidate === "object" && candidate !== null) {
+      const nested = candidate as Record<string, unknown>;
+      if (Array.isArray(nested.data)) {
+        return nested.data.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
+      }
+      if (Array.isArray(nested.items)) {
+        return nested.items.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
+      }
+    }
+  }
+  return [];
 };
 
-// Sample data
-const sampleInquiries: SiteInquiry[] = [
-  {
-    id: "1",
-    customerName: "Alex Turner",
-    email: "alex.t@email.com",
-    inquiryType: "General Question",
-    subject: "Website navigation issue",
-    message: "Can't find the checkout page",
-    status: "New",
-    priority: "High",
-    createdAt: "2026-05-08T11:00:00Z",
-    updatedAt: "2026-05-08T11:00:00Z",
-  },
-  {
-    id: "2",
-    customerName: "Jessica Lee",
-    email: "jessica.l@email.com",
-    inquiryType: "Technical Issue",
-    subject: "Login not working",
-    message: "Getting error when trying to log in",
-    status: "In Progress",
-    priority: "High",
-    createdAt: "2026-05-07T15:30:00Z",
-    updatedAt: "2026-05-08T09:45:00Z",
-  },
-  {
-    id: "3",
-    customerName: "Robert Kim",
-    email: "robert.k@email.com",
-    inquiryType: "Feature Request",
-    subject: "Dark mode option",
-    message: "Would love to see a dark mode",
-    status: "Resolved",
-    priority: "Low",
-    createdAt: "2026-05-06T10:20:00Z",
-    updatedAt: "2026-05-07T14:15:00Z",
-  },
-  {
-    id: "4",
-    customerName: "Maria Garcia",
-    email: "maria.g@email.com",
-    inquiryType: "Feedback",
-    subject: "Great website!",
-    message: "Love the new design updates",
-    status: "Closed",
-    priority: "Low",
-    createdAt: "2026-05-05T13:45:00Z",
-    updatedAt: "2026-05-06T10:30:00Z",
-  },
-  {
-    id: "5",
-    customerName: "James Wilson",
-    email: "james.w@email.com",
-    inquiryType: "Bug Report",
-    subject: "Mobile menu not responsive",
-    message: "Menu doesn't work on mobile",
-    status: "New",
-    priority: "Medium",
-    createdAt: "2026-05-08T09:15:00Z",
-    updatedAt: "2026-05-08T09:15:00Z",
-  },
-];
+type Row = Readonly<{ id: string; customerName: string; email: string; subject: string; message: string; status: string }>;
 
-const statusVariantMap: Record<string, any> = {
-  New: "pending",
-  "In Progress": "qualified",
-  Resolved: "completed",
-  Closed: "closedLost",
+const mapRows = (payload: unknown): ReadonlyArray<Row> => {
+  const items = toRowsArray(payload);
+  return items.map((entry) => {
+    const row = entry;
+    return {
+      id: text(row.id ?? row._id, crypto.randomUUID()),
+      customerName: text(row.customerName ?? row.fullname ?? row.fullName ?? row.name, "Unknown"),
+      email: text(row.email, "—"),
+      subject: text(row.subject ?? row.inquiryType, "Site Inquiry"),
+      message: text(row.message ?? row.details, "—"),
+      status: text(row.status ?? (row.isHandled === true ? "Resolved" : "New"), "New"),
+    };
+  });
 };
 
-const priorityColors: Record<string, string> = {
-  Low: "text-slate-600 bg-zinc-100",
-  Medium: "text-amber-600 bg-amber-100",
-  High: "text-red-600 bg-red-100",
-};
+const LIVE_PATH = "/dashboard/support/site-inquiries";
+const DELETED_PATH = "/dashboard/support/site-inquiries/deleted";
 
 export const SiteInquiriesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [search, setSearch] = React.useState("");
-  const [inquiries] = React.useState<SiteInquiry[]>(sampleInquiries);
-  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
-    [],
+  const location = useLocation();
+  const toast = useToast();
+  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
+  const isDeletedView = location.pathname === DELETED_PATH;
+
+  const [activeTab, setActiveTab] = React.useState("all");
+  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
+  const [replyTarget, setReplyTarget] = React.useState<{ id: string; name: string } | null>(null);
+  const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
+  const confirm = useConfirmAction();
+
+  const query = engagementApi.siteInquiries.hooks.useList(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView,
   );
+  const deletedQuery = engagementApi.siteInquiries.hooks.useDeleted(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    isDeletedView,
+  );
+  const softDelete = engagementApi.siteInquiries.hooks.useSoftDelete();
+  const recover = engagementApi.siteInquiries.hooks.useRecover();
+  const destroy = engagementApi.siteInquiries.hooks.useDestroy();
+  const createReply = engagementApi.replies.hooks.useCreate();
 
-  const filteredInquiries = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return inquiries;
+  const sourceData = isDeletedView ? deletedQuery.data : query.data;
+  const rows = React.useMemo(() => mapRows(sourceData), [sourceData]);
+  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
-    return inquiries.filter((inquiry) =>
-      [
-        inquiry.customerName,
-        inquiry.email,
-        inquiry.inquiryType,
-        inquiry.subject,
-        inquiry.status,
-      ].some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [inquiries, search]);
+  const tabFiltered = React.useMemo(() => activeTab === "all" ? rows : rows.filter((r) => r.status.toLowerCase() === activeTab), [rows, activeTab]);
+  const visibleIds = React.useMemo(() => tabFiltered.map((r) => r.id), [tabFiltered]);
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
-  // Calculate stats
-  const stats = React.useMemo(() => {
-    const total = inquiries.length;
-    const newInquiries = inquiries.filter((i) => i.status === "New").length;
-    const inProgress = inquiries.filter(
-      (i) => i.status === "In Progress",
-    ).length;
-    const resolved = inquiries.filter((i) => i.status === "Resolved").length;
+  const toggleOne = (id: string, checked: boolean) =>
+    setSelectedIds((prev) => checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id));
+  const toggleAll = (checked: boolean) =>
+    setSelectedIds((prev) => checked ? Array.from(new Set([...prev, ...visibleIds])) : prev.filter((id) => !visibleIds.includes(id)));
 
-    return { total, new: newInquiries, inProgress, resolved };
-  }, [inquiries]);
+  const stats = React.useMemo(() => ({
+    total,
+    new: rows.filter((r) => r.status.toLowerCase() === "new").length,
+    resolved: rows.filter((r) => r.status.toLowerCase() === "resolved").length,
+  }), [rows, total]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const handleConfirm = async () => {
+    const { action, ids } = confirm;
+    if (!ids.length) return;
+    try {
+      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
+      if (action === "recover") await recover.mutateAsync({ ids });
+      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await query.refetch();
+      await deletedQuery.refetch();
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    } finally {
+      confirm.dismiss();
+    }
   };
 
+  const handleReply = async (message: string) => {
+    if (!replyTarget) return;
+    try {
+      await createReply.mutateAsync({ message, siteInquiryId: replyTarget.id });
+      toast.success("Reply sent.");
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+      throw error;
+    }
+  };
+
+  const isLoading = isDeletedView ? deletedQuery.isLoading : query.isLoading;
+  const tabs = [{ key: "all", label: "All" }, { key: "new", label: "New" }, { key: "resolved", label: "Resolved" }];
+
+  const columns = [
+    {
+      key: "select",
+      label: <input type="checkbox" checked={isAllSelected} onChange={(e) => toggleAll(e.target.checked)} aria-label="Select all" />,
+      render: (r: Row) => (
+        <input type="checkbox" checked={selectedIds.includes(r.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleOne(r.id, e.target.checked)} aria-label={`Select ${r.id}`} />
+      ),
+      width: "44px",
+    },
+    {
+      key: "customer", label: "Customer",
+      render: (r: Row) => (
+        <div>
+          <div className="font-medium text-gray-900">{r.customerName}</div>
+          <div className="text-xs text-gray-400">{r.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: "subject", label: "Subject / Message",
+      render: (r: Row) => (
+        <div>
+          <div className="text-sm text-gray-800">{r.subject}</div>
+          <div className="text-xs text-gray-400 line-clamp-1">{r.message}</div>
+        </div>
+      ),
+    },
+    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    {
+      key: "actions", label: "",
+      render: (r: Row) => (
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          {isDeletedView ? (
+            <>
+              <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                <RotateCcw size={11} /> Recover
+              </button>
+              <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+                <Trash2 size={11} /> Delete Permanently
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={() => setReplyTarget({ id: r.id, name: r.customerName })} className="flex items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
+                Reply
+              </button>
+              <button type="button" onClick={() => confirm.prompt("delete", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+                <Trash2 size={11} /> Delete
+              </button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-[1400px] p-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-zinc-900">
-            Site Inquiries
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Manage website feedback, bug reports, and general site inquiries
-          </p>
+    <PageLayout
+      title={isDeletedView ? "Deleted Site Inquiries" : "Site Inquiries"}
+      subtitle={isDeletedView ? "Deleted site inquiry records." : "Website and general inquiry inbox."}
+      onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
+      actions={
+        !isDeletedView && isSudoAdmin ? (
+          <button type="button" onClick={() => navigate(DELETED_PATH)} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
+            <Trash2 size={13} strokeWidth={2} /> View Deleted
+          </button>
+        ) : undefined
+      }
+      searchValue={state.search}
+      onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
+      searchPlaceholder="Search inquiries..."
+    >
+      {!isDeletedView && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCardV2 label="Total" value={stats.total} icon={MessageSquare} colorVariant="blue" />
+          <StatCardV2 label="New" value={stats.new} icon={MessageSquare} colorVariant="amber" />
+          <StatCardV2 label="Resolved" value={stats.resolved} icon={MessageSquare} colorVariant="emerald" />
         </div>
+      )}
 
-        {/* Stats Cards */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-blue-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Total Inquiries
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.total}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <Globe size={22} className="text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-amber-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  New
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.new}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                <Clock size={22} className="text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-purple-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  In Progress
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.inProgress}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                <AlertCircle size={22} className="text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-emerald-50 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-600">
-                  Resolved
-                </p>
-                <p className="mt-1 text-3xl font-bold text-zinc-900">
-                  {stats.resolved}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <CheckCircle size={22} className="text-emerald-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-zinc-900">
-              {filteredInquiries.length} inquiries
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search inquiries..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-64 rounded-lg border border-zinc-300 bg-white px-4 text-sm text-zinc-900 placeholder-gray-500 outline-none transition-all focus:border-gray-400"
-            />
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-200 bg-white">
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredInquiries.length > 0 &&
-                      selectedIds.length === filteredInquiries.length
-                    }
-                    onChange={(e) =>
-                      setSelectedIds(
-                        e.target.checked
-                          ? filteredInquiries.map((i) => i.id)
-                          : [],
-                      )
-                    }
-                    className="h-4 w-4 rounded border-zinc-300"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Subject
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredInquiries.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-6 py-12 text-center text-sm text-slate-500"
-                  >
-                    No inquiries found.
-                  </td>
-                </tr>
-              ) : null}
-              {filteredInquiries.map((inquiry, idx) => (
-                <tr
-                  key={inquiry.id}
-                  className="transition-colors hover:bg-zinc-50"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(inquiry.id)}
-                      onChange={(e) =>
-                        setSelectedIds((current) =>
-                          e.target.checked
-                            ? [...current, inquiry.id]
-                            : current.filter((id) => id !== inquiry.id),
-                        )
-                      }
-                      className="h-4 w-4 rounded border-zinc-300"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{idx + 1}</td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-zinc-900">
-                        {inquiry.customerName}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {inquiry.email}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-zinc-900">
-                      {inquiry.inquiryType}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-sm text-zinc-900">
-                      {inquiry.subject}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${priorityColors[inquiry.priority]}`}
-                    >
-                      {inquiry.priority}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge
-                      status={inquiry.status}
-                      variant={statusVariantMap[inquiry.status]}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {formatDate(inquiry.createdAt)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() =>
-                          navigate(
-                            `/dashboard/support/site-inquiries/${inquiry.id}`,
-                          )
-                        }
-                        className="text-slate-400 transition-colors hover:text-zinc-600"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => console.log("Delete", inquiry.id)}
-                        className="text-slate-400 transition-colors hover:text-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-zinc-200 bg-white px-6 py-4">
-            <p className="text-sm text-slate-600">
-              Showing 1-{Math.min(filteredInquiries.length, 10)} of{" "}
-              {filteredInquiries.length}
-            </p>
+      <DataTableV2
+        tabs={!isDeletedView ? tabs : undefined}
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab); setState((p) => ({ ...p, page: 1 })); }}
+        columns={columns}
+        data={tabFiltered}
+        actions={
+          selectedIds.length > 0 ? (
             <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm font-medium text-white">
-                1
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-slate-600 hover:bg-zinc-50">
-                2
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-300 text-sm font-medium text-slate-600 hover:bg-zinc-50">
-                →
-              </button>
+              {isDeletedView ? (
+                <>
+                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                    <RotateCcw size={12} /> Recover ({selectedIds.length})
+                  </button>
+                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+                  <Trash2 size={12} /> Delete ({selectedIds.length})
+                </button>
+              )}
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          ) : undefined
+        }
+        searchValue={state.search}
+        emptyMessage={isLoading ? "Loading inquiries..." : "No inquiries found."}
+        showPagination
+        currentPage={state.page}
+        totalPages={totalPages}
+        onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+      />
+
+      <ReplyDialog
+        isOpen={replyTarget !== null}
+        targetName={replyTarget?.name ?? ""}
+        onClose={() => setReplyTarget(null)}
+        onSubmit={handleReply}
+      />
+
+      <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm.action === "recover" ? "Recover inquiry?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete inquiry?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm.action === "recover" ? "This will restore the selected inquiry." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the inquiry to trash."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
+              onClick={() => void handleConfirm()}
+            >
+              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageLayout>
   );
 };
