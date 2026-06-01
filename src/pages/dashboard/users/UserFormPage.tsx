@@ -262,6 +262,23 @@ const ProfileUpload: React.FC<{
   );
 };
 
+// ── helpers ────────────────────────────────────────────────────────────────
+
+const extractPermIdsFromRolePerms = (raw: unknown): string[] => {
+  const items: unknown[] = Array.isArray(raw)
+    ? raw
+    : ((raw as { data?: unknown[] } | undefined)?.data ?? []);
+  return items
+    .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
+    .map((i) => {
+      const p = (typeof i.permission === "object" && i.permission !== null
+        ? i.permission
+        : i) as Record<string, unknown>;
+      return String(p.id ?? i.permissionId ?? "");
+    })
+    .filter(Boolean);
+};
+
 // ── main page ──────────────────────────────────────────────────────────────
 
 type FormState = {
@@ -290,6 +307,7 @@ export const UserFormPage: React.FC = () => {
   const [selectedRoleIds, setSelectedRoleIds] = React.useState<string[]>([]);
   const [selectedPermIds, setSelectedPermIds] = React.useState<Set<string>>(new Set());
   const [showPwd, setShowPwd] = React.useState(false);
+  const [userChangedRole, setUserChangedRole] = React.useState(false);
 
   const userQuery = useAdminUsersGet(id, isEdit);
 
@@ -304,6 +322,27 @@ export const UserFormPage: React.FC = () => {
     queryFn: () => identityApi.userPermissions.listByUser(id!),
     enabled: isEdit && Boolean(id),
   });
+
+  const roleId = selectedRoleIds[0] ?? "";
+
+  const rolePermsQuery = useQuery({
+    queryKey: ["role-permissions", roleId],
+    queryFn: () =>
+      identityApi.rolePermissions.listByRole(
+        roleId as `${string}-${string}-${string}-${string}-${string}`,
+      ),
+    enabled: roleId.length > 0,
+    staleTime: 60_000,
+  });
+
+  // Auto-select all role permissions when role is picked:
+  // - on create: always
+  // - on edit: only when the user explicitly changed the role
+  React.useEffect(() => {
+    if (!roleId || !rolePermsQuery.data) return;
+    if (isEdit && !userChangedRole) return;
+    setSelectedPermIds(new Set(extractPermIdsFromRolePerms(rolePermsQuery.data)));
+  }, [roleId, rolePermsQuery.data, isEdit, userChangedRole]);
 
   React.useEffect(() => {
     if (!isEdit || !userQuery.data) return;
@@ -353,13 +392,6 @@ export const UserFormPage: React.FC = () => {
     mutationFn: ({ userId, payload }: { userId: string; payload: Parameters<typeof adminUsersApi.update>[1] }) =>
       adminUsersApi.update(userId as `${string}-${string}-${string}-${string}-${string}`, payload),
   });
-  const assignRoleMutation = useMutation({
-    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
-      identityApi.userRoles.assign({ userId, roleId }),
-  });
-  const removeRoleMutation = useMutation({
-    mutationFn: (assignId: string) => identityApi.userRoles.remove(assignId),
-  });
 
   const set = <K extends keyof FormState>(k: K) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -378,17 +410,11 @@ export const UserFormPage: React.FC = () => {
     return false;
   };
 
-  const savePermissions = async (userId: string) => {
-    const permissionIds = Array.from(selectedPermIds);
-    await identityApi.userPermissions.clearByUser(userId);
-    if (permissionIds.length > 0) {
-      await identityApi.userPermissions.assign({ userId, permissionIds });
-    }
-  };
-
   const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     if (!validate()) return;
+
+    const permissionIds = Array.from(selectedPermIds);
 
     try {
       if (isEdit && id) {
@@ -404,28 +430,14 @@ export const UserFormPage: React.FC = () => {
             gender: form.gender,
             isVerified: form.isVerified,
             roleIds: selectedRoleIds,
+            permissionIds,
             profile: profileFile,
             removeProfile: removeExistingProfile && !profileFile ? true : undefined,
           },
         });
-
-        const prevRoles = (existingRolesQuery.data as unknown[])
-          ?.filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
-          .map((i) => ({ assignId: String(i.id ?? ""), roleId: String(i.roleId ?? i.role_id ?? "") }))
-          ?? [];
-
-        const toAdd = selectedRoleIds.filter((rid) => !prevRoles.some((p) => p.roleId === rid));
-        const toRemove = prevRoles.filter((p) => !selectedRoleIds.includes(p.roleId));
-
-        await Promise.all([
-          ...toAdd.map((roleId) => assignRoleMutation.mutateAsync({ userId: id, roleId })),
-          ...toRemove.map((p) => removeRoleMutation.mutateAsync(p.assignId)),
-        ]);
-
-        await savePermissions(id);
         toast.success("User updated.");
       } else {
-        const result = await createMutation.mutateAsync({
+        await createMutation.mutateAsync({
           firstname: form.firstname,
           middlename: form.middlename || undefined,
           lastname: form.lastname,
@@ -436,18 +448,9 @@ export const UserFormPage: React.FC = () => {
           gender: form.gender,
           isVerified: form.isVerified,
           roleIds: selectedRoleIds,
+          permissionIds: permissionIds.length > 0 ? permissionIds : undefined,
           profile: profileFile,
         });
-
-        if (selectedRoleIds.length > 0 && result?.id) {
-          await Promise.all(
-            selectedRoleIds.map((roleId) =>
-              assignRoleMutation.mutateAsync({ userId: result.id, roleId }),
-            ),
-          );
-        }
-
-        if (result?.id) await savePermissions(result.id);
         toast.success("User created.");
       }
 
@@ -477,8 +480,6 @@ export const UserFormPage: React.FC = () => {
       </div>
     );
   }
-
-  const currentRoleId = selectedRoleIds[0] ?? "";
 
   return (
     <ModernFormLayout
@@ -578,34 +579,21 @@ export const UserFormPage: React.FC = () => {
           <RolePicker selectedIds={selectedRoleIds} onChange={(ids) => {
             setSelectedRoleIds(ids);
             setSelectedPermIds(new Set());
+            setUserChangedRole(true);
           }} />
         </FormSection>
 
-        {isEdit && <FormSection
+        <FormSection
           title="Permissions"
           description="Fine-tune which actions within the role this user can perform."
           action={
-            currentRoleId ? (
+            roleId ? (
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    const allIds = Array.from(selectedPermIds);
-                    void (async () => {
-                      const raw = await identityApi.rolePermissions.listByRole(
-                        currentRoleId as `${string}-${string}-${string}-${string}-${string}`,
-                      );
-                      const items: unknown[] = Array.isArray(raw) ? raw : ((raw as { data?: unknown[] } | undefined)?.data ?? []);
-                      const ids = items
-                        .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
-                        .map((i) => {
-                          const p = (typeof i.permission === "object" && i.permission !== null ? i.permission : i) as Record<string, unknown>;
-                          return String(p.id ?? i.permissionId ?? "");
-                        })
-                        .filter(Boolean);
-                      setSelectedPermIds(new Set(ids));
-                    })();
-                    void allIds;
+                    if (rolePermsQuery.data)
+                      setSelectedPermIds(new Set(extractPermIdsFromRolePerms(rolePermsQuery.data)));
                   }}
                   className="text-[11px] font-medium text-[#0071e3] transition-colors hover:text-[#0077ed]"
                 >
@@ -625,11 +613,11 @@ export const UserFormPage: React.FC = () => {
           }
         >
           <PermissionMatrix
-            roleId={currentRoleId}
+            roleId={roleId}
             selected={selectedPermIds}
             onChange={setSelectedPermIds}
           />
-        </FormSection>}
+        </FormSection>
 
         <FormActions
           submitLabel={isSaving ? "Saving…" : isEdit ? "Update User" : "Create User"}

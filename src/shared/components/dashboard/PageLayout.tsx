@@ -13,6 +13,7 @@ type Props = {
   searchValue?: string;
   onSearchChange?: (v: string) => void;
   searchPlaceholder?: string;
+  variant?: "default" | "deleted";
 };
 
 export const PageLayout: React.FC<Props> = ({
@@ -27,8 +28,10 @@ export const PageLayout: React.FC<Props> = ({
   searchValue,
   onSearchChange,
   searchPlaceholder = "Search…",
+  variant = "default",
 }) => {
   const [showSpinner, setShowSpinner] = React.useState(false);
+  const isDeleted = variant === "deleted";
 
   React.useEffect(() => {
     if (!onSearchChange) return;
@@ -39,24 +42,36 @@ export const PageLayout: React.FC<Props> = ({
   }, [searchValue, onSearchChange]);
 
   return (
-    <div className="space-y-[21px] p-[34px]">
+    <div className={`space-y-[21px] p-[34px] ${isDeleted ? "bg-rose-50/40 min-h-screen" : ""}`}>
+      {/* Deleted state top strip */}
+      {isDeleted && (
+        <div className="-mx-[34px] -mt-[34px] mb-0 h-[3px] bg-gradient-to-r from-red-400 via-red-500 to-rose-400" />
+      )}
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-[13px]">
         <div>
           {onBack && (
             <button
               onClick={onBack}
-              className="mb-[8px] flex items-center gap-[5px] text-[12px] text-[#6e6e73] transition-colors hover:text-[#1d1d1f]"
+              className={`mb-[8px] flex items-center gap-[5px] text-[12px] transition-colors ${isDeleted ? "text-red-400 hover:text-red-600" : "text-[#6e6e73] hover:text-[#1d1d1f]"}`}
             >
               <ArrowLeft size={12} strokeWidth={2} />
               Back
             </button>
           )}
-          <h1 className="text-[22px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#1d1d1f]">
-            {title}
-          </h1>
+          <div className="flex items-center gap-[10px]">
+            <h1 className="text-[22px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#1d1d1f]">
+              {title}
+            </h1>
+            {isDeleted && (
+              <span className="inline-flex items-center rounded-full bg-red-100 px-[9px] py-[3px] text-[11px] font-semibold text-red-600 ring-1 ring-red-200">
+                Deleted
+              </span>
+            )}
+          </div>
           {subtitle && (
-            <p className="mt-[5px] text-[14px] leading-[22px] text-[#6e6e73]">
+            <p className={`mt-[5px] text-[14px] leading-[22px] ${isDeleted ? "text-red-400/80" : "text-[#6e6e73]"}`}>
               {subtitle}
             </p>
           )}

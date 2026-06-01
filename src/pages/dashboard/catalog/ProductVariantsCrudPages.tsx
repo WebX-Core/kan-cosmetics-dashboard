@@ -395,6 +395,7 @@ export const ProductVariantsPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title="Product Variants"
       subtitle={productFilter ? `Manage variants for ${productName || "selected product"}.` : "Size, color, and other variant options."}
       onBack={productFilter ? () => navigate(returnPath) : undefined}

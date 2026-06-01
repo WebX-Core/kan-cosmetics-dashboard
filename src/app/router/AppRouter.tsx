@@ -10,16 +10,10 @@ import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { SignupPage } from "@/pages/auth/SignupPage";
 import { RoleGuard } from "../guards/RoleGuard";
-import { CsrPage } from "../../pages/dashboard/csr/CsrPage";
 import { NewsroomPage } from "../../pages/dashboard/newsroom/NewsroomPage";
 import { TeamPage } from "../../pages/dashboard/team/TeamPage";
-import { CompanyPage } from "../../pages/dashboard/company/CompanyPage";
 import { TeamCreatePage } from "../../pages/dashboard/team/TeamCreatePage";
 import { TeamEditPage } from "../../pages/dashboard/team/TeamEditPage";
-import { CompanyCreatePage } from "../../pages/dashboard/company/CompanyCreatePage";
-import { CompanyEditPage } from "../../pages/dashboard/company/CompanyEditPage";
-import { CsrCreatePage } from "../../pages/dashboard/csr/CsrCreatePage";
-import { CsrEditPage } from "../../pages/dashboard/csr/CsrEditPage";
 import { NewsroomCreatePage } from "../../pages/dashboard/newsroom/NewsroomCreatePage";
 import { NewsroomEditPage } from "../../pages/dashboard/newsroom/NewsroomEditPage";
 import { UserFormPage } from "../../pages/dashboard/users/UserFormPage";
@@ -58,6 +52,11 @@ import { ContactPage } from "../../pages/dashboard/contact/ContactPage";
 import { ContactCreatePage } from "../../pages/dashboard/contact/ContactCreatePage";
 import { ProductInquiriesPage } from "../../pages/dashboard/inquiries/ProductInquiriesPage";
 import { SiteInquiriesPage } from "../../pages/dashboard/inquiries/SiteInquiriesPage";
+import {
+  ContactConversationViewPage,
+  ProductInquiryViewPage,
+  SiteInquiryViewPage,
+} from "../../pages/dashboard/inquiries/InquiryViewPages";
 import { FaqFormPage, FaqsPage } from "../../pages/dashboard/faqs";
 import { NewsletterPage } from "@/pages/dashboard/marketing/newsletter/NewsletterPage";
 import {
@@ -68,9 +67,6 @@ import {
 import { ActivityLogsPage } from "../../pages/dashboard/reports/ActivityLogsPage";
 import { AuditLogsPage } from "../../pages/dashboard/reports/AuditLogsPage";
 import {
-  CompanyViewPage,
-  ContactViewPage,
-  CsrViewPage,
   NewsroomViewPage,
   TeamViewPage,
   UsersViewPage,
@@ -81,11 +77,11 @@ import {
   PurchaseHistoryPage,
   RolePermissionsPage,
   RolesPage,
-  SeoMetadataPage,
   UserMetadataPage,
   UserPermissionsPage,
   UserRolesPage,
 } from "@/pages/dashboard/system/SystemModulesPage";
+import { SeoListPage, SeoFormPage } from "@/pages/dashboard/seo/SeoPage";
 import { AdvertisementsPage } from "@/pages/dashboard/marketing/AdvertisementsPage";
 import { AdvertisementFormPage } from "@/pages/dashboard/marketing/AdvertisementFormPage";
 import { PermissionsPage } from "@/pages/dashboard/permissions/PermissionsPage";
@@ -143,6 +139,7 @@ import { ProductsListPage } from "@/pages/dashboard/products/ProductsListPage";
 import { ProductBulkPage } from "@/pages/dashboard/products/ProductBulkPage";
 import { ProductFaqsPage } from "@/pages/dashboard/products/ProductFaqsPage";
 import { ProductFaqFormPage } from "@/pages/dashboard/products/ProductFaqFormPage";
+import { ProductReviewsPage } from "@/pages/dashboard/products/ProductReviewsPage";
 import { EmailCampaignsPage } from "@/pages/dashboard/marketing/email/EmailCampaignsPage";
 import { EmailRecipientsPage } from "@/pages/dashboard/marketing/email/EmailRecipientsPage";
 import { EmailQueuePage } from "@/pages/dashboard/marketing/email/EmailQueuePage";
@@ -209,6 +206,10 @@ export const AppRouter: React.FC = () => {
           <Route
             path="/dashboard/products/:id"
             element={<ProductDetailsPage />}
+          />
+          <Route
+            path="/dashboard/products/:id/reviews"
+            element={<ProductReviewsPage />}
           />
           <Route
             path="/dashboard/products/:id/faqs"
@@ -377,12 +378,12 @@ export const AppRouter: React.FC = () => {
           />
           <Route
             path="/dashboard/support/product-inquiries/:id"
-            element={<ProductInquiriesPage />}
+            element={<ProductInquiryViewPage />}
           />
           <Route path="/dashboard/support/contacts" element={<ContactPage />} />
           <Route
             path="/dashboard/support/contacts/:id"
-            element={<ContactViewPage />}
+            element={<ContactConversationViewPage />}
           />
           <Route
             path="/dashboard/support/site-inquiries"
@@ -394,7 +395,7 @@ export const AppRouter: React.FC = () => {
           />
           <Route
             path="/dashboard/support/site-inquiries/:id"
-            element={<SiteInquiriesPage />}
+            element={<SiteInquiryViewPage />}
           />
           <Route path="/dashboard/support/replies" element={<RepliesPage />} />
           <Route path="/dashboard/support/replies/create" element={<RepliesCreatePage />} />
@@ -409,14 +410,9 @@ export const AppRouter: React.FC = () => {
             element={<BlogPostEditPage />}
           />
           <Route path="/dashboard/blog-posts/:id" element={<BlogPostsPage />} />
-          <Route
-            path="/dashboard/seo-metadata"
-            element={<SeoMetadataPage />}
-          />
-          <Route
-            path="/dashboard/seo-metadata/:id"
-            element={<SeoMetadataPage />}
-          />
+          <Route path="/dashboard/seo-metadata" element={<SeoListPage />} />
+          <Route path="/dashboard/seo-metadata/create" element={<SeoFormPage />} />
+          <Route path="/dashboard/seo-metadata/:id/edit" element={<SeoFormPage />} />
           <Route path="/dashboard/newsletter" element={<NewsletterPage />} />
           <Route path="/dashboard/newsletter/:id" element={<NewsletterPage />} />
           <Route
@@ -436,7 +432,7 @@ export const AppRouter: React.FC = () => {
             path="/dashboard/contact/create"
             element={<ContactCreatePage />}
           />
-          <Route path="/dashboard/contact/:id" element={<ContactViewPage />} />
+          <Route path="/dashboard/contact/:id" element={<ContactConversationViewPage />} />
           <Route path="/dashboard/coupon-usage" element={<CouponUsagePage />} />
           <Route path="/dashboard/purchase-history" element={<PurchaseHistoryPage />} />
           <Route path="/dashboard/rbac/roles" element={<RolesPage />} />
@@ -485,32 +481,6 @@ export const AppRouter: React.FC = () => {
           </Route>
           <Route path="/dashboard/team/:slug" element={<TeamViewPage />} />
 
-          <Route path="/dashboard/company" element={<CompanyPage />} />
-          <Route element={<PermissionGuard permission="entity.create" />}>
-            <Route
-              path="/dashboard/company/create"
-              element={<CompanyCreatePage />}
-            />
-          </Route>
-          <Route element={<PermissionGuard permission="entity.update" />}>
-            <Route
-              path="/dashboard/company/:slug/edit"
-              element={<CompanyEditPage />}
-            />
-          </Route>
-          <Route
-            path="/dashboard/company/:slug"
-            element={<CompanyViewPage />}
-          />
-
-          <Route path="/dashboard/csr" element={<CsrPage />} />
-          <Route element={<PermissionGuard permission="entity.create" />}>
-            <Route path="/dashboard/csr/create" element={<CsrCreatePage />} />
-          </Route>
-          <Route element={<PermissionGuard permission="entity.update" />}>
-            <Route path="/dashboard/csr/:slug/edit" element={<CsrEditPage />} />
-          </Route>
-          <Route path="/dashboard/csr/:slug" element={<CsrViewPage />} />
 
           <Route path="/dashboard/newsroom" element={<NewsroomPage />} />
           <Route element={<PermissionGuard permission="entity.create" />}>

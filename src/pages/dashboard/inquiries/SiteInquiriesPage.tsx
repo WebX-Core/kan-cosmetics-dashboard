@@ -5,7 +5,6 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
-import { ReplyDialog } from "@/shared/components/support/ReplyDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +48,12 @@ const toRowsArray = (payload: unknown): ReadonlyArray<Record<string, unknown>> =
 };
 
 type Row = Readonly<{ id: string; customerName: string; email: string; subject: string; message: string; status: string }>;
+const resolveStatus = (row: Record<string, unknown>): string => {
+  if (row.isHandled === true) return "Resolved";
+  const rawStatus = text(row.status, "New").toLowerCase();
+  if (rawStatus.includes("resolve") || rawStatus.includes("handled")) return "Resolved";
+  return "New";
+};
 
 const mapRows = (payload: unknown): ReadonlyArray<Row> => {
   const items = toRowsArray(payload);
@@ -60,7 +65,7 @@ const mapRows = (payload: unknown): ReadonlyArray<Row> => {
       email: text(row.email, "—"),
       subject: text(row.subject ?? row.inquiryType, "Site Inquiry"),
       message: text(row.message ?? row.details, "—"),
-      status: text(row.status ?? (row.isHandled === true ? "Resolved" : "New"), "New"),
+      status: resolveStatus(row),
     };
   });
 };
@@ -77,7 +82,6 @@ export const SiteInquiriesPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const [replyTarget, setReplyTarget] = React.useState<{ id: string; name: string } | null>(null);
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const confirm = useConfirmAction();
 
@@ -92,7 +96,6 @@ export const SiteInquiriesPage: React.FC = () => {
   const softDelete = engagementApi.siteInquiries.hooks.useSoftDelete();
   const recover = engagementApi.siteInquiries.hooks.useRecover();
   const destroy = engagementApi.siteInquiries.hooks.useDestroy();
-  const createReply = engagementApi.replies.hooks.useCreate();
 
   const sourceData = isDeletedView ? deletedQuery.data : query.data;
   const rows = React.useMemo(() => mapRows(sourceData), [sourceData]);
@@ -129,17 +132,6 @@ export const SiteInquiriesPage: React.FC = () => {
       toast.error(parseApiError(error).message);
     } finally {
       confirm.dismiss();
-    }
-  };
-
-  const handleReply = async (message: string) => {
-    if (!replyTarget) return;
-    try {
-      await createReply.mutateAsync({ message, siteInquiryId: replyTarget.id });
-      toast.success("Reply sent.");
-    } catch (error) {
-      toast.error(parseApiError(error).message);
-      throw error;
     }
   };
 
@@ -189,8 +181,8 @@ export const SiteInquiriesPage: React.FC = () => {
             </>
           ) : (
             <>
-              <button type="button" onClick={() => setReplyTarget({ id: r.id, name: r.customerName })} className="flex items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
-                Reply
+              <button type="button" onClick={() => navigate(`/dashboard/support/site-inquiries/${r.id}`)} className="flex items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
+                View
               </button>
               <button type="button" onClick={() => confirm.prompt("delete", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
                 <Trash2 size={11} /> Delete
@@ -204,6 +196,7 @@ export const SiteInquiriesPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Site Inquiries" : "Site Inquiries"}
       subtitle={isDeletedView ? "Deleted site inquiry records." : "Website and general inquiry inbox."}
       onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
@@ -231,7 +224,7 @@ export const SiteInquiriesPage: React.FC = () => {
         activeTab={activeTab}
         onTabChange={(tab) => { setActiveTab(tab); setState((p) => ({ ...p, page: 1 })); }}
         columns={columns}
-        data={tabFiltered}
+        data={[...tabFiltered]}
         actions={
           selectedIds.length > 0 ? (
             <div className="flex items-center gap-2">
@@ -254,17 +247,11 @@ export const SiteInquiriesPage: React.FC = () => {
         }
         searchValue={state.search}
         emptyMessage={isLoading ? "Loading inquiries..." : "No inquiries found."}
+        onRowClick={(row) => navigate(`/dashboard/support/site-inquiries/${String(row.id)}`)}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
-      />
-
-      <ReplyDialog
-        isOpen={replyTarget !== null}
-        targetName={replyTarget?.name ?? ""}
-        onClose={() => setReplyTarget(null)}
-        onSubmit={handleReply}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

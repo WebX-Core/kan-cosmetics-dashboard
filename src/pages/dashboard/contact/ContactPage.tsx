@@ -217,6 +217,7 @@ export const ContactPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Messages" : "Contact Messages"}
       subtitle={isDeletedView ? "Deleted contact form submissions." : "Customer inquiries and contact form submissions."}
       onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
@@ -241,7 +242,8 @@ export const ContactPage: React.FC = () => {
 
       <DataTableV2
         columns={columns}
-        data={contacts}
+        data={[...contacts]}
+        onRowClick={(row) => navigate(`/dashboard/contact/${String(row.id)}`)}
         actions={
           selectedIds.length > 0 ? (
             <div className="flex items-center gap-2">

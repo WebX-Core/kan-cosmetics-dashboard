@@ -1,12 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, CheckCircle, Clock, Layers } from "lucide-react";
+import { FileText, CheckCircle, Clock, Layers, MoreHorizontal, Pencil, Globe, Trash2 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { Button } from "@/shared/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import { confirmAction } from "@/shared/utils/confirm";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 const num = (value: unknown): number => (typeof value === "number" ? value : 0);
@@ -14,6 +19,7 @@ const num = (value: unknown): number => (typeof value === "number" ? value : 0);
 type Row = Readonly<{
   id: string;
   title: string;
+  slug: string;
   author: string;
   category: string;
   status: "Published" | "Draft" | "Scheduled";
@@ -34,6 +40,7 @@ const rowsFrom = (payload: unknown): ReadonlyArray<Row> => {
     return {
       id: text(item.id, crypto.randomUUID()),
       title: text(item.title, "Untitled"),
+      slug: text(item.slug, ""),
       author: text(item.author ?? item.createdBy, "—"),
       category: text(item.category, "General"),
       status: toStatus(text(item.status, "Draft")),
@@ -44,6 +51,7 @@ const rowsFrom = (payload: unknown): ReadonlyArray<Row> => {
 
 export const BlogPostsPage: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
 
@@ -52,6 +60,7 @@ export const BlogPostsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
+  const softDelete = marketingApi.blogs.hooks.useSoftDelete();
 
   const rows = React.useMemo(() => rowsFrom(query.data), [query.data]);
   const totalPages = query.data?.totalPages ?? 1;
@@ -90,6 +99,45 @@ export const BlogPostsPage: React.FC = () => {
     )},
     { key: "views", label: "Views", render: (r: Row) => <span className="text-gray-600">{r.views}</span> },
     { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (r: Row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full">
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/blog-posts/${r.id}`); }}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=BLOG&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`); }}>
+              <Globe className="mr-2 h-4 w-4" /> SEO
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[#b42318] focus:text-[#b42318]"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const ok = await confirmAction("Delete this blog post?");
+                if (!ok) return;
+                try {
+                  await softDelete.mutateAsync(r.id);
+                  toast.success("Blog post deleted.");
+                } catch (err) {
+                  toast.error(parseApiError(err).message);
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
   ];
 
   return (
@@ -115,7 +163,6 @@ export const BlogPostsPage: React.FC = () => {
         columns={columns}
         data={tabFiltered}
         searchValue={state.search}
-        onEdit={(r) => navigate(`/dashboard/blog-posts/${r.id}`)}
         emptyMessage={query.isLoading ? "Loading posts..." : "No blog posts found."}
         showPagination={true}
         currentPage={state.page}

@@ -353,6 +353,7 @@ export const SubcategoryDetailPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={subcategoryName}
       subtitle={isDeletedView ? "View deleted products in this subcategory." : (subcategoryDescription || "Manage products in this subcategory.")}
       onBack={() => navigate(isDeletedView ? `/dashboard/categories/${categoryId}/subcategories/${subcategoryId}` : `/dashboard/categories/${categoryId}`)}

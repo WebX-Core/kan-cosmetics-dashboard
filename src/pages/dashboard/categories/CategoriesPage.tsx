@@ -1,15 +1,15 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FolderTree, Tag, Layers, RotateCcw, Trash2 } from "lucide-react";
+import { FolderTree, Tag, Layers, RotateCcw, Trash2, MoreHorizontal, Pencil, Globe } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { StatusToggle } from "@/shared/components/dashboard/StatusToggle";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { catalogApi, useCategoryList } from "@/features/catalog";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useUserStore } from "@/store/UserStore";
-import { parseApiError } from "@/shared/utils/apiError";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,11 +117,8 @@ export const CategoriesPage: React.FC = () => {
   const softDeleteCategory = catalogApi.categories.hooks.useSoftDelete();
   const recoverCategory = catalogApi.categories.hooks.useRecover();
   const destroyCategory = catalogApi.categories.hooks.useDestroy();
-  const updateCategory = catalogApi.categories.hooks.useUpdate();
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList({ page: 1, limit: 1000 }, true);
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
-  const [statusOverrides, setStatusOverrides] = React.useState<Readonly<Record<string, CategoryRow["status"]>>>({});
-  const [pendingStatusIds, setPendingStatusIds] = React.useState<ReadonlySet<string>>(new Set());
 
   const subcategoryCountMap = React.useMemo(() => {
     const map = new Map<string, number>();
@@ -147,12 +144,8 @@ export const CategoriesPage: React.FC = () => {
 
   const sourceRows = isDeletedView ? deletedCategoriesQuery.data?.data : categoriesQuery.data?.data;
   const rows = React.useMemo(
-    () =>
-      (sourceRows ?? []).map((row) => {
-        const next = toCategoryRow(row, subcategoryCountMap, productCountMap);
-        return { ...next, status: statusOverrides[next.id] ?? next.status };
-      }),
-    [sourceRows, subcategoryCountMap, productCountMap, statusOverrides]
+    () => (sourceRows ?? []).map((row) => toCategoryRow(row, subcategoryCountMap, productCountMap)),
+    [sourceRows, subcategoryCountMap, productCountMap]
   );
   const totalPages = (isDeletedView ? deletedCategoriesQuery.data?.totalPages : categoriesQuery.data?.totalPages) ?? 1;
   const totalCategories = (isDeletedView ? deletedCategoriesQuery.data?.total : categoriesQuery.data?.total) ?? rows.length;
@@ -228,25 +221,6 @@ export const CategoriesPage: React.FC = () => {
     setPendingIds([]);
   };
 
-  const handleStatusToggle = async (row: CategoryRow, nextActive: boolean) => {
-    const previousStatus = row.status;
-    const nextStatus: CategoryRow["status"] = nextActive ? "Active" : "Inactive";
-    setStatusOverrides((prev) => ({ ...prev, [row.id]: nextStatus }));
-    setPendingStatusIds((prev) => new Set(prev).add(row.id));
-    try {
-      await updateCategory.mutateAsync({ id: row.id, dto: { isDeleted: !nextActive } });
-    } catch (error) {
-      setStatusOverrides((prev) => ({ ...prev, [row.id]: previousStatus }));
-      toast.error(parseApiError(error).message);
-    } finally {
-      setPendingStatusIds((prev) => {
-        const next = new Set(prev);
-        next.delete(row.id);
-        return next;
-      });
-    }
-  };
-
   const columns = [
     {
       key: "select",
@@ -293,58 +267,64 @@ export const CategoriesPage: React.FC = () => {
     { key: "products", label: "Products", render: (row: CategoryRow) => (
       <span className="font-medium text-gray-900">{row.products}</span>
     )},
-    {
-      key: "status",
-      label: "Status",
-      render: (row: CategoryRow) => (
-        <div className="inline-flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-          <StatusToggle
-            checked={row.status === "Active"}
-            disabled={isDeletedView || pendingStatusIds.has(row.id)}
-            onClick={(event) => event.stopPropagation()}
-            onChange={(next) => handleStatusToggle(row, next)}
-          />
-          <span className={`text-xs font-medium ${row.status === "Active" ? "text-emerald-700" : "text-zinc-600"}`}>
-            {row.status}
-          </span>
-        </div>
-      ),
-    },
     { key: "createdAt", label: "Created", render: (row: CategoryRow) => (
       <span className="text-gray-500 text-xs">{formatDateTime(row.createdAt)}</span>
     )},
-    ...(isDeletedView
-      ? [
-          {
-            key: "rowActions",
-            label: "Actions",
-            render: (row: CategoryRow) => (
-              <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("recover", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={11} />
-                  Recover
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("destroy", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                >
-                  <Trash2 size={11} />
-                  Delete Permanently
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : []),
+    {
+      key: "rowActions",
+      label: "Actions",
+      render: (row: CategoryRow) => (
+        isDeletedView ? (
+          <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => openConfirm("recover", [row.id])}
+              className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+            >
+              <RotateCcw size={11} />
+              Recover
+            </button>
+            <button
+              type="button"
+              onClick={() => openConfirm("destroy", [row.id])}
+              className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+            >
+              <Trash2 size={11} />
+              Delete Permanently
+            </button>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full">
+                <MoreHorizontal size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/categories/${row.id}/edit`); }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=CATEGORY&entityId=${encodeURIComponent(row.id)}&slug=${encodeURIComponent(row.slug)}`); }}>
+                <Globe className="mr-2 h-4 w-4" /> SEO
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-[#b42318] focus:text-[#b42318]"
+                onClick={(e) => { e.stopPropagation(); openConfirm("delete", [row.id]); }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      ),
+    },
   ];
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Categories" : "Categories"}
       subtitle={
         isDeletedView
@@ -418,8 +398,6 @@ export const CategoriesPage: React.FC = () => {
         }
         searchValue={state.search}
         onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/categories/${row.id}`) : undefined}
-        onEdit={!isDeletedView ? (row) => navigate(`/dashboard/categories/${row.id}/edit`) : undefined}
-        onDelete={!isDeletedView ? (row) => openConfirm("delete", [row.id]) : undefined}
         emptyMessage={
           (isDeletedView ? deletedCategoriesQuery.isLoading : categoriesQuery.isLoading)
             ? "Loading categories..."

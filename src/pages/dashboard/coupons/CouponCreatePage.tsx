@@ -98,7 +98,6 @@ export const CouponCreatePage: React.FC = () => {
       isActive: parsed.isActive,
       appliesToAllUsers: parsed.appliesToAllUsers,
       firstSignupOnly: parsed.firstSignupOnly,
-      sortOrder: parsed.sortOrder,
     };
 
     try {

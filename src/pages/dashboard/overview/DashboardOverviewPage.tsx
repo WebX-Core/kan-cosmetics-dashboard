@@ -11,6 +11,7 @@ import {
   RotateCcw,
   BarChart2,
   Activity,
+  ShoppingCart,
 } from "lucide-react";
 import { useOrders, usePaymentsAggregate } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
@@ -775,10 +776,10 @@ export const DashboardOverviewPage: React.FC = () => {
       >
 
         {/* Total Orders */}
-        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-blue-500 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-              <RotateCcw size={15} className="text-slate-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
+              <RotateCcw size={15} className="text-blue-600" />
             </div>
             <span className="text-xs font-medium text-(--text-tertiary)">
               Total Orders
@@ -795,10 +796,10 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
 
         {/* Total Sales */}
-        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-violet-500 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-              <Activity size={15} className="text-slate-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-50">
+              <ShoppingCart size={15} className="text-violet-600" />
             </div>
             <span className="text-xs font-medium text-(--text-tertiary)">
               Total Sales
@@ -815,10 +816,10 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
 
         {/* Customer Growth */}
-        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-amber-500 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-              <BarChart2 size={15} className="text-slate-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50">
+              <BarChart2 size={15} className="text-amber-600" />
             </div>
             <span className="text-xs font-medium text-(--text-tertiary)">
               Customer Growth
@@ -839,9 +840,9 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
 
         {/* Total Revenue */}
-        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-emerald-500 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50">
               <CoinIcon />
             </div>
             <span className="text-xs font-medium text-(--text-tertiary)">

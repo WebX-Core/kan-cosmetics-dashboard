@@ -28,5 +28,6 @@ export const engagementApi = {
   seo: {
     byPage: async (routeKey: string) => unwrap<unknown>(await api.get("/seo/page", { params: { routeKey } })),
     byEntity: async (entityType: string, entityId: UUID) => unwrap<unknown>(await api.get(`/seo/${entityType}/${entityId}`)),
+    ...makeStandardCrud<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>>({ key: "seo", basePath: "/seo" }),
   },
 };

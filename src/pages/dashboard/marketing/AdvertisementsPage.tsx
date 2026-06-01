@@ -221,6 +221,7 @@ export const AdvertisementsPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Advertisements" : "Advertisements"}
       subtitle={isDeletedView ? "View soft-deleted ads." : "Manage promotional banners and targeted advertisements."}
       onBack={isDeletedView ? () => navigate("/dashboard/advertisements") : undefined}

@@ -175,6 +175,7 @@ export const EmailRecipientsPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Recipients" : "Email Recipients"}
       subtitle={isDeletedView ? "View soft-deleted recipients." : "Recipients linked to email campaigns."}
       onBack={isDeletedView ? () => navigate("/dashboard/marketing/email-recipients") : undefined}

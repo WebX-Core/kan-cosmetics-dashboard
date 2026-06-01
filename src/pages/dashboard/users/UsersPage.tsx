@@ -1,11 +1,20 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Users, UserCheck, Shield, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, UserCheck, Shield, ChevronLeft, ChevronRight, ShieldCheck, Key, Trash2, MoreHorizontal, Pencil } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { confirmAction } from "@/shared/utils/confirm";
 import { formatDateTime } from "@/shared/utils/date";
@@ -68,6 +77,7 @@ export const UsersPage: React.FC = () => {
   const toast = useToast();
   const viewerRole = useUserStore((state) => (state.user?.role ?? "").toUpperCase());
   const [activeTab, setActiveTab] = React.useState<"all" | "system" | "customers">("all");
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 15, search: "" });
 
   const listQuery = useAdminUsersList({
@@ -203,42 +213,48 @@ export const UsersPage: React.FC = () => {
     {
       key: "actions",
       label: "Actions",
-      render: (u: CombinedRow) =>
-        u.rowType === "customer" ? (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              void handleBanCustomer(u);
-            }}
-            className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-          >
-            Ban Customer
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
+      render: (u: CombinedRow) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
               type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/dashboard/users/${u.id}/edit`);
-              }}
-              className="rounded-full border border-[#d2d2d7] px-3 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={(e) => e.stopPropagation()}
             >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                void handleDelete(u.id);
-              }}
-              className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-            >
-              Delete
-            </button>
-          </div>
-        ),
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            {u.rowType === "admin" && (
+              <DropdownMenuItem
+                className="text-[#1d1d1f] focus:text-[#1d1d1f]"
+                onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/users/${u.id}/edit`); }}
+              >
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            {u.rowType === "customer" ? (
+              <DropdownMenuItem
+                className="text-[#b42318] focus:text-[#b42318]"
+                onClick={(e) => { e.stopPropagation(); void handleBanCustomer(u); }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Ban Customer
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-[#b42318] focus:text-[#b42318]"
+                onClick={(e) => { e.stopPropagation(); void handleDelete(u.id); }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 
@@ -248,6 +264,26 @@ export const UsersPage: React.FC = () => {
       subtitle="Manage admin panel users and roles."
       onNew={() => navigate("/dashboard/users/create")}
       newButtonLabel="New User"
+      actions={
+        <>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/rbac/roles")}
+            className="flex items-center gap-1.5 rounded-full border border-[#d2d2d7] bg-white px-3.5 py-1.5 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <Key size={13} />
+            Roles
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/permissions/users")}
+            className="flex items-center gap-1.5 rounded-full border border-[#d2d2d7] bg-white px-3.5 py-1.5 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <ShieldCheck size={13} />
+            Permissions
+          </button>
+        </>
+      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search email, name..."
@@ -267,6 +303,23 @@ export const UsersPage: React.FC = () => {
         searchValue={state.search}
         emptyMessage={listQuery.isLoading || customersQuery.isLoading ? "Loading users..." : "No users found."}
         showPagination={false}
+        rowId={(row) => String((row as unknown as CombinedRow).id ?? "")}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        bulkActions={(ids, clear) => (
+          <button
+            type="button"
+            onClick={async () => {
+              if (!window.confirm(`Delete ${ids.size} user(s)?`)) return;
+              await Promise.all([...ids].map((id) => del.mutateAsync(id)));
+              clear();
+              toast.success(`${ids.size} user(s) deleted.`);
+            }}
+            className="flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-600 transition-colors hover:bg-red-100"
+          >
+            <Trash2 size={12} /> Delete selected
+          </button>
+        )}
       />
 
       {totalPages > 1 && (

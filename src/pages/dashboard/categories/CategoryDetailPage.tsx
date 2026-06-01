@@ -1,6 +1,8 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, FolderOpen, Layers, Plus, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Edit2, FolderOpen, Globe, Layers, MoreHorizontal, Pencil, Plus, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { catalogApi } from "@/features/catalog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -296,38 +298,61 @@ export const CategoryDetailPage: React.FC = () => {
       label: "Created",
       render: (row: SubcategoryRow) => <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>,
     },
-    ...(isDeletedView
-      ? [
-          {
-            key: "rowActions",
-            label: "Actions",
-            render: (row: SubcategoryRow) => (
-              <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("recover", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={11} />
-                  Recover
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("destroy", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                >
-                  <Trash2 size={11} />
-                  Delete Permanently
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : []),
+    {
+      key: "rowActions",
+      label: "Actions",
+      render: (row: SubcategoryRow) => (
+        isDeletedView ? (
+          <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => openConfirm("recover", [row.id])}
+              className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+            >
+              <RotateCcw size={11} />
+              Recover
+            </button>
+            <button
+              type="button"
+              onClick={() => openConfirm("destroy", [row.id])}
+              className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+            >
+              <Trash2 size={11} />
+              Delete Permanently
+            </button>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full">
+                <MoreHorizontal size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/categories/${id}/subcategories/${row.id}/edit`); }}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=SUBCATEGORY&entityId=${encodeURIComponent(row.id)}&slug=${encodeURIComponent(row.slug)}`); }}>
+                <Globe className="mr-2 h-4 w-4" /> SEO
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-[#b42318] focus:text-[#b42318]"
+                onClick={(e) => { e.stopPropagation(); openConfirm("delete", [row.id]); }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      ),
+    },
   ];
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={categoryName}
       subtitle={isDeletedView ? "View deleted subcategories in this category." : (categoryDescription || "Manage subcategories in this category.")}
       onBack={() => navigate(isDeletedView ? `/dashboard/categories/${id}` : "/dashboard/categories")}
@@ -416,8 +441,6 @@ export const CategoryDetailPage: React.FC = () => {
         ) : undefined}
         searchValue={state.search}
         onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/categories/${id}/subcategories/${row.id}`) : undefined}
-        onEdit={!isDeletedView ? (row) => navigate(`/dashboard/categories/${id}/subcategories/${row.id}/edit`) : undefined}
-        onDelete={!isDeletedView ? (row) => openConfirm("delete", [row.id]) : undefined}
         emptyMessage={
           (isDeletedView ? deletedSubcategoriesQuery.isLoading : subcategoriesQuery.isLoading)
             ? "Loading subcategories..."

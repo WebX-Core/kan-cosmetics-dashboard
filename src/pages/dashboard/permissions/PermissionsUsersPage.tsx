@@ -1,6 +1,15 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, Trash2 } from "lucide-react";
+import { ShieldCheck, Trash2, MoreHorizontal, Pencil } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { useAdminUsersList } from "@/features/adminUsers";
 import type { User } from "@/features/adminUsers/adminUsers.types";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
@@ -40,6 +49,46 @@ export const PermissionsUsersPage: React.FC = () => {
     { key: "phone", label: "Phone", render: (u: User) => <span className="text-gray-600">{u.phone ?? "—"}</span> },
     { key: "role", label: "Role", render: (u: User) => <span className="font-medium text-gray-700">{fmtRole(u.role)}</span> },
     { key: "verified", label: "Verified", render: (u: User) => <StatusBadge status={u.isVerified ? "Verified" : "Unverified"} /> },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (u: User) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              className="text-[#1d1d1f] focus:text-[#1d1d1f]"
+              onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/permissions/users/${u.id}`); }}
+            >
+              <Pencil className="mr-2 h-4 w-4" /> Edit Permissions
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[#b42318] focus:text-[#b42318]"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm("Remove all permissions for this user?")) {
+                  // handled via bulk or individual clear
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Remove Permissions
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
   ];
 
   return (
@@ -63,7 +112,6 @@ export const PermissionsUsersPage: React.FC = () => {
         totalPages={totalPages}
         onPageChange={(page) => setState((p) => ({ ...p, page }))}
         onRowClick={(row) => navigate(`/dashboard/permissions/users/${(row as unknown as User).id}`)}
-        onEdit={(row) => navigate(`/dashboard/permissions/users/${(row as unknown as User).id}`)}
         rowId={(row) => String((row as unknown as User).id ?? "")}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}

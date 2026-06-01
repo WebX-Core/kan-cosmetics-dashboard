@@ -13,68 +13,74 @@ export async function confirmAction(message: string): Promise<boolean> {
     overlay.style.zIndex = "2000";
 
     const modal = document.createElement("div");
-    modal.style.width = "min(96vw, 1040px)";
+    modal.style.width = "min(90vw, 300px)";
     modal.style.border = "1px solid #d2d2d7";
-    modal.style.borderRadius = "8px";
+    modal.style.borderRadius = "12px";
     modal.style.background = "#fff";
-    modal.style.boxShadow = "0 10px 30px rgba(0,0,0,0.22)";
-    modal.style.padding = "44px";
+    modal.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)";
+    modal.style.padding = "16px";
     modal.style.display = "grid";
-    modal.style.gap = "32px";
+    modal.style.gap = "4px";
 
     const title = document.createElement("div");
     title.textContent = isDelete ? "Delete item?" : "Please confirm";
     title.style.fontWeight = "600";
-    title.style.fontSize = "42px";
-    title.style.lineHeight = "1.02";
-    title.style.letterSpacing = "-0.02em";
+    title.style.fontSize = "13px";
+    title.style.lineHeight = "1.3";
+    title.style.letterSpacing = "-0.01em";
     title.style.color = "#1d1d1f";
 
     const body = document.createElement("div");
     body.textContent = message;
-    body.style.color = "#2c2c2e";
-    body.style.fontSize = "22px";
-    body.style.lineHeight = "1.2";
+    body.style.color = "#6e6e73";
+    body.style.fontSize = "12px";
+    body.style.lineHeight = "1.4";
+    body.style.marginBottom = "6px";
 
     const actions = document.createElement("div");
     actions.style.display = "flex";
     actions.style.justifyContent = "flex-end";
-    actions.style.gap = "16px";
+    actions.style.gap = "6px";
+    actions.style.marginTop = "2px";
 
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.textContent = "Cancel";
-    cancel.style.height = "78px";
-    cancel.style.minWidth = "148px";
-    cancel.style.padding = "0 40px";
+    cancel.style.height = "28px";
+    cancel.style.padding = "0 12px";
     cancel.style.borderRadius = "9999px";
-    cancel.style.border = "1px solid #c7c7cc";
+    cancel.style.border = "1px solid #d2d2d7";
     cancel.style.background = "#fff";
-    cancel.style.color = "#2c2c2e";
-    cancel.style.fontSize = "40px";
+    cancel.style.color = "#1d1d1f";
+    cancel.style.fontSize = "12px";
     cancel.style.fontWeight = "500";
-    cancel.style.lineHeight = "1";
     cancel.style.cursor = "pointer";
+    cancel.style.transition = "background 0.15s";
+    cancel.onmouseenter = () => { cancel.style.background = "#f5f5f7"; };
+    cancel.onmouseleave = () => { cancel.style.background = "#fff"; };
 
     const confirm = document.createElement("button");
     confirm.type = "button";
     confirm.textContent = isDelete ? "Delete" : "Confirm";
-    confirm.style.height = "78px";
-    confirm.style.minWidth = "148px";
-    confirm.style.padding = "0 40px";
+    confirm.style.height = "28px";
+    confirm.style.padding = "0 12px";
     confirm.style.borderRadius = "9999px";
     confirm.style.cursor = "pointer";
-    confirm.style.fontSize = "40px";
+    confirm.style.fontSize = "12px";
     confirm.style.fontWeight = "500";
-    confirm.style.lineHeight = "1";
+    confirm.style.transition = "background 0.15s";
     if (isDelete) {
-      confirm.style.border = "1px solid #0071e3";
-      confirm.style.background = "#f50000";
+      confirm.style.border = "none";
+      confirm.style.background = "#dc2626";
       confirm.style.color = "#fff";
+      confirm.onmouseenter = () => { confirm.style.background = "#b91c1c"; };
+      confirm.onmouseleave = () => { confirm.style.background = "#dc2626"; };
     } else {
-      confirm.style.border = "1px solid #0071e3";
+      confirm.style.border = "none";
       confirm.style.background = "#0071e3";
       confirm.style.color = "#fff";
+      confirm.onmouseenter = () => { confirm.style.background = "#0066cc"; };
+      confirm.onmouseleave = () => { confirm.style.background = "#0071e3"; };
     }
 
     const cleanup = () => {

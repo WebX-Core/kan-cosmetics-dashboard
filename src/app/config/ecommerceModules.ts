@@ -3,21 +3,19 @@ import {
   Bell,
   BellRing,
   Boxes,
-  ShieldCheck,
   ClipboardList,
   FileClock,
   FileSearch,
+  Globe,
   Inbox,
   LayoutDashboard,
   List,
   Mail,
-  MapPin,
   MessageCircleQuestion,
   Package,
   Rss,
   SearchCheck,
   Send,
-  ShieldOff,
   ShieldUser,
   ShoppingCart,
   Star,
@@ -51,13 +49,13 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
   { key: "carts", label: "Carts", path: "/dashboard/carts", section: "Sales", description: "Active carts, abandoned carts, and line-item visibility.", icon: ShoppingCart },
   { key: "wishlists", label: "Wishlists", path: "/dashboard/wishlists", section: "Sales", description: "Wishlist viewing by customer with product and variant mapping.", icon: Star },
 
+  { key: "customers", label: "Customers", path: "/dashboard/customers", section: "Support", description: "All registered customers with profile, order history, and purchase records.", icon: Users, shortcut: "C" },
+
   { key: "product-inquiries", label: "Inquiries", path: "/dashboard/support/product-inquiries", section: "Support", description: "Inbox, handled flags, and reply threads for product questions.", icon: Bell },
   { key: "site-inquiries", label: "Site Inquiries", path: "/dashboard/support/site-inquiries", section: "Support", description: "AI digital hair color and site-level inquiry inbox with notes and replies.", icon: SearchCheck },
   { key: "contacts", label: "Contacts", path: "/dashboard/support/contacts", section: "Support", description: "General contact inbox with view and handled state through replies.", icon: Users },
   { key: "reviews", label: "Reviews", path: "/dashboard/reviews", section: "Support", description: "Review moderation with product and site review split.", icon: Star },
   { key: "faqs", label: "FAQs", path: "/dashboard/faqs", section: "Support", description: "FAQ CRUD with product and site FAQ split plus active toggle.", icon: MessageCircleQuestion },
-  { key: "customer-bans", label: "Customer Bans", path: "/dashboard/customers/bans", section: "Support", description: "View and manage banned customer accounts.", icon: ShieldOff },
-  { key: "customer-addresses", label: "Addresses", path: "/dashboard/customers/addresses", section: "Support", description: "Shipping and billing addresses across all customers.", icon: MapPin },
 
   { key: "blog-posts", label: "Blog", path: "/dashboard/blog-posts", section: "Marketing", description: "Blog post CRUD and publish toggle.", icon: Rss },
   { key: "newsletter", label: "Newsletter", path: "/dashboard/newsletter", section: "Marketing", description: "Subscriber list, subscription state, and segmentation.", icon: Send },
@@ -68,12 +66,11 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
   { key: "web-push-notifications", label: "Push Notifications", path: "/dashboard/marketing/web-push/notifications", section: "Marketing", description: "Send and manage browser push notifications.", icon: BellRing },
   { key: "web-push-subscriptions", label: "Push Subscriptions", path: "/dashboard/marketing/web-push/subscriptions", section: "Marketing", description: "Browser push notification subscriptions.", icon: Bell },
 
+  { key: "seo", label: "SEO", path: "/dashboard/seo-metadata", section: "Reports", description: "Page-level SEO metadata management by route key.", icon: Globe },
   { key: "activity-logs", label: "Activity", path: "/dashboard/activity-logs", section: "Reports", description: "User and customer activity timeline with filters.", icon: FileClock, shortcut: "A" },
   { key: "audit-logs", label: "Audit", path: "/dashboard/audit-logs", section: "Reports", description: "Admin change trail by entity and actor.", icon: FileSearch },
 
   { key: "users", label: "Users", path: "/dashboard/users", section: "Administration", description: "Admin users and soft-delete visibility.", icon: ShieldUser, shortcut: "U" },
-  { key: "roles", label: "Roles", path: "/dashboard/rbac/roles", section: "Administration", description: "Manage dashboard roles and create new role records.", icon: ShieldCheck },
-  { key: "permissions", label: "Permissions", path: "/dashboard/permissions/users", section: "Administration", description: "Assign module permissions per user.", icon: ShieldCheck, roles: ["ADMIN", "SUDOADMIN"] },
 ];
 
 export const ecommerceSidebarOrder: ReadonlyArray<string> = [

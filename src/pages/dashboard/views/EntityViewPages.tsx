@@ -5,8 +5,6 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { z } from "zod";
 import { useFaqGet, useFaqList } from "@/features/faq";
 import { useTeamGet, useTeamList } from "@/features/team";
-import { useCompanyGet, useCompanyList } from "@/features/company";
-import { useCsrGet, useCsrList } from "@/features/csr";
 import { useNewsroomGet, useNewsroomList } from "@/features/newsroom";
 import { useContactGet } from "@/features/contact";
 import { useAdminUsersGet } from "@/features/adminUsers";
@@ -111,34 +109,6 @@ export const TeamViewPage: React.FC = () => {
   if (teamFind.isLoading) return <div>Loading...</div>;
   if (!id) return <div>Not found.</div>;
   return renderView("Team Details", "/dashboard/team", "/dashboard/team", q, slug);
-};
-export const CompanyViewPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const find = useCompanyList({ page: 1, limit: 1, search: slug }, Boolean(slug));
-  const id = React.useMemo(() => {
-    if (isIdLike(slug)) return slug;
-    const rows = find.data?.data ?? [];
-    return rows.find((r) => r.slug === slug)?.id ?? rows[0]?.id;
-  }, [find.data?.data, slug]);
-  const q = useCompanyGet(id);
-  if (!slug) return <div>Invalid slug.</div>;
-  if (find.isLoading) return <div>Loading...</div>;
-  if (!id) return <div>Not found.</div>;
-  return renderView("Company Details", "/dashboard/company", "/dashboard/company", q, slug);
-};
-export const CsrViewPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const find = useCsrList({ page: 1, limit: 1, search: slug }, Boolean(slug));
-  const id = React.useMemo(() => {
-    if (isIdLike(slug)) return slug;
-    const rows = find.data?.data ?? [];
-    return rows.find((r) => r.slug === slug)?.id ?? rows[0]?.id;
-  }, [find.data?.data, slug]);
-  const q = useCsrGet(id);
-  if (!slug) return <div>Invalid slug.</div>;
-  if (find.isLoading) return <div>Loading...</div>;
-  if (!id) return <div>Not found.</div>;
-  return renderView("CSR Details", "/dashboard/csr", "/dashboard/csr", q, slug);
 };
 export const NewsroomViewPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();

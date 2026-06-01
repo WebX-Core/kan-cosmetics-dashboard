@@ -1,10 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes } from "lucide-react";
+import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { StatusToggle } from "@/shared/components/dashboard/StatusToggle";
 import { catalogApi } from "@/features/catalog";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { Button } from "@/shared/components/ui/button";
@@ -31,10 +30,10 @@ type ProductRow = Readonly<{
   name: string;
   slug: string;
   sku: string;
+  image: string;
   price: number;
   stock: number;
   category: string;
-  status: "Active" | "Inactive";
   createdAt: string;
 }>;
 
@@ -65,6 +64,7 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
         name: text(item.name ?? item.title, "Untitled Product"),
         slug: text(item.slug, ""),
         sku: text(item.sku, "—"),
+        image: text(item.coverImage ?? item.mainImage ?? item.image ?? item.thumbnail ?? item.imageUrl, ""),
         price:
           toNumber(item.price) ??
           toNumber(item.basePrice) ??
@@ -73,7 +73,6 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
           0,
         stock: num(item.stock ?? item.totalStock),
         category: text(category.title ?? category.name ?? subcategory.title ?? subcategory.name, "—"),
-        status: item.isDeleted === true ? "Inactive" : "Active",
         createdAt: text(item.createdAt, ""),
       };
     });
@@ -91,20 +90,13 @@ export const ProductsListPage: React.FC = () => {
     search: debouncedSearch || undefined,
   });
   const softDelete = catalogApi.products.hooks.useSoftDelete();
-  const updateProduct = catalogApi.products.hooks.useUpdate();
-  const [statusOverrides, setStatusOverrides] = React.useState<Readonly<Record<string, ProductRow["status"]>>>({});
-  const [pendingStatusIds, setPendingStatusIds] = React.useState<ReadonlySet<string>>(new Set());
+  const [selectedIds, setSelectedIds] = React.useState<ReadonlySet<string>>(new Set());
 
-  const rows = React.useMemo(
-    () => toRows(query.data).map((row) => ({ ...row, status: statusOverrides[row.id] ?? row.status })),
-    [query.data, statusOverrides]
-  );
+  const rows = React.useMemo(() => toRows(query.data), [query.data]);
   const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const total = (query.data as { total?: number } | undefined)?.total ?? rows.length;
 
   const filtered = React.useMemo(() => {
-    if (activeTab === "active") return rows.filter((r) => r.status === "Active");
-    if (activeTab === "inactive") return rows.filter((r) => r.status === "Inactive");
     if (activeTab === "low-stock") return rows.filter((r) => r.stock > 0 && r.stock <= 5);
     if (activeTab === "out-of-stock") return rows.filter((r) => r.stock === 0);
     return rows;
@@ -112,44 +104,33 @@ export const ProductsListPage: React.FC = () => {
 
   const stats = React.useMemo(() => ({
     total,
-    active: rows.filter((r) => r.status === "Active").length,
     lowStock: rows.filter((r) => r.stock > 0 && r.stock <= 5).length,
     outOfStock: rows.filter((r) => r.stock === 0).length,
   }), [rows, total]);
 
   const tabs = [
     { key: "all", label: "All Products", count: total },
-    { key: "active", label: "Active", count: stats.active },
     { key: "low-stock", label: "Low Stock", count: stats.lowStock },
     { key: "out-of-stock", label: "Out of Stock", count: stats.outOfStock },
   ];
-
-  const handleStatusToggle = async (row: ProductRow, nextActive: boolean) => {
-    const previousStatus = row.status;
-    const nextStatus: ProductRow["status"] = nextActive ? "Active" : "Inactive";
-    setStatusOverrides((prev) => ({ ...prev, [row.id]: nextStatus }));
-    setPendingStatusIds((prev) => new Set(prev).add(row.id));
-    try {
-      await updateProduct.mutateAsync({ id: row.id, dto: { isDeleted: !nextActive } });
-    } catch (error) {
-      setStatusOverrides((prev) => ({ ...prev, [row.id]: previousStatus }));
-      toast.error(parseApiError(error).message);
-    } finally {
-      setPendingStatusIds((prev) => {
-        const next = new Set(prev);
-        next.delete(row.id);
-        return next;
-      });
-    }
-  };
 
   const columns = [
     {
       key: "name",
       label: "Product",
       render: (r: ProductRow) => (
-        <div>
-          <div className="font-medium text-gray-900">{r.name}</div>
+        <div className="flex items-center gap-3">
+          {r.image ? (
+            <img src={r.image} alt={r.name} className="h-9 w-9 rounded-lg object-cover border border-[#e5e5ea] shrink-0" />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f7] text-[11px] font-semibold text-[#86868b] border border-[#e5e5ea]">
+              {r.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <div className="font-medium text-gray-900">{r.name}</div>
+            <div className="text-xs text-gray-400">{r.slug}</div>
+          </div>
         </div>
       ),
     },
@@ -159,23 +140,6 @@ export const ProductsListPage: React.FC = () => {
       key: "price",
       label: "Price",
       render: (r: ProductRow) => <span className="font-medium text-gray-900">{fmtPrice(r.price)}</span>,
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (r: ProductRow) => (
-        <div className="inline-flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-          <StatusToggle
-            checked={r.status === "Active"}
-            disabled={pendingStatusIds.has(r.id)}
-            onClick={(event) => event.stopPropagation()}
-            onChange={(next) => handleStatusToggle(r, next)}
-          />
-          <span className={`text-xs font-medium ${r.status === "Active" ? "text-emerald-700" : "text-zinc-600"}`}>
-            {r.status}
-          </span>
-        </div>
-      ),
     },
     { key: "createdAt", label: "Created", render: (r: ProductRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
     {
@@ -208,6 +172,15 @@ export const ProductsListPage: React.FC = () => {
             <DropdownMenuItem
               onClick={(event) => {
                 event.stopPropagation();
+                navigate(`/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`);
+              }}
+            >
+              <Star className="mr-2 h-4 w-4" />
+              Reviews
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
                 navigate(`/dashboard/products/${r.id}/faqs`);
               }}
             >
@@ -222,6 +195,15 @@ export const ProductsListPage: React.FC = () => {
             >
               <Boxes className="mr-2 h-4 w-4" />
               Manage Variants
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(`/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`);
+              }}
+            >
+              <Globe className="mr-2 h-4 w-4" />
+              SEO
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -271,6 +253,24 @@ export const ProductsListPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        rowId={(r) => r.id}
+        selectedIds={selectedIds}
+        onSelectionChange={(ids) => setSelectedIds(ids)}
+        bulkActions={(ids, clear) => (
+          <button
+            type="button"
+            onClick={async () => {
+              const ok = await confirmAction(`Delete ${ids.size} product${ids.size > 1 ? "s" : ""}?`);
+              if (!ok) return;
+              await Promise.all([...ids].map((id) => softDelete.mutateAsync(id)));
+              clear();
+              toast.success(`${ids.size} product${ids.size > 1 ? "s" : ""} deleted.`);
+            }}
+            className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+          >
+            <Trash2 size={12} /> Delete ({ids.size})
+          </button>
+        )}
       />
     </PageLayout>
   );

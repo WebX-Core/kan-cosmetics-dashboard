@@ -115,13 +115,11 @@ export const Sidebar: React.FC<Props> = ({
 
       {/* Footer */}
       <div className="border-t border-[#e5e5e7] px-[21px] py-[13px]">
-        <div className="flex items-center justify-center gap-[8px] text-[11px] text-[#86868b]">
-          <span>Design & Developed by</span>
-          <img
-            src="/logo/webx.svg"
-            alt="Webx"
-            className="h-3 w-auto opacity-60"
-          />
+        <div className="flex items-center justify-center gap-[8px] text-[11px] text-black">
+          <span>Powered by</span>
+          <a href="https://www.webxnepal.com" target="_blank">
+            <img src="/logo/webx.svg" alt="Webx" className="h-3 w-auto " />
+          </a>
         </div>
       </div>
     </div>

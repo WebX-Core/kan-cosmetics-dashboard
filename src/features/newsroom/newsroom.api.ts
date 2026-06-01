@@ -9,18 +9,18 @@ import type {
 } from "./newsroom.types";
 
 const paths: CrudPaths = {
-  getAll: "/newsroom/get-all",
-  getOne: (id) => `/newsroom/get/${id}`,
+  getAll: "/blog/get-all",
+  getOne: (id) => `/blog/get/${id}`,
 
-  create: "/newsroom/create",
-  update: (id) => `/newsroom/update/${id}`,
+  create: "/blog/create",
+  update: (id) => `/blog/update/${id}`,
 
-  softDelete: (ids) => `/newsroom/delete/${ids}`,
+  softDelete: (ids) => `/blog/delete/${ids}`,
 
-  deletedList: "/newsroom/deleted",
-  recover: "/newsroom/recover",
+  deletedList: "/blog/deleted",
+  recover: "/blog/recover",
 
-  destroy: (ids) => `/newsroom/destroy/${ids}`,
+  destroy: (ids) => `/blog/destroy/${ids}`,
 } as const;
 
 export const newsroomModule = makeCrud<

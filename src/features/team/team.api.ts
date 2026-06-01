@@ -4,18 +4,18 @@ import type { FormFieldValue, FormFileValue } from "../../shared/api/api";
 import type { TeamCreatePayload, TeamMember, TeamUpdatePayload } from "./team.types";
 
 const paths: CrudPaths = {
-  getAll: "/team/get-all",
-  getOne: (id) => `/team/get/${id}`,
+  getAll: "/teammember/get-all",
+  getOne: (id) => `/teammember/get/${id}`,
 
-  create: "/team/create",
-  update: (id) => `/team/update/${id}`,
+  create: "/teammember/create",
+  update: (id) => `/teammember/update/${id}`,
 
-  softDelete: (id) => `/team/delete-member/${id}`,
+  softDelete: (id) => `/teammember/delete/${id}`,
 
-  deletedList: "/team/deleted",
-  recover: "/team/recover",
+  deletedList: "/teammember/deleted",
+  recover: "/teammember/recover",
 
-  destroy: (ids) => `/team/destroy/${ids}`,
+  destroy: (ids) => `/teammember/destroy/${ids}`,
 } as const;
 
 export const teamModule = makeCrud<TeamMember, TeamCreatePayload, TeamUpdatePayload>(

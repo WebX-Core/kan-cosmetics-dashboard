@@ -323,6 +323,7 @@ export const RolesPage: React.FC = () => {
     search: "",
   });
   const [activeTab, setActiveTab] = React.useState("all");
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const softDeleteRole = identityApi.roles.hooks.useSoftDelete();
   const updateRole = identityApi.roles.hooks.useUpdate();
   const q = identityApi.roles.hooks.useList({
@@ -586,6 +587,22 @@ export const RolesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={(q.data?.totalPages as number | undefined) ?? 1}
         onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
+        rowId={(row) => String((row as { id: string }).id ?? "")}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        bulkActions={(ids, clear) => (
+          <button
+            type="button"
+            onClick={async () => {
+              if (!window.confirm(`Delete ${ids.size} role(s)?`)) return;
+              await Promise.all([...ids].map((id) => softDeleteRole.mutateAsync(id)));
+              clear();
+            }}
+            className="flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-[12px] font-medium text-red-600 transition-colors hover:bg-red-100"
+          >
+            <Trash2 size={12} /> Delete selected
+          </button>
+        )}
       />
     </PageLayout>
   );
@@ -1514,6 +1531,7 @@ export const UserMetadataPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted User Metadata" : "User Metadata"}
       subtitle="Session and device metadata captured for users."
       onBack={isDeletedView ? () => setIsDeletedView(false) : undefined}

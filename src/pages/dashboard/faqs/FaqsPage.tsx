@@ -1,6 +1,9 @@
 import React from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { HelpCircle, CheckCircle, XCircle, Package, Globe, X, RotateCcw, Trash2 } from "lucide-react";
+import { HelpCircle, CheckCircle, XCircle, Package, Globe, X, RotateCcw, Trash2, MoreHorizontal, Pencil } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import { confirmAction } from "@/shared/utils/confirm";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -161,10 +164,64 @@ export const FaqsPage: React.FC = () => {
         </div>
       )
     ) },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (r: Row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full">
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            {!isDeletedView && (
+              <>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/faqs/${r.id}/edit`); }}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=FAQ&entityId=${encodeURIComponent(r.id)}`); }}>
+                  <Globe className="mr-2 h-4 w-4" /> SEO
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-[#b42318] focus:text-[#b42318]"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const ok = await confirmAction("Delete this FAQ?");
+                    if (!ok) return;
+                    await destroyMutation.mutateAsync(r.id);
+                    await query.refetch();
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </>
+            )}
+            {isDeletedView && (
+              <>
+                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await recoverMutation.mutateAsync({ ids: [r.id] }); }}>
+                  <RotateCcw className="mr-2 h-4 w-4" /> Recover
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-[#b42318] focus:text-[#b42318]"
+                  onClick={async (e) => { e.stopPropagation(); await destroyMutation.mutateAsync(r.id); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
   ];
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title="FAQs"
       subtitle={productIdFilter ? `Manage FAQs for ${productNameFilter || "selected product"}.` : isDeletedView ? "View deleted FAQ records." : "Manage FAQ records."}
       onNew={isDeletedView ? undefined : () => navigate(`/dashboard/faqs/create`)}
@@ -232,7 +289,6 @@ export const FaqsPage: React.FC = () => {
           </div>
         ) : undefined}
         searchValue={state.search}
-        onEdit={isDeletedView ? undefined : (r) => navigate(`/dashboard/faqs/${r.id}/edit`)}
         emptyMessage={query.isLoading ? "Loading FAQs..." : "No FAQs found."}
         showPagination={true}
         currentPage={state.page}

@@ -344,7 +344,13 @@ export const RolesCreatePage: React.FC = () => {
         (i): i is Record<string, unknown> =>
           typeof i === "object" && i !== null,
       )
-      .map((i) => String(i.permissionId ?? i.permission_id ?? ""))
+      .map((i) => {
+        const nested =
+          typeof i.permission === "object" && i.permission !== null
+            ? (i.permission as Record<string, unknown>)
+            : null;
+        return String(nested?.id ?? i.permissionId ?? i.permission_id ?? "");
+      })
       .filter(Boolean);
     setSelectedPermissionIds(ids);
   }, [existingPermsQuery.data, isEdit]);
@@ -425,10 +431,16 @@ export const RolesCreatePage: React.FC = () => {
               (i): i is Record<string, unknown> =>
                 typeof i === "object" && i !== null,
             )
-            .map((i) => ({
-              assignId: String(i.id ?? ""),
-              permissionId: String(i.permissionId ?? i.permission_id ?? ""),
-            }))
+            .map((i) => {
+              const nested =
+                typeof i.permission === "object" && i.permission !== null
+                  ? (i.permission as Record<string, unknown>)
+                  : null;
+              return {
+                assignId: String(i.id ?? ""),
+                permissionId: String(nested?.id ?? i.permissionId ?? i.permission_id ?? ""),
+              };
+            })
             .filter((i) => i.permissionId);
         })();
 

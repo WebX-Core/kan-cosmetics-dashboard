@@ -56,10 +56,11 @@ const useCountUp = (target: number, durationMs = 900): number => {
 const parseNumericValue = (
   value: string | number,
 ): Readonly<{ target: number; decimals: number; prefix: string; suffix: string } | null> => {
+  if (value == null) return null;
   if (typeof value === "number") {
     return { target: value, decimals: Number.isInteger(value) ? 0 : 2, prefix: "", suffix: "" };
   }
-  const match = value.match(/-?\d[\d,]*(?:\.\d+)?/);
+  const match = String(value).match(/-?\d[\d,]*(?:\.\d+)?/);
   if (!match) return null;
   const raw = match[0];
   const numeric = Number(raw.replace(/,/g, ""));
@@ -68,8 +69,8 @@ const parseNumericValue = (
   return {
     target: numeric,
     decimals,
-    prefix: value.slice(0, match.index ?? 0),
-    suffix: value.slice((match.index ?? 0) + raw.length),
+    prefix: String(value).slice(0, match.index ?? 0),
+    suffix: String(value).slice((match.index ?? 0) + raw.length),
   };
 };
 

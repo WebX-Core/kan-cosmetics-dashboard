@@ -12,6 +12,8 @@ const keys = {
   cartsAggregate: () => ["commerce", "carts", "aggregate"] as const,
   wishlistsAggregate: () => ["commerce", "wishlists", "aggregate"] as const,
   paymentsAggregate: () => ["commerce", "payments", "aggregate"] as const,
+  customers: (q?: ApiListQuery) => ["commerce", "customers", q] as const,
+  purchaseHistoryByCustomer: (customerId?: UUID) => ["commerce", "purchase-history", "customer", customerId] as const,
 };
 
 export const useOrders = (q?: ApiListQuery, enabled = true) => {
@@ -132,6 +134,21 @@ export const useWishlistAggregate = () =>
       );
       return Promise.all(customerIds.map((customerId) => commerceApi.wishlists.byCustomer(customerId)));
     },
+  });
+
+export const useCustomers = (q?: ApiListQuery, enabled = true) =>
+  useQuery({
+    queryKey: keys.customers(q),
+    queryFn: () => commerceApi.customers.getAll(q),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+
+export const usePurchaseHistoryByCustomer = (customerId?: UUID, enabled = true) =>
+  useQuery({
+    queryKey: keys.purchaseHistoryByCustomer(customerId),
+    queryFn: () => commerceApi.purchaseHistory.byCustomer(customerId!),
+    enabled: enabled && Boolean(customerId),
   });
 
 export const usePaymentsAggregate = () =>

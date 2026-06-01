@@ -211,6 +211,7 @@ export const PermissionsPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Permissions" : "Permissions"}
       subtitle={isDeletedView ? "View soft-deleted permissions." : "Manage granular permission keys for RBAC."}
       onBack={isDeletedView ? () => navigate("/dashboard/rbac/permissions") : undefined}

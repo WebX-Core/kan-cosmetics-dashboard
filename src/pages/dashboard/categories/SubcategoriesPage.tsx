@@ -4,12 +4,10 @@ import { FolderTree, Layers, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { StatusToggle } from "@/shared/components/dashboard/StatusToggle";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { catalogApi } from "@/features/catalog";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useUserStore } from "@/store/UserStore";
-import { parseApiError } from "@/shared/utils/apiError";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -120,9 +118,6 @@ export const SubcategoriesPage: React.FC = () => {
   const softDeleteSubcategory = catalogApi.subcategories.hooks.useSoftDelete();
   const recoverSubcategory = catalogApi.subcategories.hooks.useRecover();
   const destroySubcategory = catalogApi.subcategories.hooks.useDestroy();
-  const updateSubcategory = catalogApi.subcategories.hooks.useUpdate();
-  const [statusOverrides, setStatusOverrides] = React.useState<Readonly<Record<string, SubcategoryRow["status"]>>>({});
-  const [pendingStatusIds, setPendingStatusIds] = React.useState<ReadonlySet<string>>(new Set());
 
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
 
@@ -142,12 +137,8 @@ export const SubcategoriesPage: React.FC = () => {
     : subcategoriesQuery.data?.data;
 
   const rows = React.useMemo(
-    () =>
-      (sourceRows ?? []).map((row) => {
-        const next = toSubcategoryRow(row, productCountMap);
-        return { ...next, status: statusOverrides[next.id] ?? next.status };
-      }),
-    [sourceRows, productCountMap, statusOverrides]
+    () => (sourceRows ?? []).map((row) => toSubcategoryRow(row, productCountMap)),
+    [sourceRows, productCountMap]
   );
 
   const totalPages =
@@ -236,25 +227,6 @@ export const SubcategoriesPage: React.FC = () => {
     setPendingIds([]);
   };
 
-  const handleStatusToggle = async (row: SubcategoryRow, nextActive: boolean) => {
-    const previousStatus = row.status;
-    const nextStatus: SubcategoryRow["status"] = nextActive ? "Active" : "Inactive";
-    setStatusOverrides((prev) => ({ ...prev, [row.id]: nextStatus }));
-    setPendingStatusIds((prev) => new Set(prev).add(row.id));
-    try {
-      await updateSubcategory.mutateAsync({ id: row.id, dto: { isDeleted: !nextActive } });
-    } catch (error) {
-      setStatusOverrides((prev) => ({ ...prev, [row.id]: previousStatus }));
-      toast.error(parseApiError(error).message);
-    } finally {
-      setPendingStatusIds((prev) => {
-        const next = new Set(prev);
-        next.delete(row.id);
-        return next;
-      });
-    }
-  };
-
   const columns = [
     {
       key: "select",
@@ -314,23 +286,6 @@ export const SubcategoriesPage: React.FC = () => {
       render: (row: SubcategoryRow) => <span className="font-medium text-gray-900">{row.products}</span>,
     },
     {
-      key: "status",
-      label: "Status",
-      render: (row: SubcategoryRow) => (
-        <div className="inline-flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-          <StatusToggle
-            checked={row.status === "Active"}
-            disabled={isDeletedView || pendingStatusIds.has(row.id)}
-            onClick={(event) => event.stopPropagation()}
-            onChange={(next) => handleStatusToggle(row, next)}
-          />
-          <span className={`text-xs font-medium ${row.status === "Active" ? "text-emerald-700" : "text-zinc-600"}`}>
-            {row.status}
-          </span>
-        </div>
-      ),
-    },
-    {
       key: "createdAt",
       label: "Created",
       render: (row: SubcategoryRow) => (
@@ -372,6 +327,7 @@ export const SubcategoriesPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Subcategories" : "Subcategories"}
       subtitle={
         isDeletedView

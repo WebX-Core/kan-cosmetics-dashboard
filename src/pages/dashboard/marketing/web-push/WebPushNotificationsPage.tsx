@@ -169,6 +169,7 @@ export const WebPushNotificationsPage: React.FC = () => {
 
   return (
     <PageLayout
+      variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Notifications" : "Web Push Notifications"}
       subtitle={isDeletedView ? "View soft-deleted push notifications." : "Manage and send browser push notifications."}
       onBack={isDeletedView ? () => navigate("/dashboard/marketing/web-push/notifications") : undefined}
