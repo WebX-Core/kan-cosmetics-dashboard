@@ -140,11 +140,11 @@ export const FaqsPage: React.FC = () => {
             type="button"
             role="switch"
             aria-checked={r.isActive}
-            onClick={async (event) => {
+              onClick={async (event) => {
               event.stopPropagation();
               await updateMutation.mutateAsync({
                 id: r.id,
-                dto: { isActive: !r.isActive },
+                dto: { title: r.question, isActive: !r.isActive },
               });
               await query.refetch();
             }}

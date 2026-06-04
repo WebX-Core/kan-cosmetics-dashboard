@@ -46,16 +46,19 @@ const statusMap: Record<string, { dot: string; text: string; bg: string }> = {
 
 const fallback = { dot: "bg-[#86868b]", text: "text-[#6e6e73]", bg: "bg-[#f5f5f7]" };
 
-type Props = { status: string };
+type Props = {
+  status: string;
+  label?: string;
+};
 
-export const StatusBadge: React.FC<Props> = ({ status }) => {
+export const StatusBadge: React.FC<Props> = ({ status, label }) => {
   const key = status.toLowerCase().trim();
   const style = statusMap[key] ?? statusMap[key.replace(/\s+/g, "")] ?? fallback;
 
   return (
     <span className={`inline-flex items-center gap-[5px] rounded-full px-[8px] py-[3px] text-[11px] font-medium ${style.bg} ${style.text}`}>
       <span className={`h-[5px] w-[5px] shrink-0 rounded-full ${style.dot}`} />
-      {status}
+      {label ?? status}
     </span>
   );
 };

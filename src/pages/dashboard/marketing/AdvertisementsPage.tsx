@@ -72,7 +72,7 @@ export const AdvertisementsPage: React.FC = () => {
 
   const matchResults = useQuery({
     queryKey: ["advertisements", "match", submittedMatchQuery],
-    queryFn: () => marketingApi.advertisementsMatch(submittedMatchQuery ? { q: submittedMatchQuery } : undefined),
+    queryFn: () => marketingApi.advertisementsMatch(submittedMatchQuery ? { search: submittedMatchQuery } : undefined),
     enabled: submittedMatchQuery.length > 0,
   });
 
@@ -276,7 +276,7 @@ export const AdvertisementsPage: React.FC = () => {
             </div>
             {matchResults.isLoading && <p className="text-xs text-[#86868b]">Matching…</p>}
             {matchResults.isError && <p className="text-xs text-red-600">Match query failed.</p>}
-            {matchResults.data && !matchResults.isLoading && (
+            {Boolean(matchResults.data) && !matchResults.isLoading && (
               <div className="rounded-lg border border-[#d2d2d7] bg-[#f5f5f7] p-3">
                 <p className="text-xs font-medium text-[#86868b] mb-1">Match results</p>
                 <pre className="text-xs text-[#1d1d1f] whitespace-pre-wrap break-all">

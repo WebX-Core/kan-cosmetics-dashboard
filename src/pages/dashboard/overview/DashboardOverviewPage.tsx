@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   RotateCcw,
   BarChart2,
-  Activity,
   ShoppingCart,
 } from "lucide-react";
 import { useOrders, usePaymentsAggregate } from "@/features/commerce";

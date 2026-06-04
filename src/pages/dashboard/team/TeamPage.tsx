@@ -81,7 +81,7 @@ export const TeamPage: React.FC = () => {
   const handleRecover = async (id: string) => {
     const ok = await confirmAction("Restore this member?");
     if (!ok) return;
-    await recover.mutateAsync(id);
+    await recover.mutateAsync({ ids: [id] });
     void qc.invalidateQueries();
     toast.success("Restored.");
   };

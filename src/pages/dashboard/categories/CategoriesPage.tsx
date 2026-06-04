@@ -35,8 +35,6 @@ type CategoryRow = Readonly<{
 
 const readString = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
-const readNumber = (value: unknown, fallback = 0): number =>
-  typeof value === "number" ? value : fallback;
 const formatDateTime = (value: string): string => {
   if (!value) return "—";
   const date = new Date(value);

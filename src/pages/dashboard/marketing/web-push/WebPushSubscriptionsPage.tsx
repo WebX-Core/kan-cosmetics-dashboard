@@ -27,10 +27,10 @@ const fmt = (v: string): string => {
 const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   if (!payload || typeof payload !== "object") return [];
   const data = payload as { data?: { subscriptions?: unknown[] } | unknown[] };
-  const rows = Array.isArray(data.data)
+  const rows: unknown[] = Array.isArray(data.data)
     ? data.data
     : Array.isArray((data.data as { subscriptions?: unknown[] } | undefined)?.subscriptions)
-      ? (data.data as { subscriptions?: unknown[] }).subscriptions
+      ? (data.data as { subscriptions?: unknown[] } | undefined)?.subscriptions ?? []
       : [];
 
   return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);

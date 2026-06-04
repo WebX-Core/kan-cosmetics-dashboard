@@ -318,7 +318,7 @@ export const ProductsListPage: React.FC = () => {
         rowId={(r) => r.id}
         selectedIds={selectedIds}
         onSelectionChange={(ids) => setSelectedIds(ids)}
-        bulkActions={(ids, clear) => (
+        bulkActions={(ids, _clear) => (
           <div className="flex items-center gap-2">
             {isDeletedView ? (
               <>

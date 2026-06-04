@@ -2,16 +2,17 @@ import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { engagementApi } from "@/features/engagement";
+import type { ReplyDto } from "@/features/engagement/engagement.types";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { validateOrToast } from "@/shared/utils/validation";
 
-type Row = Readonly<Record<string, unknown>>;
+type ReplyRow = Readonly<ReplyDto & { id?: string }>;
 
-const toRows = (value: unknown): ReadonlyArray<Row> => {
-  if (Array.isArray(value)) return value as ReadonlyArray<Row>;
+const toRows = (value: unknown): ReadonlyArray<ReplyRow> => {
+  if (Array.isArray(value)) return value as ReadonlyArray<ReplyDto & { id?: string }>;
   if (!value || typeof value !== "object") return [];
   const nested = Object.values(value as Record<string, unknown>).find(Array.isArray);
-  return Array.isArray(nested) ? (nested as ReadonlyArray<Row>) : [];
+  return Array.isArray(nested) ? (nested as ReadonlyArray<ReplyDto & { id?: string }>) : [];
 };
 
 const replySchema = z.object({
@@ -24,8 +25,8 @@ const replySchema = z.object({
 });
 
 const RepliesForm: React.FC<{
-  initial?: Row;
-  onSubmit: (payload: Row) => Promise<void>;
+  initial?: Partial<ReplyDto>;
+  onSubmit: (payload: ReplyDto) => Promise<void>;
   submitLabel: string;
   onInvalid: (message: string) => void;
 }> = ({ initial, onSubmit, submitLabel, onInvalid }) => {
@@ -43,7 +44,7 @@ const RepliesForm: React.FC<{
             onInvalid("Payload must be valid JSON");
             return;
           }
-          const parsed = validateOrToast(replySchema, payload, { error: onInvalid });
+          const parsed = validateOrToast(replySchema, payload, { error: onInvalid }) as ReplyDto | null;
           if (!parsed) return;
           await onSubmit(parsed);
         }}
@@ -59,7 +60,14 @@ export const RepliesPage: React.FC = () => {
   const q = engagementApi.replies.hooks.useList();
   const del = engagementApi.replies.hooks.useSoftDelete();
   const rows = toRows(q.data?.data);
-  const cols = Array.from(new Set(rows.flatMap((r) => Object.keys(r)))).slice(0, 6);
+  const cols: ReadonlyArray<Readonly<{ key: keyof ReplyRow; label: string }>> = [
+    { key: "message", label: "Message" },
+    { key: "inquiryId", label: "Inquiry ID" },
+    { key: "contactId", label: "Contact ID" },
+    { key: "siteInquiryId", label: "Site Inquiry ID" },
+    { key: "repliedById", label: "Replied By ID" },
+    { key: "sortOrder", label: "Sort Order" },
+  ];
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -67,11 +75,25 @@ export const RepliesPage: React.FC = () => {
         <button className="rounded bg-zinc-900 px-3 py-2 text-sm text-white" onClick={() => nav("/dashboard/support/replies/create")}>New Reply</button>
       </div>
       <table className="w-full rounded border bg-white">
-        <thead><tr>{cols.map((c) => <th key={c} className="px-3 py-2 text-left text-xs">{c}</th>)}<th className="px-3 py-2 text-left text-xs">Action</th></tr></thead>
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c.key} className="px-3 py-2 text-left text-xs">{c.label}</th>
+            ))}
+            <th className="px-3 py-2 text-left text-xs">Action</th>
+          </tr>
+        </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={String(row.id)} className="border-t">
-              {cols.map((c) => <td key={c} className="px-3 py-2 text-sm">{typeof row[c] === "object" ? JSON.stringify(row[c]) : String(row[c] ?? "-")}</td>)}
+              {cols.map((c) => {
+                const value = row[c.key];
+                return (
+                  <td key={c.key} className="px-3 py-2 text-sm">
+                    {value == null || value === "" ? "-" : String(value)}
+                  </td>
+                );
+              })}
               <td className="px-3 py-2 text-sm">
                 <button className="mr-2 rounded border px-2 py-1 text-xs" onClick={() => nav(`/dashboard/support/replies/${row.id}/edit`)}>Edit</button>
                 <button className="rounded border px-2 py-1 text-xs" onClick={() => void del.mutateAsync(String(row.id))}>Delete</button>
@@ -97,5 +119,5 @@ export const RepliesEditPage: React.FC = () => {
   const { id } = useParams();
   const get = engagementApi.replies.hooks.useGet(id);
   const update = engagementApi.replies.hooks.useUpdate();
-  return <RepliesForm initial={(get.data ?? {}) as Row} onSubmit={async (payload) => { if (!id) return; await update.mutateAsync({ id, dto: payload }); nav("/dashboard/support/replies"); }} submitLabel="Update Reply" onInvalid={toast.error} />;
+  return <RepliesForm initial={(get.data ?? {}) as Partial<ReplyDto>} onSubmit={async (payload) => { if (!id) return; await update.mutateAsync({ id, dto: payload }); nav("/dashboard/support/replies"); }} submitLabel="Update Reply" onInvalid={toast.error} />;
 };

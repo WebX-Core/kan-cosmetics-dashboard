@@ -289,7 +289,7 @@ export const TestimonialFormPage: React.FC = () => {
         <FormActions
           onCancel={() => navigate("/dashboard/testimonials")}
           submitLabel={isPending ? "Saving…" : isEdit ? "Save Changes" : "Create Testimonial"}
-          disabled={isPending}
+          isSubmitting={isPending}
         />
       </form>
     </ModernFormLayout>

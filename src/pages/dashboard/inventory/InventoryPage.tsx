@@ -86,7 +86,7 @@ const getProductIdFromInventory = (record: unknown): string => {
     toId(row.productId) ||
     toId(row.product_id) ||
     toId(row.productID) ||
-    toId(row.product?.id) ||
+    toId((toObject(row.product) as Record<string, unknown>).id) ||
     toId((toObject(row.productVariant).product as Record<string, unknown> | undefined)?.id);
   if (direct) return direct;
 
@@ -94,7 +94,7 @@ const getProductIdFromInventory = (record: unknown): string => {
   return (
     toId(variant.productId) ||
     toId(variant.product_id) ||
-    toId((toObject(variant.product).id)) ||
+    toId((toObject(variant.product) as Record<string, unknown>).id) ||
     ""
   );
 };
@@ -280,7 +280,6 @@ export const InventoryPage: React.FC = () => {
         await destroy.mutateAsync(ids.join(","));
         await deletedQuery.refetch();
       }
-      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
       toast.success(
         action === "recover"
           ? `${ids.length === 1 ? "Inventory record" : `${ids.length} inventory records`} recovered.`

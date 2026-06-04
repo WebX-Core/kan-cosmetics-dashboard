@@ -101,11 +101,11 @@ export const PermissionsUsersPage: React.FC = () => {
     >
       <DataTableV2
         title="Users"
-        subtitle="Manage user permission assignments"
-        icon={<ShieldCheck size={16} className="text-[#0071e3]" />}
-        columns={columns}
-        data={[...rows] as unknown as Record<string, unknown>[]}
-        emptyMessage={listQuery.isLoading ? "Loading users..." : "No users found."}
+      subtitle="Manage user permission assignments"
+      icon={<ShieldCheck size={16} className="text-[#0071e3]" />}
+      columns={columns}
+      data={rows}
+      emptyMessage={listQuery.isLoading ? "Loading users..." : "No users found."}
         searchValue={state.search}
         onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
         currentPage={state.page}

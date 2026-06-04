@@ -7,9 +7,6 @@ import { catalogApi } from "@/features/catalog";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 
-const inputClass =
-  "h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
-
 export const ProductBulkPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -93,7 +90,7 @@ export const ProductBulkPage: React.FC = () => {
           >
             <FileJson size={15} /> {bulkCreate.isPending ? "Creating…" : "Bulk Create"}
           </button>
-          {bulkResult && (
+          {Boolean(bulkResult) && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
               <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-emerald-700">
                 <CheckCircle size={13} /> Success
@@ -154,7 +151,7 @@ export const ProductBulkPage: React.FC = () => {
             <Upload size={15} /> {bulkUpload.isPending ? "Uploading…" : "Upload Images"}
           </button>
 
-          {imageResult && (
+          {Boolean(imageResult) && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
               <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-emerald-700">
                 <CheckCircle size={13} /> Upload complete

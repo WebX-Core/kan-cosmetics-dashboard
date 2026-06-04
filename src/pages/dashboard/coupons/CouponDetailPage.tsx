@@ -284,9 +284,9 @@ export const CouponDetailPage: React.FC = () => {
             <div className="mt-1"><StatusBadge status={text(coupon.status, "Inactive")} /></div>
           </div>
         </div>
-        {coupon.description && (
-          <p className="text-sm text-gray-600">{text(coupon.description)}</p>
-        )}
+        {typeof coupon.description === "string" && coupon.description ? (
+          <p className="text-sm text-gray-600">{coupon.description}</p>
+        ) : null}
       </FormSection>
 
       {/* Insights */}

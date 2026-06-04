@@ -19,7 +19,7 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { confirmAction } from "@/shared/utils/confirm";
 import { formatDateTime } from "@/shared/utils/date";
 import { useAdminUsersList, useDeleteAdminUsers } from "@/features/adminUsers";
-import type { Gender, Role, User } from "@/features/adminUsers/adminUsers.types";
+import type { Gender, Role } from "@/features/adminUsers/adminUsers.types";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useUserStore } from "@/store/UserStore";
 import { api, unwrap } from "@/shared/api/api";
@@ -65,7 +65,7 @@ const toCustomerRows = (payload: unknown): ReadonlyArray<CustomerRow> => {
       lastname: String(item.lastname ?? ""),
       email: String(item.email ?? ""),
       phone: String(item.phone ?? ""),
-      role: "CUSTOMER",
+      role: "CUSTOMER" as const,
       isVerified: Boolean(item.isVerified),
       createdAt: typeof item.createdAt === "string" ? item.createdAt : undefined,
     }))
@@ -107,6 +107,7 @@ export const UsersPage: React.FC = () => {
     rowType: "customer",
     gender: "OTHER",
     address: "",
+    role: "CUSTOMER" as const,
   }));
   const rows: ReadonlyArray<CombinedRow> = [...adminRows, ...customerRows];
   const resolveRole = React.useCallback((user: CombinedRow) => (user.role ?? "USER").toUpperCase(), []);

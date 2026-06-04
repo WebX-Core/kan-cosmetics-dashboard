@@ -19,9 +19,11 @@ const toText = (value: unknown, fallback = ""): string => (typeof value === "str
 const toNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
 
 const mapWishlistRows = (payload: unknown): ReadonlyArray<WishlistRow> => {
-  const rows = Array.isArray(payload)
+  const rows: unknown[] = Array.isArray(payload)
     ? payload
-    : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+    : (Array.isArray((payload as { data?: unknown[] } | undefined)?.data)
+      ? ((payload as { data?: unknown[] } | undefined)?.data ?? [])
+      : []);
 
   return rows.map((entry) => {
     const item = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
@@ -46,7 +48,10 @@ export const WishlistsPage: React.FC = () => {
   const query = useWishlistAggregate();
 
   const wishlists = React.useMemo(
-    () => (query.data ?? []).flatMap((payload) => mapWishlistRows(payload)),
+    () => {
+      const payloads = Array.isArray(query.data) ? query.data : [];
+      return payloads.flatMap((payload: unknown) => mapWishlistRows(payload));
+    },
     [query.data]
   );
 
@@ -78,8 +83,8 @@ export const WishlistsPage: React.FC = () => {
   const stats = React.useMemo(() => ({
     total: wishlists.length,
     active: wishlists.filter((r) => r.status === "Active").length,
-    totalItems: wishlists.reduce((sum, r) => sum + r.items, 0),
-    totalValue: wishlists.reduce((sum, r) => sum + r.totalValue, 0),
+    totalItems: wishlists.reduce((sum: number, r: WishlistRow) => sum + r.items, 0),
+    totalValue: wishlists.reduce((sum: number, r: WishlistRow) => sum + r.totalValue, 0),
   }), [wishlists]);
 
   const columns = [

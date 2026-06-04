@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, Loader2, Search, ShieldCheck, X } from "lucide-react";
+import { Check, Loader2, Search, X } from "lucide-react";
 import { useWebPushSubscriptionSearch, type WebPushSubscriptionSearchOption } from "@/shared/hooks/useWebPushSubscriptionSearch";
 
 type Props = Readonly<{

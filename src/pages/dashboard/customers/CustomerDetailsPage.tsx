@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingBag, Package, History, UserCheck, ShieldOff } from "lucide-react";
+import { ShoppingBag, Package, UserCheck, ShieldOff } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";

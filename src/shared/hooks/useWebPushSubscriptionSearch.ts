@@ -26,9 +26,8 @@ const pickRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   }
 
   if (Array.isArray((data.data as { subscriptions?: unknown[] } | undefined)?.subscriptions)) {
-    return (data.data as { subscriptions?: unknown[] }).subscriptions.filter(
-      (row): row is Record<string, unknown> => typeof row === "object" && row !== null,
-    );
+    const subscriptions = (data.data as { subscriptions?: unknown[] } | undefined)?.subscriptions ?? [];
+    return subscriptions.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
   }
 
   if (Array.isArray(data.subscriptions)) {

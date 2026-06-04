@@ -95,11 +95,11 @@ export const ProductFaqsPage: React.FC = () => {
             type="button"
             role="switch"
             aria-checked={row.isActive}
-            onClick={async (event) => {
+              onClick={async (event) => {
               event.stopPropagation();
               await updateFaq.mutateAsync({
                 id: row.id,
-                dto: { isActive: !row.isActive },
+                dto: { title: row.title, isActive: !row.isActive },
               });
               await faqListQuery.refetch();
             }}

@@ -6,8 +6,6 @@ import { useAdminUsersGet } from "@/features/adminUsers";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { Button } from "@/shared/components/ui/button";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-
-type PermissionRow = Readonly<{ id: string; module: string; action: string; key: string }>;
 type CrudColumn = "create" | "edit" | "view" | "delete";
 
 const toCrudColumn = (action: string): CrudColumn | null => {

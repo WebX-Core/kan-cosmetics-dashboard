@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, ShoppingBag, UserCheck, ShieldOff, Eye } from "lucide-react";
+import { Users, UserCheck, ShieldOff, Eye } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";

@@ -8,7 +8,6 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { validateOrToast } from "@/shared/utils/validation";
 import { marketingApi } from "@/features/marketing";
-import { useQuery } from "@tanstack/react-query";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
@@ -111,7 +110,7 @@ export const EmailRecipientFormPage: React.FC = () => {
     const payload = {
       campaignId: parsed.campaignId,
       customerId: form.customer.id,
-      email: parsed.email?.trim() || undefined,
+      email: parsed.email?.trim() || form.customer.email,
       name: parsed.name?.trim() || undefined,
     };
 

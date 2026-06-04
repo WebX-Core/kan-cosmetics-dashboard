@@ -166,7 +166,7 @@ export const SeoListPage: React.FC = () => {
   const totalPages = (q.data as Record<string, unknown> | undefined)?.totalPages as number | undefined ?? 1;
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => engagementApi.seo.softDelete(id),
+    mutationFn: (id: string) => engagementApi.seo.service.softDelete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["seo"] }),
   });
 
@@ -327,7 +327,7 @@ export const SeoFormPage: React.FC = () => {
 
   const existingQuery = useQuery({
     queryKey: ["seo", id],
-    queryFn: () => engagementApi.seo.getOne!(id!),
+    queryFn: () => engagementApi.seo.service.get(id!),
     enabled: isEdit && Boolean(id),
   });
 
@@ -359,12 +359,12 @@ export const SeoFormPage: React.FC = () => {
   }, [existingQuery.data, isEdit]);
 
   const createMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => engagementApi.seo.create(payload),
+    mutationFn: (payload: Record<string, unknown>) => engagementApi.seo.service.create(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["seo"] }),
   });
   const updateMutation = useMutation({
     mutationFn: ({ payload }: { payload: Record<string, unknown> }) =>
-      engagementApi.seo.update!(id!, payload),
+      engagementApi.seo.service.update(id!, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["seo"] }),
   });
 

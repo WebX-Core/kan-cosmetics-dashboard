@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit2, Info, Star, User, Calendar } from "lucide-react";
+import { Info, Star, User, Calendar } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { engagementApi } from "@/features/engagement";
@@ -22,6 +22,7 @@ type ReviewRow = Readonly<{
   id: string;
   reviewerName: string;
   reviewerEmail: string;
+  title: string;
   comment: string;
   rating: number;
   image: string;
@@ -42,6 +43,7 @@ const toRows = (payload: unknown): ReadonlyArray<ReviewRow> => {
       id: text(r.id, crypto.randomUUID()),
       reviewerName: text(r.reviewerName ?? r.fullname, "Anonymous"),
       reviewerEmail: text(r.reviewerEmail ?? r.email, "—"),
+      title: text(r.title, ""),
       comment: text(r.comment ?? r.message, ""),
       rating: num(r.rating),
       image: text(r.image ?? r.imageUrl, ""),
@@ -93,8 +95,17 @@ export const ProductReviewDetailPage: React.FC = () => {
   const changed = review ? isPublished !== review.isPublished : false;
 
   const mutation = useMutation({
-    mutationFn: () =>
-      engagementApi.reviews.crud.service.update(reviewId!, { isPublished } as Record<string, unknown>),
+    mutationFn: () => {
+      if (!review) return Promise.reject(new Error("Review not loaded"));
+      return engagementApi.reviews.crud.service.update(reviewId!, {
+        reviewerName: review.reviewerName,
+        reviewerEmail: review.reviewerEmail,
+        title: review.title || undefined,
+        comment: review.comment,
+        rating: review.rating,
+        isPublished,
+      });
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["reviews", "product", productId] });
       toast.success("Review updated.");

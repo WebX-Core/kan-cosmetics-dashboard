@@ -36,7 +36,7 @@ const schema = z.object({
   payloadJson: z.string().trim().optional().or(z.literal("")),
   idempotencyKey: z.string().trim().optional().or(z.literal("")),
   targetType: z.enum(["customer", "subscription", "user", "session"]),
-  targetId: z.string().trim().optional().or(z.literal("")),
+  targetId: z.string().trim().min(1, "Target is required"),
 });
 
 type TargetType = "customer" | "subscription" | "user" | "session";
@@ -77,7 +77,7 @@ const initial: Form = {
   targetId: "",
 };
 
-const read = (v: unknown): string => (typeof v === "string" ? v : "");
+const read = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : fallback);
 const readText = (v: unknown, fb = ""): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : fb);
 
 const customerFromRecord = (record: Record<string, unknown>): CustomerSearchOption | null => {
@@ -197,8 +197,8 @@ const getTarget = (
   return { targetType: "customer", targetId: "", customer: null, subscription: null, user: null };
 };
 
-const parsePayloadJson = (value: string): Record<string, unknown> | null => {
-  const trimmed = value.trim();
+const parsePayloadJson = (value: string | undefined): Record<string, unknown> | null => {
+  const trimmed = value?.trim() ?? "";
   if (!trimmed) return null;
   const parsed = JSON.parse(trimmed) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -296,34 +296,38 @@ export const WebPushNotificationFormPage: React.FC = () => {
       : { label: "Session", value: "No session selected", meta: "Enter a session ID to target a single session." };
   }, [form.targetId, form.targetType, selectedCustomer, selectedSubscription, selectedUser]);
 
-  const validateTarget = (parsed: z.infer<typeof schema>) => {
-    if (!parsed.targetId.trim()) {
-      throw new Error("Target ID is required");
-    }
-  };
-
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
 
-    let parsed: z.infer<typeof schema>;
     try {
-      parsed = validateOrToast(schema, form, toast);
+      const parsed = validateOrToast(schema, form, toast);
       if (!parsed) return;
-      validateTarget(parsed);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid target");
-      return;
-    }
 
-    let payloadData: Record<string, unknown> | null = null;
-    try {
-      payloadData = parsePayloadJson(parsed.payloadJson);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid payload JSON");
-      return;
-    }
+      const targetId = parsed.targetId.trim();
+      if (parsed.targetType === "customer" && !selectedCustomer?.id) {
+        throw new Error("Customer target is required");
+      }
+      if (parsed.targetType === "subscription" && !selectedSubscription?.id) {
+        throw new Error("Subscription target is required");
+      }
+      if (parsed.targetType === "user" && !selectedUser?.id) {
+        throw new Error("User target is required");
+      }
+      if (parsed.targetType === "session" && !targetId) {
+        throw new Error("Session ID is required");
+      }
 
-    try {
+      const payloadJson = parsed.payloadJson ?? "";
+      const payloadData = (() => {
+        try {
+          return parsePayloadJson(payloadJson);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Invalid payload JSON");
+          return null;
+        }
+      })();
+      if (payloadData === null && payloadJson.trim()) return;
+
       const dto = {
         title: parsed.title,
         body: parsed.body,
@@ -346,12 +350,12 @@ export const WebPushNotificationFormPage: React.FC = () => {
         payload: payloadData ?? undefined,
         idempotencyKey: parsed.idempotencyKey?.trim() || undefined,
         ...(parsed.targetType === "customer"
-          ? { customerId: parsed.targetId.trim() }
+          ? { customerId: selectedCustomer?.id }
           : parsed.targetType === "subscription"
-            ? { subscriptionId: parsed.targetId.trim() }
+            ? { subscriptionId: selectedSubscription?.id }
             : parsed.targetType === "user"
-              ? { userId: parsed.targetId.trim() }
-              : { sessionId: parsed.targetId.trim() }),
+              ? { userId: selectedUser?.id }
+              : { sessionId: targetId }),
       };
 
       if (isEdit && id) {

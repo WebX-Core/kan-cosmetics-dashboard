@@ -113,7 +113,7 @@ export const ProductTagCreatePage: React.FC = () => {
   const create = catalogApi.productTags.hooks.useCreate();
   const [productId, setProductId] = React.useState("");
   const [tag, setTag] = React.useState("");
-  const [sortOrder, setSortOrder] = React.useState("0");
+  const [sortOrder] = React.useState("0");
   const submit = async () => {
     const parsed = validateOrToast(tagSchema, { productId, tag, sortOrder }, toast);
     if (!parsed) return;
@@ -240,7 +240,7 @@ export const ProductAttributeCreatePage: React.FC = () => {
   const [productId, setProductId] = React.useState("");
   const [name, setName] = React.useState("");
   const [value, setValue] = React.useState("");
-  const [sortOrder, setSortOrder] = React.useState("0");
+  const [sortOrder] = React.useState("0");
   const submit = async () => {
     const parsed = validateOrToast(attributeSchema, { productId, name, value, sortOrder }, toast);
     if (!parsed) return;

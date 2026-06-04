@@ -7,7 +7,6 @@ import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { engagementApi } from "@/features/engagement";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { parseApiError } from "@/shared/utils/apiError";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown): number => (typeof v === "number" ? v : 0);

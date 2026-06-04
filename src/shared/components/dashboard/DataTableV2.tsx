@@ -26,11 +26,11 @@ type Props<T> = {
   title?: string;
   subtitle?: string;
   icon?: React.ReactNode;
-  tabs?: Tab[];
+  tabs?: ReadonlyArray<Tab>;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  columns: Column<T>[];
-  data: T[];
+  columns: ReadonlyArray<Column<T>>;
+  data: ReadonlyArray<T>;
   searchPlaceholder?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -38,7 +38,7 @@ type Props<T> = {
   onDelete?: (row: T) => void;
   onRowClick?: (row: T) => void;
   actions?: React.ReactNode;
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
@@ -180,7 +180,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
     0,
     tabItems.findIndex((tab) => tab.key === activeTab),
   );
-  const isLoadingState = data.length === 0 && /loading/i.test(emptyMessage);
+  const isLoadingState = data.length === 0 && /loading/i.test(String(emptyMessage));
   const effectiveData = data;
   const skeletonRows = 6;
   const [showDebounceSpinner, setShowDebounceSpinner] = React.useState(false);

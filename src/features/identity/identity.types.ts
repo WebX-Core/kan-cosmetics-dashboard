@@ -1,4 +1,4 @@
-import type { AdminSignupDto } from "./auth";
+import type { SignupDto } from "../auth/auth.types";
 
 export type RoleDto = Readonly<{
   name: string;
@@ -33,4 +33,4 @@ export type UserPermissionAssignDto = Readonly<{
   permissionIds?: ReadonlyArray<string>;
 }>;
 
-export type AdminUserDto = AdminSignupDto;
+export type AdminUserDto = SignupDto;
