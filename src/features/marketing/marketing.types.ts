@@ -33,9 +33,10 @@ export type AdvertisementDto = Readonly<{
 }>;
 
 export type EmailCampaignDto = Readonly<{
-  name: string;
+  title: string;
   subject: string;
-  body?: string;
+  content: string;
+  type: string;
   status?: string;
   scheduledAt?: string;
   sortOrder?: number;
@@ -64,16 +65,100 @@ export type EmailLogDto = Readonly<{
 }>;
 
 export type WebPushSubscriptionDto = Readonly<{
+  customerId?: string;
+  userId?: string;
+  sessionId?: string;
   endpoint: string;
-  p256dh?: string;
-  auth?: string;
+  p256dh: string;
+  authKey: string;
+  contentEncoding?: string;
+  isActive?: boolean;
+  lastSeenAt?: string;
+  lastSuccessAt?: string;
+  lastFailureAt?: string;
+  failureReason?: string;
+  userAgent?: string;
+  deviceType?: string;
+  platform?: string;
+  browser?: string;
+  locale?: string;
+  timezone?: string;
+  ip?: string;
+  metadata?: Record<string, unknown> | null;
   sortOrder?: number;
 }>;
 
 export type WebPushNotificationDto = Readonly<{
+  subscriptionId?: string;
+  customerId?: string;
+  userId?: string;
+  sessionId?: string;
   title: string;
   body: string;
   icon?: string;
-  url?: string;
+  badge?: string;
+  image?: string;
+  clickAction?: string;
+  tag?: string;
+  ttl?: number;
+  urgency?: string;
+  payload?: Record<string, unknown> | null;
+  idempotencyKey?: string;
+  status?: string;
+  scheduledAt?: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  providerMessageId?: string;
+  responseStatus?: number;
+  responsePayload?: Record<string, unknown> | null;
   sortOrder?: number;
+}>;
+
+export type EmailRecipientBucketDto = Readonly<{
+  name: string;
+  description?: string;
+  district?: string;
+  minTotalSpent?: number;
+  maxTotalSpent?: number;
+  limit?: number;
+  sortOrder?: number;
+}>;
+
+export type SelectAudienceDto = Readonly<{
+  campaignId: string;
+  minTotalSpent?: number;
+  maxTotalSpent?: number;
+  city?: string;
+  state?: string;
+  country?: string;
+  keyword?: string;
+  limit?: number;
+  dryRun?: boolean;
+}>;
+
+export type CreateFromSubscribersDto = Readonly<{
+  campaignId: string;
+  subscriberIds: ReadonlyArray<string>;
+  dryRun?: boolean;
+}>;
+
+export type CreateQueueFromCampaignDto = Readonly<{
+  campaignId: string;
+  scheduledAt?: string;
+  limit?: number;
+  batchSize?: number;
+  dryRun?: boolean;
+  skipExistingQueued?: boolean;
+}>;
+
+export type CreateQueueFromBucketDto = Readonly<{
+  campaignId: string;
+  bucketId: string;
+  scheduledAt?: string;
+  limit?: number;
+  batchSize?: number;
+  dryRun?: boolean;
+  skipExistingQueued?: boolean;
 }>;

@@ -21,7 +21,10 @@ export const commerceApi = {
   carts: {
     addItem: async (payload: CartAddItemDto) => unwrap<unknown>(await api.post("/cart/add-item", payload)),
     my: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/cart/my", { params: q })),
+    allCustomersSummary: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/cart/customers", { params: q })),
+    abandonedCustomersSummary: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/cart/abandoned/customers", { params: q })),
     byCustomer: async (customerId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/cart/customer/${customerId}`, { params: q })),
+    abandonedByCustomer: async (customerId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/cart/abandoned/customer/${customerId}`, { params: q })),
     updateItem: async (itemId: UUID, payload: CartUpdateItemDto) => unwrap<unknown>(await api.patch(`/cart/item/${itemId}`, payload)),
     removeItem: async (itemId: UUID) => unwrap<unknown>(await api.delete(`/cart/item/${itemId}`)),
     clear: async () => unwrap<unknown>(await api.delete("/cart/clear")),
@@ -29,6 +32,7 @@ export const commerceApi = {
   wishlists: {
     addItem: async (payload: WishlistAddItemDto) => unwrap<unknown>(await api.post("/wishlist/add-item", payload)),
     my: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/wishlist/my", { params: q })),
+    allCustomersSummary: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/wishlist/customers", { params: q })),
     byCustomer: async (customerId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/wishlist/customer/${customerId}`, { params: q })),
     removeItem: async (itemId: UUID) => unwrap<unknown>(await api.delete(`/wishlist/item/${itemId}`)),
     clear: async () => unwrap<unknown>(await api.delete("/wishlist/clear")),
@@ -65,6 +69,7 @@ export const commerceApi = {
   payments: {
     byOrder: async (orderId: UUID) => unwrap<unknown>(await api.get(`/payment/order/${orderId}`)),
     update: async (id: UUID, payload: PaymentUpdateDto) => unwrap<unknown>(await api.patch(`/payment/update/${id}`, payload)),
+    syncProvider: async (id: UUID) => unwrap<unknown>(await api.patch(`/payment/sync-provider/${id}`, {})),
   },
   purchaseHistory: {
     syncByOrder: async (orderId: UUID) => unwrap<unknown>(await api.post(`/purchase-history/sync/order/${orderId}`)),

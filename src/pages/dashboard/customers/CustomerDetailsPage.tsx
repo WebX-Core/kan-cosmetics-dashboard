@@ -67,7 +67,12 @@ const toPurchaseRow = (p: unknown): PurchaseRow => {
 };
 
 const toOrderRows = (payload: unknown, customerId: string): OrderRow[] => {
-  const items = Array.isArray(payload) ? payload : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+  const p = payload as Record<string, unknown> | undefined;
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(p?.orders)
+    ? (p.orders as unknown[])
+    : ((p as { data?: unknown[] } | undefined)?.data ?? []);
   return items
     .filter((o) => {
       const r = (typeof o === "object" && o !== null ? o : {}) as Record<string, unknown>;

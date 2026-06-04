@@ -1,10 +1,9 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { List, Clock, Send, AlertCircle, Megaphone, Archive, RotateCcw, Trash2, X } from "lucide-react";
+import { Archive, RotateCcw, Trash2 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,12 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { Checkbox } from "@/shared/components/ui/checkbox";
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown): number => (typeof v === "number" ? v : 0);
@@ -29,60 +28,64 @@ const fmt = (v: string): string => {
   const d = new Date(v);
   return isNaN(d.getTime())
     ? "—"
-    : new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d);
+    : new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "2-digit" }).format(d);
 };
 const toRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   const items = Array.isArray(payload) ? payload : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
   return items.filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null);
 };
 
-type QueueRow = Readonly<{
+type BucketRow = Readonly<{
   id: string;
-  to: string;
-  subject: string;
-  status: string;
-  attempts: number;
+  name: string;
+  description: string;
+  district: string;
+  limit: number;
+  minTotalSpent: number;
+  maxTotalSpent: number;
   createdAt: string;
 }>;
 
-const toQueueRows = (payload: unknown): ReadonlyArray<QueueRow> =>
+const toBucketRows = (payload: unknown): ReadonlyArray<BucketRow> =>
   toRows(payload).map((item) => ({
     id: text(item.id, crypto.randomUUID()),
-    to: text(item.to ?? item.email, "—"),
-    subject: text(item.subject, "—"),
-    status: text(item.status, "Queued"),
-    attempts: num(item.attempts ?? item.retryCount),
+    name: text(item.name, "—"),
+    description: text(item.description, ""),
+    district: text(item.district, ""),
+    limit: num(item.limit),
+    minTotalSpent: num(item.minTotalSpent),
+    maxTotalSpent: num(item.maxTotalSpent),
     createdAt: text(item.createdAt, ""),
   }));
 
-export const EmailQueuePage: React.FC = () => {
+export const EmailRecipientBucketsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
   const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
-  const isDeletedView = location.pathname === "/dashboard/marketing/email-queue/deleted";
+  const isDeletedView = location.pathname === "/dashboard/marketing/email-recipient-buckets/deleted";
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const confirm = useConfirmAction();
 
-  const query = marketingApi.emailQueues.hooks.useList(
+  const query = marketingApi.emailRecipientBuckets.hooks.useList(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
     !isDeletedView,
   );
-  const deletedQuery = marketingApi.emailQueues.hooks.useDeleted(
+  const deletedQuery = marketingApi.emailRecipientBuckets.hooks.useDeleted(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
     isDeletedView,
   );
-  const softDelete = marketingApi.emailQueues.hooks.useSoftDelete();
-  const recover = marketingApi.emailQueues.hooks.useRecover();
-  const destroy = marketingApi.emailQueues.hooks.useDestroy();
+  const softDelete = marketingApi.emailRecipientBuckets.hooks.useSoftDelete();
+  const recover = marketingApi.emailRecipientBuckets.hooks.useRecover();
+  const destroy = marketingApi.emailRecipientBuckets.hooks.useDestroy();
 
   const sourceData = isDeletedView ? deletedQuery.data : query.data;
-  const rows = React.useMemo(() => toQueueRows(sourceData), [sourceData]);
+  const rows = React.useMemo(() => toBucketRows(sourceData), [sourceData]);
   const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
-  const allVisibleIds = React.useMemo(() => rows.map((row) => row.id), [rows]);
+  const allVisibleIds = React.useMemo(() => rows.map((r) => r.id), [rows]);
   const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
 
   const toggleOne = (id: string, checked: boolean) =>
@@ -102,55 +105,62 @@ export const EmailQueuePage: React.FC = () => {
       await query.refetch();
       await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(
-        action === "recover" ? `${ids.length === 1 ? "Queue item" : `${ids.length} queue items`} recovered.`
-          : action === "destroy" ? `${ids.length === 1 ? "Queue item" : `${ids.length} queue items`} permanently deleted.`
-          : `${ids.length === 1 ? "Queue item" : `${ids.length} queue items`} deleted.`,
-      );
+      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
     } finally {
       confirm.dismiss();
     }
   };
 
-  const stats = React.useMemo(
-    () => ({
-      total,
-      queued: rows.filter((row) => row.status.toLowerCase() === "queued").length,
-      processing: rows.filter((row) => row.status.toLowerCase() === "processing").length,
-      failed: rows.filter((row) => row.status.toLowerCase() === "failed").length,
-    }),
-    [rows, total],
-  );
-
   const columns = [
     {
       key: "select",
       label: <Checkbox checked={isAllSelected} onCheckedChange={(checked) => toggleAll(Boolean(checked))} aria-label="Select all" />,
-      render: (r: QueueRow) => (
-        <Checkbox checked={selectedIds.includes(r.id)} onClick={(event) => event.stopPropagation()} onCheckedChange={(checked) => toggleOne(r.id, Boolean(checked))} aria-label={`Select ${r.to}`} />
+      render: (r: BucketRow) => (
+        <Checkbox checked={selectedIds.includes(r.id)} onClick={(event) => event.stopPropagation()} onCheckedChange={(checked) => toggleOne(r.id, Boolean(checked))} aria-label={`Select ${r.name}`} />
       ),
       width: "44px",
     },
-    { key: "to", label: "To", render: (r: QueueRow) => <span className="font-medium text-gray-900">{r.to}</span> },
-    { key: "subject", label: "Subject", render: (r: QueueRow) => <span className="text-gray-600 line-clamp-1">{r.subject}</span> },
     {
-      key: "status",
-      label: "Status",
-      render: (r: QueueRow) => (
-        <StatusBadge
-          status={r.status.toLowerCase() === "sent" ? "Active" : r.status.toLowerCase() === "failed" ? "Inactive" : "Pending"}
-          label={r.status}
-        />
+      key: "name",
+      label: "Bucket Name",
+      render: (r: BucketRow) => (
+        <div>
+          <div className="font-medium text-gray-900">{r.name}</div>
+          {r.description && <div className="text-xs text-gray-400 line-clamp-1">{r.description}</div>}
+        </div>
       ),
     },
-    { key: "attempts", label: "Attempts", render: (r: QueueRow) => <span className="text-gray-600">{r.attempts}</span> },
-    { key: "createdAt", label: "Queued At", render: (r: QueueRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    {
+      key: "district",
+      label: "District",
+      render: (r: BucketRow) => <span className="text-sm text-gray-600">{r.district || "—"}</span>,
+    },
+    {
+      key: "spent",
+      label: "Spent Range",
+      render: (r: BucketRow) => {
+        if (!r.minTotalSpent && !r.maxTotalSpent) return <span className="text-gray-400">—</span>;
+        const min = r.minTotalSpent ? `Rs ${r.minTotalSpent.toLocaleString()}` : "—";
+        const max = r.maxTotalSpent ? `Rs ${r.maxTotalSpent.toLocaleString()}` : "—";
+        return <span className="text-sm text-gray-600">{min} – {max}</span>;
+      },
+    },
+    {
+      key: "limit",
+      label: "Limit",
+      render: (r: BucketRow) => <span className="text-sm text-gray-600">{r.limit || "—"}</span>,
+    },
+    {
+      key: "createdAt",
+      label: "Created",
+      render: (r: BucketRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span>,
+    },
     ...(isDeletedView
       ? [
           {
             key: "rowActions",
             label: "Actions",
-            render: (r: QueueRow) => (
+            render: (r: BucketRow) => (
               <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
                   <RotateCcw size={11} /> Recover
@@ -168,38 +178,29 @@ export const EmailQueuePage: React.FC = () => {
   return (
     <PageLayout
       variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Queue Items" : "Email Queue"}
-      subtitle={isDeletedView ? "View soft-deleted email queue entries." : "Outbound email queue and delivery status."}
-      onBack={isDeletedView ? () => navigate("/dashboard/marketing/email-queue") : undefined}
-      searchValue={state.search}
-      onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
-      searchPlaceholder="Search queue..."
+      title={isDeletedView ? "Deleted Buckets" : "Recipient Buckets"}
+      subtitle={isDeletedView ? "View soft-deleted recipient buckets." : "Audience buckets for targeted email campaigns."}
+      onBack={isDeletedView ? () => navigate("/dashboard/marketing/email-recipient-buckets") : undefined}
+      onNew={!isDeletedView ? () => navigate("/dashboard/marketing/email-recipient-buckets/create") : undefined}
+      newButtonLabel="New Bucket"
       actions={
-        !isDeletedView ? (
-          <div className="flex items-center gap-2">
-            {isSudoAdmin ? (
-              <button type="button" onClick={() => navigate("/dashboard/marketing/email-queue/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-                <Trash2 size={13} strokeWidth={2} /> View Deleted
-              </button>
-            ) : null}
-            <button type="button" onClick={() => navigate("/dashboard/marketing/email-queue/create-from-campaign")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-              <Megaphone size={13} strokeWidth={2} /> From Campaign
-            </button>
-            <button type="button" onClick={() => navigate("/dashboard/marketing/email-queue/create-from-bucket")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-              <Archive size={13} strokeWidth={2} /> From Bucket
-            </button>
-          </div>
+        !isDeletedView && isSudoAdmin ? (
+          <button type="button" onClick={() => navigate("/dashboard/marketing/email-recipient-buckets/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
+            <Trash2 size={13} strokeWidth={2} /> View Deleted
+          </button>
         ) : undefined
       }
+      searchValue={state.search}
+      onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
+      searchPlaceholder="Search buckets..."
     >
-      {!isDeletedView ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label="Total in Queue" value={stats.total} icon={List} colorVariant="blue" />
-          <StatCardV2 label="Queued" value={stats.queued} icon={Clock} colorVariant="amber" />
-          <StatCardV2 label="Processing" value={stats.processing} icon={Send} colorVariant="indigo" />
-          <StatCardV2 label="Failed" value={stats.failed} icon={AlertCircle} colorVariant="red" />
+      {!isDeletedView && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <StatCardV2 label="Total Buckets" value={total} icon={Archive} colorVariant="blue" />
+          <StatCardV2 label="On This Page" value={rows.length} icon={Archive} colorVariant="indigo" />
         </div>
-      ) : null}
+      )}
+
       <DataTableV2
         columns={columns}
         data={rows}
@@ -220,35 +221,31 @@ export const EmailQueuePage: React.FC = () => {
                   <Trash2 size={12} /> Delete ({selectedIds.length})
                 </button>
               )}
-              <button type="button" onClick={() => setSelectedIds([])} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]" aria-label="Clear selection">
-                <X size={12} />
-              </button>
             </div>
           ) : undefined
         }
         searchValue={state.search}
-        onDelete={!isDeletedView ? (row) => confirm.prompt("delete", [row.id]) : undefined}
-        emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading queue..." : isDeletedView ? "No deleted queue items." : "Email queue is empty."}
+        onEdit={!isDeletedView ? (r) => navigate(`/dashboard/marketing/email-recipient-buckets/${r.id}/edit`) : undefined}
+        onDelete={!isDeletedView ? (r) => confirm.prompt("delete", [r.id]) : undefined}
+        emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading buckets..." : "No recipient buckets found."}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
-        onPageChange={(page) => setState((prev) => ({ ...prev, page }))}
+        onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
       />
 
-      <AlertDialog open={confirm.open} onOpenChange={(open) => !open && confirm.dismiss()}>
+      <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover queue item?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete queue item?"}
+              {confirm.action === "recover" ? "Recover bucket?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete bucket?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the queue item." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the queue item to trash."}
+              {confirm.action === "recover" ? "This will restore the bucket." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the bucket to trash."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
               onClick={() => void handleConfirm()}

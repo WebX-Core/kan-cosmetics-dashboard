@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Archive,
   Bell,
   BellRing,
   Boxes,
@@ -19,6 +20,7 @@ import {
   ShieldUser,
   ShoppingCart,
   Star,
+  Quote,
   TicketPercent,
   Truck,
   Users,
@@ -55,12 +57,14 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
   { key: "site-inquiries", label: "Site Inquiries", path: "/dashboard/support/site-inquiries", section: "Support", description: "AI digital hair color and site-level inquiry inbox with notes and replies.", icon: SearchCheck },
   { key: "contacts", label: "Contacts", path: "/dashboard/support/contacts", section: "Support", description: "General contact inbox with view and handled state through replies.", icon: Users },
   { key: "reviews", label: "Reviews", path: "/dashboard/reviews", section: "Support", description: "Review moderation with product and site review split.", icon: Star },
+  { key: "testimonials", label: "Testimonials", path: "/dashboard/testimonials", section: "Support", description: "Curated site-wide customer testimonials with publish control.", icon: Quote },
   { key: "faqs", label: "FAQs", path: "/dashboard/faqs", section: "Support", description: "FAQ CRUD with product and site FAQ split plus active toggle.", icon: MessageCircleQuestion },
 
   { key: "blog-posts", label: "Blog", path: "/dashboard/blog-posts", section: "Marketing", description: "Blog post CRUD and publish toggle.", icon: Rss },
   { key: "newsletter", label: "Newsletter", path: "/dashboard/newsletter", section: "Marketing", description: "Subscriber list, subscription state, and segmentation.", icon: Send },
   { key: "email-campaigns", label: "Email Campaigns", path: "/dashboard/marketing/email-campaigns", section: "Marketing", description: "Email marketing campaign management.", icon: Mail },
   { key: "email-recipients", label: "Email Recipients", path: "/dashboard/marketing/email-recipients", section: "Marketing", description: "Recipients linked to email campaigns.", icon: Users },
+  { key: "email-recipient-buckets", label: "Recipient Buckets", path: "/dashboard/marketing/email-recipient-buckets", section: "Marketing", description: "Audience buckets for targeted email campaigns.", icon: Archive },
   { key: "email-queue", label: "Email Queue", path: "/dashboard/marketing/email-queue", section: "Marketing", description: "Outbound email queue and delivery status.", icon: List },
   { key: "email-logs", label: "Email Logs", path: "/dashboard/marketing/email-logs", section: "Marketing", description: "Delivery history for all outbound emails.", icon: Inbox },
   { key: "web-push-notifications", label: "Push Notifications", path: "/dashboard/marketing/web-push/notifications", section: "Marketing", description: "Send and manage browser push notifications.", icon: BellRing },

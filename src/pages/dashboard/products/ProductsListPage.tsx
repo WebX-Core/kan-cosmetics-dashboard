@@ -1,6 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -8,9 +8,19 @@ import { catalogApi } from "@/features/catalog";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
-import { confirmAction } from "@/shared/utils/confirm";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { parseApiError } from "@/shared/utils/apiError";
+import { useUserStore } from "@/store/UserStore";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
@@ -80,30 +90,42 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
 
 export const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
+  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
+  const isDeletedView = location.pathname === "/dashboard/products/deleted";
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
-
-  const query = catalogApi.products.hooks.useList({
-    page: state.page,
-    limit: state.limit,
-    search: debouncedSearch || undefined,
-  });
-  const softDelete = catalogApi.products.hooks.useSoftDelete();
   const [selectedIds, setSelectedIds] = React.useState<ReadonlySet<string>>(new Set());
+  const confirm = useConfirmAction();
 
-  const rows = React.useMemo(() => toRows(query.data), [query.data]);
-  const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (query.data as { total?: number } | undefined)?.total ?? rows.length;
+  const query = catalogApi.products.hooks.useList(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView,
+  );
+  const deletedQuery = catalogApi.products.hooks.useDeleted(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    isDeletedView,
+  );
+  const softDelete = catalogApi.products.hooks.useSoftDelete();
+  const recover = catalogApi.products.hooks.useRecover();
+  const destroy = catalogApi.products.hooks.useDestroy();
+
+  const sourceData = isDeletedView ? deletedQuery.data : query.data;
+  const rows = React.useMemo(() => toRows(sourceData), [sourceData]);
+  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
   const filtered = React.useMemo(() => {
+    if (isDeletedView) return rows;
     if (activeTab === "low-stock") return rows.filter((r) => r.stock > 0 && r.stock <= 5);
     if (activeTab === "out-of-stock") return rows.filter((r) => r.stock === 0);
     return rows;
-  }, [rows, activeTab]);
+  }, [rows, activeTab, isDeletedView]);
 
   const stats = React.useMemo(() => ({
     total,
+    inStock: rows.filter((r) => r.stock > 0).length,
     lowStock: rows.filter((r) => r.stock > 0 && r.stock <= 5).length,
     outOfStock: rows.filter((r) => r.stock === 0).length,
   }), [rows, total]);
@@ -113,6 +135,26 @@ export const ProductsListPage: React.FC = () => {
     { key: "low-stock", label: "Low Stock", count: stats.lowStock },
     { key: "out-of-stock", label: "Out of Stock", count: stats.outOfStock },
   ];
+
+  const handleConfirm = async () => {
+    const { action, ids } = confirm;
+    if (!ids.length) return;
+    try {
+      if (action === "delete") await Promise.all(ids.map((id) => softDelete.mutateAsync(id)));
+      if (action === "recover") await recover.mutateAsync({ ids });
+      if (action === "destroy") await Promise.all(ids.map((id) => destroy.mutateAsync(id)));
+      await query.refetch();
+      await deletedQuery.refetch();
+      setSelectedIds(new Set());
+      toast.success(
+        action === "recover" ? `${ids.length === 1 ? "Product" : `${ids.length} products`} recovered.`
+          : action === "destroy" ? `${ids.length === 1 ? "Product" : `${ids.length} products`} permanently deleted.`
+          : `${ids.length === 1 ? "Product" : `${ids.length} products`} deleted.`,
+      );
+    } finally {
+      confirm.dismiss();
+    }
+  };
 
   const columns = [
     {
@@ -146,109 +188,129 @@ export const ProductsListPage: React.FC = () => {
       key: "actions",
       label: "Actions",
       render: (r: ProductRow) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <MoreHorizontal size={15} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/dashboard/products/${r.id}/edit`);
-              }}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`);
-              }}
-            >
-              <Star className="mr-2 h-4 w-4" />
-              Reviews
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/dashboard/products/${r.id}/faqs`);
-              }}
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Manage FAQs
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
-              }}
-            >
-              <Boxes className="mr-2 h-4 w-4" />
-              Manage Variants
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation();
-                navigate(`/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`);
-              }}
-            >
-              <Globe className="mr-2 h-4 w-4" />
-              SEO
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-[#b42318] focus:text-[#b42318]"
-              onClick={async (event) => {
-                event.stopPropagation();
-                const ok = await confirmAction("Delete this product?");
-                if (!ok) return;
-                await softDelete.mutateAsync(r.id);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        isDeletedView ? (
+          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+              <RotateCcw size={11} /> Recover
+            </button>
+            <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+              <Trash2 size={11} /> Delete Permanently
+            </button>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <MoreHorizontal size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/products/${r.id}/edit`);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`);
+                }}
+              >
+                <Star className="mr-2 h-4 w-4" />
+                Reviews
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/products/${r.id}/faqs`);
+                }}
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Manage FAQs
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                }}
+              >
+                <Boxes className="mr-2 h-4 w-4" />
+                Manage Variants
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`);
+                }}
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                SEO
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-[#b42318] focus:text-[#b42318]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  confirm.prompt("delete", [r.id]);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
       ),
     },
   ];
 
   return (
     <PageLayout
-      title="Products"
-      subtitle="All products in the catalog."
-      onNew={() => navigate("/dashboard/products/create")}
+      variant={isDeletedView ? "deleted" : undefined}
+      title={isDeletedView ? "Deleted Products" : "Products"}
+      subtitle={isDeletedView ? "View soft-deleted products." : "All products in the catalog."}
+      onBack={isDeletedView ? () => navigate("/dashboard/products") : undefined}
+      onNew={!isDeletedView ? () => navigate("/dashboard/products/create") : undefined}
       newButtonLabel="New Product"
+      actions={
+        !isDeletedView && isSudoAdmin ? (
+          <button type="button" onClick={() => navigate("/dashboard/products/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
+            <Trash2 size={13} strokeWidth={2} /> View Deleted
+          </button>
+        ) : undefined
+      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search products..."
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCardV2 label="Total Products" value={stats.total} icon={Package} colorVariant="blue" />
-        <StatCardV2 label="Active" value={stats.active} icon={Tag} colorVariant="emerald" />
-        <StatCardV2 label="Low Stock" value={stats.lowStock} icon={AlertTriangle} colorVariant="amber" />
-        <StatCardV2 label="Out of Stock" value={stats.outOfStock} icon={Layers} colorVariant="red" />
-      </div>
+      {!isDeletedView && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCardV2 label="Total Products" value={stats.total} icon={Package} colorVariant="blue" />
+          <StatCardV2 label="In Stock" value={stats.inStock} icon={Tag} colorVariant="emerald" />
+          <StatCardV2 label="Low Stock" value={stats.lowStock} icon={AlertTriangle} colorVariant="amber" />
+          <StatCardV2 label="Out of Stock" value={stats.outOfStock} icon={Layers} colorVariant="red" />
+        </div>
+      )}
       <DataTableV2
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={(t) => { setActiveTab(t); setState((p) => ({ ...p, page: 1 })); }}
+        tabs={!isDeletedView ? tabs : undefined}
+        activeTab={!isDeletedView ? activeTab : undefined}
+        onTabChange={!isDeletedView ? (t) => { setActiveTab(t); setState((p) => ({ ...p, page: 1 })); } : undefined}
         columns={columns}
         data={filtered}
         searchValue={state.search}
-        onRowClick={(r) => navigate(`/dashboard/products/${r.id}`)}
-        emptyMessage={query.isLoading ? "Loading products..." : "No products found."}
+        onRowClick={!isDeletedView ? (r) => navigate(`/dashboard/products/${r.id}`) : undefined}
+        emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading products..." : isDeletedView ? "No deleted products." : "No products found."}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
@@ -257,21 +319,62 @@ export const ProductsListPage: React.FC = () => {
         selectedIds={selectedIds}
         onSelectionChange={(ids) => setSelectedIds(ids)}
         bulkActions={(ids, clear) => (
-          <button
-            type="button"
-            onClick={async () => {
-              const ok = await confirmAction(`Delete ${ids.size} product${ids.size > 1 ? "s" : ""}?`);
-              if (!ok) return;
-              await Promise.all([...ids].map((id) => softDelete.mutateAsync(id)));
-              clear();
-              toast.success(`${ids.size} product${ids.size > 1 ? "s" : ""} deleted.`);
-            }}
-            className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-          >
-            <Trash2 size={12} /> Delete ({ids.size})
-          </button>
+          <div className="flex items-center gap-2">
+            {isDeletedView ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => confirm.prompt("recover", [...ids])}
+                  className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                >
+                  <RotateCcw size={12} /> Recover ({ids.size})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirm.prompt("destroy", [...ids])}
+                  className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+                >
+                  <Trash2 size={12} /> Delete Permanently ({ids.size})
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => confirm.prompt("delete", [...ids])}
+                className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+              >
+                <Trash2 size={12} /> Delete ({ids.size})
+              </button>
+            )}
+          </div>
         )}
       />
+
+      <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm.action === "recover" ? "Recover products?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete products?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm.action === "recover"
+                ? `Recover ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`}.`
+                : confirm.action === "destroy"
+                ? "This cannot be undone."
+                : `Move ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`} to trash.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
+              onClick={() => void handleConfirm()}
+            >
+              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 };

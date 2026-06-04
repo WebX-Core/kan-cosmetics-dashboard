@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Bell, BellRing, Clock, RotateCcw, Trash2 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Bell, BellRing, Clock, RotateCcw, Trash2, Send } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -22,39 +22,87 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
+
 const fmt = (v: string): string => {
   if (!v) return "—";
   const d = new Date(v);
-  return isNaN(d.getTime())
+  return Number.isNaN(d.getTime())
     ? "—"
-    : new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d);
+    : new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d);
 };
-const toRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
-  const items = Array.isArray(payload) ? payload : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
-  return items.filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null);
+
+const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
+  if (!payload || typeof payload !== "object") return [];
+  const data = payload as { data?: { notifications?: unknown[] } | unknown[] };
+  const rows = Array.isArray(data.data)
+    ? data.data
+    : Array.isArray((data.data as { notifications?: unknown[] } | undefined)?.notifications)
+      ? (data.data as { notifications?: unknown[] }).notifications
+      : [];
+
+  return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
 };
 
 type NotificationRow = Readonly<{
   id: string;
   title: string;
   body: string;
+  target: string;
   status: string;
+  scheduledAt: string;
+  deliveredAt: string;
   sentAt: string;
   createdAt: string;
 }>;
 
+const targetLabel = (row: Record<string, unknown>): string => {
+  if (typeof row.subscription === "object" && row.subscription !== null) {
+    const subscription = row.subscription as Record<string, unknown>;
+    return text(subscription.endpoint, text(subscription.id, "Subscription"));
+  }
+
+  const customer = typeof row.customer === "object" && row.customer !== null
+    ? (row.customer as Record<string, unknown>)
+    : null;
+  const customerId = text(customer?.id ?? row.customerId, "");
+  if (customerId) return `Customer ${customerId}`;
+
+  const user = typeof row.user === "object" && row.user !== null
+    ? (row.user as Record<string, unknown>)
+    : null;
+  const userId = text(user?.id ?? row.userId, "");
+  if (userId) return `User ${userId}`;
+
+  const sessionId = text(row.sessionId, "");
+  if (sessionId) return `Session ${sessionId}`;
+
+  return "—";
+};
+
 const toNotificationRows = (payload: unknown): ReadonlyArray<NotificationRow> =>
-  toRows(payload).map((item) => ({
+  getRows(payload).map((item) => ({
     id: text(item.id, crypto.randomUUID()),
     title: text(item.title, "Untitled"),
     body: text(item.body, "—"),
-    status: text(item.status, "Draft"),
-    sentAt: text(item.sentAt ?? item.deliveredAt, ""),
+    target: targetLabel(item),
+    status: text(item.status, "queued"),
+    scheduledAt: text(item.scheduledAt, ""),
+    deliveredAt: text(item.deliveredAt, ""),
+    sentAt: text(item.sentAt, ""),
     createdAt: text(item.createdAt, ""),
   }));
 
-const notifBadgeStatus = (s: string): "Active" | "Inactive" | "Pending" =>
-  s.toLowerCase() === "sent" ? "Active" : s.toLowerCase() === "failed" ? "Inactive" : "Pending";
+const normalizeStatus = (status: string): string => {
+  const value = status.trim().toLowerCase();
+  if (value === "sent") return "delivered";
+  return value;
+};
 
 export const WebPushNotificationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -84,8 +132,8 @@ export const WebPushNotificationsPage: React.FC = () => {
   const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
-  const filtered = React.useMemo(() =>
-    activeTab === "all" ? rows : rows.filter((r) => r.status.toLowerCase() === activeTab),
+  const filtered = React.useMemo(
+    () => (activeTab === "all" ? rows : rows.filter((r) => normalizeStatus(r.status) === activeTab)),
     [rows, activeTab],
   );
 
@@ -93,7 +141,8 @@ export const WebPushNotificationsPage: React.FC = () => {
   const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
 
   const toggleOne = (id: string, checked: boolean) =>
-    setSelectedIds((prev) => checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id));
+    setSelectedIds((prev) => (checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id)));
+
   const toggleAll = (checked: boolean) =>
     setSelectedIds((prev) =>
       checked ? Array.from(new Set([...prev, ...allVisibleIds])) : prev.filter((id) => !allVisibleIds.includes(id)),
@@ -102,6 +151,7 @@ export const WebPushNotificationsPage: React.FC = () => {
   const handleConfirm = async () => {
     const { action, ids } = confirm;
     if (!ids.length) return;
+
     try {
       if (action === "delete") await softDelete.mutateAsync(ids.join(","));
       if (action === "recover") await recover.mutateAsync({ ids });
@@ -115,18 +165,23 @@ export const WebPushNotificationsPage: React.FC = () => {
     }
   };
 
-  const stats = React.useMemo(() => ({
-    total,
-    sent: rows.filter((r) => r.status.toLowerCase() === "sent").length,
-    scheduled: rows.filter((r) => r.status.toLowerCase() === "scheduled").length,
-    draft: rows.filter((r) => r.status.toLowerCase() === "draft").length,
-  }), [rows, total]);
+  const stats = React.useMemo(
+    () => ({
+      total,
+      queued: rows.filter((r) => normalizeStatus(r.status) === "queued").length,
+      delivered: rows.filter((r) => normalizeStatus(r.status) === "delivered").length,
+      partial: rows.filter((r) => normalizeStatus(r.status) === "partial").length,
+      failed: rows.filter((r) => normalizeStatus(r.status) === "failed").length,
+    }),
+    [rows, total],
+  );
 
   const tabs = [
     { key: "all", label: "All", count: total },
-    { key: "sent", label: "Sent", count: stats.sent },
-    { key: "scheduled", label: "Scheduled", count: stats.scheduled },
-    { key: "draft", label: "Drafts", count: stats.draft },
+    { key: "queued", label: "Queued", count: stats.queued },
+    { key: "delivered", label: "Delivered", count: stats.delivered },
+    { key: "partial", label: "Partial", count: stats.partial },
+    { key: "failed", label: "Failed", count: stats.failed },
   ];
 
   const columns = [
@@ -134,7 +189,13 @@ export const WebPushNotificationsPage: React.FC = () => {
       key: "select",
       label: <input type="checkbox" checked={isAllSelected} onChange={(e) => toggleAll(e.target.checked)} aria-label="Select all" />,
       render: (r: NotificationRow) => (
-        <input type="checkbox" checked={selectedIds.includes(r.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleOne(r.id, e.target.checked)} aria-label={`Select ${r.title}`} />
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(r.id)}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => toggleOne(r.id, e.target.checked)}
+          aria-label={`Select ${r.title}`}
+        />
       ),
       width: "44px",
     },
@@ -143,42 +204,39 @@ export const WebPushNotificationsPage: React.FC = () => {
       label: "Notification",
       render: (r: NotificationRow) => (
         <div>
-          <div className="font-medium text-gray-900">{r.title}</div>
-          <div className="text-xs text-gray-400 line-clamp-1">{r.body}</div>
+          <div className="font-medium text-[#1d1d1f]">{r.title}</div>
+          <div className="line-clamp-1 text-xs text-[#6e6e73]">{r.body}</div>
         </div>
       ),
     },
-    { key: "status", label: "Status", render: (r: NotificationRow) => <StatusBadge status={notifBadgeStatus(r.status)} label={r.status} /> },
-    { key: "sentAt", label: "Sent At", render: (r: NotificationRow) => <span className="text-xs text-gray-500">{fmt(r.sentAt)}</span> },
-    { key: "createdAt", label: "Created", render: (r: NotificationRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
-    ...(isDeletedView ? [{
-      key: "rowActions",
-      label: "Actions",
-      render: (r: NotificationRow) => (
-        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-          <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-            <RotateCcw size={11} /> Recover
-          </button>
-          <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-            <Trash2 size={11} /> Delete Permanently
-          </button>
-        </div>
-      ),
-    }] : []),
+    {
+      key: "target",
+      label: "Target",
+      render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{r.target}</span>,
+    },
+    { key: "status", label: "Status", render: (r: NotificationRow) => <StatusBadge status={r.status} /> },
+    { key: "sentAt", label: "Sent At", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.sentAt || r.deliveredAt)}</span> },
+    { key: "scheduledAt", label: "Scheduled", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.scheduledAt)}</span> },
+    { key: "createdAt", label: "Created", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.createdAt)}</span> },
   ];
 
   return (
     <PageLayout
       variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Notifications" : "Web Push Notifications"}
-      subtitle={isDeletedView ? "View soft-deleted push notifications." : "Manage and send browser push notifications."}
+      subtitle={isDeletedView ? "View soft-deleted push notifications." : "Compose and manage browser push notifications for customers."}
       onBack={isDeletedView ? () => navigate("/dashboard/marketing/web-push/notifications") : undefined}
       onNew={!isDeletedView ? () => navigate("/dashboard/marketing/web-push/notifications/create") : undefined}
       newButtonLabel="New Notification"
       actions={
         !isDeletedView && isSudoAdmin ? (
-          <button type="button" onClick={() => navigate("/dashboard/marketing/web-push/notifications/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-            <Trash2 size={13} strokeWidth={2} /> View Deleted
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/marketing/web-push/notifications/deleted")}
+            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <Trash2 size={13} strokeWidth={2} />
+            View Deleted
           </button>
         ) : undefined
       }
@@ -189,15 +247,19 @@ export const WebPushNotificationsPage: React.FC = () => {
       {!isDeletedView && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCardV2 label="Total" value={stats.total} icon={Bell} colorVariant="blue" />
-          <StatCardV2 label="Sent" value={stats.sent} icon={BellRing} colorVariant="emerald" />
-          <StatCardV2 label="Scheduled" value={stats.scheduled} icon={Clock} colorVariant="amber" />
-          <StatCardV2 label="Drafts" value={stats.draft} icon={Bell} colorVariant="gray" />
+          <StatCardV2 label="Queued" value={stats.queued} icon={Send} colorVariant="amber" />
+          <StatCardV2 label="Delivered" value={stats.delivered} icon={BellRing} colorVariant="emerald" />
+          <StatCardV2 label="Partial / Failed" value={stats.partial + stats.failed} icon={Clock} colorVariant="gray" />
         </div>
       )}
+
       <DataTableV2
         tabs={!isDeletedView ? tabs : undefined}
         activeTab={activeTab}
-        onTabChange={(t) => { setActiveTab(t); setState((p) => ({ ...p, page: 1 })); }}
+        onTabChange={(t) => {
+          setActiveTab(t);
+          setState((p) => ({ ...p, page: 1 }));
+        }}
         columns={columns}
         data={filtered}
         actions={
@@ -205,22 +267,40 @@ export const WebPushNotificationsPage: React.FC = () => {
             <div className="flex items-center gap-2">
               {isDeletedView ? (
                 <>
-                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
-                    <RotateCcw size={12} /> Recover ({selectedIds.length})
+                  <button
+                    type="button"
+                    onClick={() => confirm.prompt("recover", selectedIds)}
+                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    <RotateCcw size={12} />
+                    Recover ({selectedIds.length})
                   </button>
-                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
+                  <button
+                    type="button"
+                    onClick={() => confirm.prompt("destroy", selectedIds)}
+                    className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+                  >
+                    <Trash2 size={12} />
+                    Delete Permanently ({selectedIds.length})
                   </button>
                 </>
               ) : (
-                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                  <Trash2 size={12} /> Delete ({selectedIds.length})
+                <button
+                  type="button"
+                  onClick={() => confirm.prompt("delete", selectedIds)}
+                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+                >
+                  <Trash2 size={12} />
+                  Delete ({selectedIds.length})
                 </button>
               )}
             </div>
           ) : undefined
         }
         searchValue={state.search}
+        onRowClick={
+          !isDeletedView ? (row) => navigate(`/dashboard/marketing/web-push/notifications/${row.id}/edit`) : undefined
+        }
         onEdit={!isDeletedView ? (r) => navigate(`/dashboard/marketing/web-push/notifications/${r.id}/edit`) : undefined}
         onDelete={!isDeletedView ? (r) => confirm.prompt("delete", [r.id]) : undefined}
         emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading notifications..." : "No notifications found."}
@@ -241,7 +321,9 @@ export const WebPushNotificationsPage: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
               onClick={() => void handleConfirm()}

@@ -30,6 +30,41 @@ type OrderRow = Readonly<{
 const readString = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
 
+const readNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const normalizeStatus = (value: unknown, fallback = "PENDING"): string => {
+  const status = readString(value, fallback).trim().toUpperCase();
+  if (!status) return fallback;
+  if (["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "CANCELED"].includes(status)) return status;
+  return status;
+};
+
+const getCustomerName = (item: Record<string, unknown>): string => {
+  const parts = [item.firstname, item.middlename, item.lastname]
+    .map((part) => readString(part).trim())
+    .filter(Boolean);
+  if (parts.length > 0) return parts.join(" ");
+  return readString(item.customerName ?? item.fullname, "Unknown");
+};
+
+const getOrderRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
+  if (!payload || typeof payload !== "object") return [];
+  const data = payload as { data?: { orders?: unknown[] } | unknown[] };
+  const rows = Array.isArray(data.data)
+    ? data.data
+    : Array.isArray((data.data as { orders?: unknown[] } | undefined)?.orders)
+      ? (data.data as { orders?: unknown[] }).orders
+      : [];
+  return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
+};
+
 const toOrderRow = (record: unknown): OrderRow => {
   const item = (
     typeof record === "object" && record !== null ? record : {}
@@ -37,13 +72,13 @@ const toOrderRow = (record: unknown): OrderRow => {
   return {
     id: readString(item.id, crypto.randomUUID()),
     orderNumber: readString(item.orderNumber ?? item.orderId, "—"),
-    customerName: readString(item.customerName ?? item.fullname, "Unknown"),
+    customerName: getCustomerName(item),
     customerEmail: readString(item.customerEmail ?? item.email, "—"),
     paymentMethod: readString(item.paymentMethod, "—"),
     paymentStatus: readString(item.paymentStatus, "—"),
-    total: readString(item.total ?? item.totalAmount, "0"),
+    total: readString(item.totalAmount ?? item.total ?? "0.00", "0.00"),
     placedAt: readString(item.placedAt ?? item.createdAt, "—"),
-    status: readString(item.status, "Pending"),
+    status: normalizeStatus(item.orderStatus ?? item.status),
   };
 };
 
@@ -66,10 +101,7 @@ export const OrdersPage: React.FC = () => {
   });
 
   const orders = React.useMemo(() => {
-    const raw = Array.isArray(ordersQuery.data)
-      ? ordersQuery.data
-      : ((ordersQuery.data as { data?: unknown[] } | undefined)?.data ?? []);
-    return raw.map(toOrderRow);
+    return getOrderRows(ordersQuery.data).map(toOrderRow);
   }, [ordersQuery.data]);
 
   const totalPages =
@@ -113,9 +145,9 @@ export const OrdersPage: React.FC = () => {
   const stats = React.useMemo(
     () => ({
       total: totalOrders,
-      pending: orders.filter((o) => o.status === "Pending").length,
-      shipped: orders.filter((o) => o.status === "Shipped").length,
-      delivered: orders.filter((o) => o.status === "Delivered").length,
+      pending: orders.filter((o) => o.status === "PENDING").length,
+      shipped: orders.filter((o) => o.status === "SHIPPED").length,
+      delivered: orders.filter((o) => o.status === "DELIVERED").length,
     }),
     [orders, totalOrders],
   );

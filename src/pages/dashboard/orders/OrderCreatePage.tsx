@@ -86,32 +86,49 @@ const CustomerPicker: React.FC<{
 }> = ({ value, onChange }) => {
   const [search, setSearch] = React.useState("");
   const [open, setOpen] = React.useState(false);
-  const debouncedSearch = useDebounce(search, 300);
+  const [isPending, setIsPending] = React.useState(false);
+  const debouncedSearch = useDebounce(search, 500);
   const ref = React.useRef<HTMLDivElement>(null);
 
+  React.useEffect(() => {
+    if (search !== debouncedSearch) {
+      setIsPending(true);
+    } else {
+      setIsPending(false);
+    }
+  }, [search, debouncedSearch]);
+
   const q = useQuery({
-    queryKey: ["orders", "customerSearch", debouncedSearch],
-    queryFn: () => commerceApi.orders.all({ search: debouncedSearch || undefined, limit: 50 }),
-    enabled: open || !!debouncedSearch,
+    queryKey: ["customers", "search", debouncedSearch],
+    queryFn: () => commerceApi.customers.getAll({ search: debouncedSearch, limit: 50 }),
+    enabled: !!debouncedSearch,
     staleTime: 30_000,
   });
 
+  const isLoading = isPending || q.isFetching;
+
   const customers = React.useMemo<SelectedCustomer[]>(() => {
-    const raw = q.data;
-    const items: unknown[] = Array.isArray(raw) ? raw : ((raw as { data?: unknown[] } | undefined)?.data ?? []);
-    const map = new Map<string, SelectedCustomer>();
-    for (const item of items) {
-      const o = (typeof item === "object" && item !== null ? item : {}) as Record<string, unknown>;
-      const id = str(o.customerId);
-      if (!id || map.has(id)) continue;
-      map.set(id, {
-        id,
-        name: str(o.customerName ?? o.fullname, "Unknown"),
-        email: str(o.customerEmail ?? o.email, "—"),
-        phone: str(o.phone ?? o.customerPhone, "—"),
-      });
-    }
-    return Array.from(map.values());
+    const raw = q.data as Record<string, unknown> | undefined;
+    const items: unknown[] = Array.isArray(q.data)
+      ? q.data
+      : Array.isArray(raw?.customers)
+      ? (raw.customers as unknown[])
+      : Array.isArray(raw?.data)
+      ? (raw.data as unknown[])
+      : [];
+    return items
+      .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
+      .map((c) => {
+        const firstname = str(c.firstname ?? "");
+        const lastname = str(c.lastname ?? "");
+        return {
+          id: str(c.id),
+          name: [firstname, lastname].filter(Boolean).join(" ") || str(c.fullname ?? c.name, "Unknown"),
+          email: str(c.email, "—"),
+          phone: str(c.phone, "—"),
+        };
+      })
+      .filter((c) => c.id);
   }, [q.data]);
 
   React.useEffect(() => {
@@ -151,13 +168,20 @@ const CustomerPicker: React.FC<{
           onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Search customer by name or email…"
-          className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+          className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-9 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
         />
+        {isLoading && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3]" />
+          </div>
+        )}
       </div>
 
       {open && (
         <div className="absolute z-50 mt-1 w-full rounded-xl border border-[#d2d2d7] bg-white shadow-lg overflow-hidden">
-          {q.isLoading ? (
+          {!search.trim() ? (
+            <p className="px-4 py-3 text-xs text-[#86868b]">Type to search customers…</p>
+          ) : isLoading ? (
             <p className="px-4 py-3 text-xs text-[#86868b]">Searching…</p>
           ) : customers.length === 0 ? (
             <p className="px-4 py-3 text-xs text-[#86868b]">No customers found.</p>

@@ -128,7 +128,7 @@ export const TopNav: React.FC<Props> = ({
                     <Link
                       to="/dashboard/support/contacts"
                       onClick={() => setNotificationsOpen(false)}
-                      className="block rounded-full bg-[#1d1d1f] px-[21px] py-[8px] text-center text-[13px] font-medium text-white transition-colors hover:bg-[#0071e3]"
+                      className="block rounded-full bg-blue-500 px-[21px] py-[8px] text-center text-[13px] font-medium text-white! hover:bg-blue-600"
                     >
                       View All Contacts
                     </Link>

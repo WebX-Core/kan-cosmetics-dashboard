@@ -18,8 +18,10 @@ const statusMap: Record<string, { dot: string; text: string; bg: string }> = {
   pending:        { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   processing:     { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   scheduled:      { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
+  queued:         { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   expiring:       { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   unpaid:         { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
+  partial:        { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   lowstock:       { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   "low stock":    { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   /* info */

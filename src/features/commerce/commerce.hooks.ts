@@ -10,6 +10,7 @@ const keys = {
   order: (id?: UUID) => ["commerce", "order", id] as const,
   paymentsByOrder: (orderId?: UUID) => ["commerce", "payments", "order", orderId] as const,
   cartsAggregate: () => ["commerce", "carts", "aggregate"] as const,
+  cartsAbandonedAggregate: () => ["commerce", "carts", "abandoned", "aggregate"] as const,
   wishlistsAggregate: () => ["commerce", "wishlists", "aggregate"] as const,
   paymentsAggregate: () => ["commerce", "payments", "aggregate"] as const,
   customers: (q?: ApiListQuery) => ["commerce", "customers", q] as const,
@@ -68,6 +69,19 @@ export const usePaymentUpdate = () => {
   });
 };
 
+export const usePaymentSyncProvider = () => {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (id: UUID) => commerceApi.payments.syncProvider(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.paymentsAggregate() });
+      toast.success("Payment synced with provider.");
+    },
+    onError: (error) => toast.error(parseApiError(error).message),
+  });
+};
+
 export const useUpdateOrderStatus = () => {
   const qc = useQueryClient();
   const toast = useToast();
@@ -104,36 +118,19 @@ export const useSyncOrderDelivery = () => {
 export const useCartAggregate = () =>
   useQuery({
     queryKey: keys.cartsAggregate(),
-    queryFn: async () => {
-      const ordersPayload = await commerceApi.orders.all();
-      const orders = Array.isArray(ordersPayload) ? ordersPayload : ((ordersPayload as { data?: unknown[] } | undefined)?.data ?? []);
-      const customerIds = Array.from(
-        new Set(
-          orders
-            .map((row) => (row && typeof row === "object" ? (row as Record<string, unknown>).customerId : null))
-            .filter((value): value is string => typeof value === "string" && value.length > 0),
-        ),
-      );
-      const cartPayloads = await Promise.all(customerIds.map((customerId) => commerceApi.carts.byCustomer(customerId)));
-      return cartPayloads;
-    },
+    queryFn: () => commerceApi.carts.allCustomersSummary(),
+  });
+
+export const useAbandonedCartAggregate = () =>
+  useQuery({
+    queryKey: keys.cartsAbandonedAggregate(),
+    queryFn: () => commerceApi.carts.abandonedCustomersSummary(),
   });
 
 export const useWishlistAggregate = () =>
   useQuery({
     queryKey: keys.wishlistsAggregate(),
-    queryFn: async () => {
-      const ordersPayload = await commerceApi.orders.all();
-      const orders = Array.isArray(ordersPayload) ? ordersPayload : ((ordersPayload as { data?: unknown[] } | undefined)?.data ?? []);
-      const customerIds = Array.from(
-        new Set(
-          orders
-            .map((row) => (row && typeof row === "object" ? (row as Record<string, unknown>).customerId : null))
-            .filter((value): value is string => typeof value === "string" && value.length > 0),
-        ),
-      );
-      return Promise.all(customerIds.map((customerId) => commerceApi.wishlists.byCustomer(customerId)));
-    },
+    queryFn: () => commerceApi.wishlists.allCustomersSummary(),
   });
 
 export const useCustomers = (q?: ApiListQuery, enabled = true) =>

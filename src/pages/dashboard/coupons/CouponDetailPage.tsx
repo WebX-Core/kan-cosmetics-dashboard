@@ -1,13 +1,176 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Tag, Users, UserMinus, BarChart2, Edit } from "lucide-react";
+import { Loader2, Tag, Users, UserMinus, BarChart2, Edit, X, Search } from "lucide-react";
 import { ModernFormLayout, FormSection } from "@/shared/components/forms/ModernFormLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { commerceApi } from "@/features/commerce";
+
+type CustomerOption = { id: string; name: string; email: string };
+
+const useCustomerSearch = (search: string) => {
+  const [debounced, setDebounced] = React.useState(search);
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(search), 500);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const q = useQuery({
+    queryKey: ["customers", "search", debounced],
+    queryFn: () => commerceApi.customers.getAll({ search: debounced, limit: 50 }),
+    enabled: !!debounced.trim(),
+    staleTime: 30_000,
+  });
+
+  const customers = React.useMemo<CustomerOption[]>(() => {
+    if (!debounced.trim()) return [];
+    const raw = q.data as Record<string, unknown> | undefined;
+    const items: unknown[] = Array.isArray(q.data)
+      ? q.data
+      : Array.isArray(raw?.customers)
+      ? (raw.customers as unknown[])
+      : Array.isArray(raw?.data)
+      ? (raw.data as unknown[])
+      : [];
+    return items
+      .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
+      .map((c) => {
+        const fn = typeof c.firstname === "string" ? c.firstname : "";
+        const ln = typeof c.lastname === "string" ? c.lastname : "";
+        return {
+          id: typeof c.id === "string" ? c.id : "",
+          name: [fn, ln].filter(Boolean).join(" ") || (typeof c.name === "string" ? c.name : "Unknown"),
+          email: typeof c.email === "string" ? c.email : "",
+        };
+      })
+      .filter((c) => c.id);
+  }, [q.data, debounced]);
+
+  const isPending = search !== debounced;
+  const isLoading = isPending || q.isFetching;
+  return { customers, isLoading, debounced };
+};
+
+interface CustomerMultiPickerProps {
+  selected: CustomerOption[];
+  onChange: (customers: CustomerOption[]) => void;
+  chipColor?: "blue" | "red";
+  chipTooltip?: string;
+}
+
+const CustomerMultiPicker: React.FC<CustomerMultiPickerProps> = ({
+  selected,
+  onChange,
+  chipColor = "blue",
+  chipTooltip,
+}) => {
+  const [search, setSearch] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const { customers, isLoading, debounced } = useCustomerSearch(search);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (c: CustomerOption) => {
+    const already = selected.some((s) => s.id === c.id);
+    onChange(already ? selected.filter((s) => s.id !== c.id) : [...selected, c]);
+  };
+
+  const filtered = customers.filter((c) => !selected.some((s) => s.id === c.id));
+
+  const chipBg = chipColor === "red" ? "bg-red-50" : "bg-[#e8f0fe]";
+  const chipText = chipColor === "red" ? "text-red-600" : "text-[#0071e3]";
+  const chipHover = chipColor === "red" ? "hover:bg-red-100/60" : "hover:bg-[#0071e3]/20";
+  const ringColor = chipColor === "red" ? "focus-within:border-red-400 focus-within:ring-red-400/10" : "focus-within:border-[#0071e3] focus-within:ring-[#0071e3]/10";
+  const avatarBg = chipColor === "red" ? "bg-red-50 text-red-500" : "bg-[#e8f0fe] text-[#0071e3]";
+
+  return (
+    <div ref={ref} className="flex flex-col gap-3">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((c) => (
+            <span
+              key={c.id}
+              className={`inline-flex items-center gap-1.5 rounded-full ${chipBg} px-3 py-1 text-xs font-medium ${chipText}`}
+            >
+              {c.name}
+              <span className="group/tip relative inline-flex">
+                <button
+                  type="button"
+                  onClick={() => onChange(selected.filter((s) => s.id !== c.id))}
+                  className={`inline-flex h-3.5 w-3.5 items-center justify-center rounded-full ${chipHover}`}
+                  aria-label={chipTooltip ?? `Remove ${c.name}`}
+                >
+                  <X size={10} />
+                </button>
+                {chipTooltip && (
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#1d1d1f] px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity group-hover/tip:opacity-100">
+                    {chipTooltip}
+                    <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1d1d1f]" />
+                  </span>
+                )}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <div className={`flex items-center gap-2 rounded-xl border border-[#d2d2d7] bg-white px-3 py-2.5 transition focus-within:ring-2 ${ringColor}`}>
+          <Search size={14} className="shrink-0 text-[#86868b]" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            placeholder="Search customers..."
+            className="flex-1 bg-transparent text-sm text-[#1d1d1f] outline-none placeholder:text-[#86868b]"
+          />
+          {isLoading && (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3] shrink-0" />
+          )}
+        </div>
+        {open && (
+          <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-[#d2d2d7] bg-white shadow-lg">
+            {!search.trim() ? (
+              <p className="px-4 py-3 text-xs text-[#86868b]">Type to search customers…</p>
+            ) : isLoading ? (
+              <p className="px-4 py-3 text-xs text-[#86868b]">Searching…</p>
+            ) : filtered.length === 0 ? (
+              <p className="px-4 py-3 text-xs text-[#86868b]">{debounced ? "No customers found." : "Type to search customers…"}</p>
+            ) : (
+              filtered.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { toggle(c); setSearch(""); }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[#f5f5f7]"
+                >
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${avatarBg} text-xs font-semibold`}>
+                    {c.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#1d1d1f]">{c.name}</p>
+                    <p className="text-xs text-[#86868b]">{c.email}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
@@ -26,25 +189,22 @@ export const CouponDetailPage: React.FC = () => {
     staleTime: 30_000,
   });
 
-  const [issueIds, setIssueIds] = React.useState("");
-  const [unassignIds, setUnassignIds] = React.useState("");
+  const [issueCustomers, setIssueCustomers] = React.useState<CustomerOption[]>([]);
+  const [unassignCustomers, setUnassignCustomers] = React.useState<CustomerOption[]>([]);
   const [issuing, setIssuing] = React.useState(false);
   const [unassigning, setUnassigning] = React.useState(false);
 
   const coupon = couponQuery.data as Record<string, unknown> | undefined;
   const insights = insightsQuery.data as Record<string, unknown> | undefined;
 
-  const parseIds = (raw: string): string[] =>
-    raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-
   const handleIssue = async () => {
-    const customerIds = parseIds(issueIds);
-    if (!customerIds.length) { toast.error("Enter at least one customer ID"); return; }
+    if (!issueCustomers.length) { toast.error("Select at least one customer"); return; }
+    const customerIds = issueCustomers.map((c) => c.id);
     setIssuing(true);
     try {
       await commerceApi.coupons.issueUsers({ couponId: id!, customerIds });
       toast.success(`Coupon issued to ${customerIds.length} customer(s)`);
-      setIssueIds("");
+      setIssueCustomers([]);
       void insightsQuery.refetch();
     } catch (error) {
       toast.error(parseApiError(error).message);
@@ -54,13 +214,13 @@ export const CouponDetailPage: React.FC = () => {
   };
 
   const handleUnassign = async () => {
-    const customerIds = parseIds(unassignIds);
-    if (!customerIds.length) { toast.error("Enter at least one customer ID"); return; }
+    if (!unassignCustomers.length) { toast.error("Select at least one customer"); return; }
+    const customerIds = unassignCustomers.map((c) => c.id);
     setUnassigning(true);
     try {
       await commerceApi.coupons.unassignUsers({ couponId: id!, customerIds });
       toast.success(`Coupon removed from ${customerIds.length} customer(s)`);
-      setUnassignIds("");
+      setUnassignCustomers([]);
       void insightsQuery.refetch();
     } catch (error) {
       toast.error(parseApiError(error).message);
@@ -165,44 +325,36 @@ export const CouponDetailPage: React.FC = () => {
         )}
       </FormSection>
 
-      {/* Issue to users */}
-      <FormSection title="Issue to Customers">
-        <p className="text-sm text-gray-500">Paste customer IDs (one per line or comma-separated) to grant this coupon.</p>
-        <textarea
-          value={issueIds}
-          onChange={(e) => setIssueIds(e.target.value)}
-          placeholder={"customer-id-1\ncustomer-id-2"}
-          rows={4}
-          className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
-        />
+      {/* Manage customers — issue + remove in one section */}
+      <FormSection title="Manage Customers">
+        <p className="text-sm text-[#86868b]">Search and select customers to grant this coupon.</p>
+        <CustomerMultiPicker selected={issueCustomers} onChange={setIssueCustomers} />
         <button
           onClick={() => void handleIssue()}
-          disabled={issuing}
+          disabled={issuing || issueCustomers.length === 0}
           className="flex items-center gap-2 rounded-full bg-[#0071e3] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
         >
           {issuing ? <Loader2 size={13} className="animate-spin" /> : <Users size={13} />}
-          Issue Coupon
+          Issue Coupon{issueCustomers.length > 0 ? ` (${issueCustomers.length})` : ""}
         </button>
-      </FormSection>
 
-      {/* Unassign from users */}
-      <FormSection title="Remove from Customers">
-        <p className="text-sm text-gray-500">Paste customer IDs to revoke this coupon.</p>
-        <textarea
-          value={unassignIds}
-          onChange={(e) => setUnassignIds(e.target.value)}
-          placeholder={"customer-id-1\ncustomer-id-2"}
-          rows={4}
-          className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
-        />
-        <button
-          onClick={() => void handleUnassign()}
-          disabled={unassigning}
-          className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-6 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
-        >
-          {unassigning ? <Loader2 size={13} className="animate-spin" /> : <UserMinus size={13} />}
-          Remove Coupon
-        </button>
+        <div className="border-t border-[#f0f0f2] pt-4">
+          <p className="mb-3 text-sm text-[#86868b]">Select customers to revoke coupon access. Click <span className="font-medium text-red-500">×</span> on a chip to deselect.</p>
+          <CustomerMultiPicker
+            selected={unassignCustomers}
+            onChange={setUnassignCustomers}
+            chipColor="red"
+            chipTooltip="Remove this customer"
+          />
+          <button
+            onClick={() => void handleUnassign()}
+            disabled={unassigning || unassignCustomers.length === 0}
+            className="mt-3 flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-6 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            {unassigning ? <Loader2 size={13} className="animate-spin" /> : <UserMinus size={13} />}
+            Remove Coupon{unassignCustomers.length > 0 ? ` (${unassignCustomers.length})` : ""}
+          </button>
+        </div>
       </FormSection>
     </ModernFormLayout>
   );

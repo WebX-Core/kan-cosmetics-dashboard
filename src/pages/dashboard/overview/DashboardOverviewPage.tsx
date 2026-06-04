@@ -342,9 +342,12 @@ export const DashboardOverviewPage: React.FC = () => {
 
   const orders = React.useMemo(() => {
     const payload = ordersQuery.data as unknown;
+    const p = payload as Record<string, unknown> | undefined;
     const rows = Array.isArray(payload)
       ? payload
-      : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+      : Array.isArray(p?.orders)
+      ? (p.orders as unknown[])
+      : ((p as { data?: unknown[] } | undefined)?.data ?? []);
     return rows as ReadonlyArray<Record<string, unknown>>;
   }, [ordersQuery.data]);
 

@@ -1,12 +1,14 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { ModernFormLayout, FormSection, FormField, FormActions } from "@/shared/components/forms/ModernFormLayout";
+import { CustomerSearchPicker } from "@/shared/components/forms/CustomerSearchPicker";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { validateOrToast } from "@/shared/utils/validation";
 import { marketingApi } from "@/features/marketing";
+import { useQuery } from "@tanstack/react-query";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
@@ -14,39 +16,105 @@ const inputClass =
 const read = (v: unknown): string => (typeof v === "string" ? v : "");
 
 const recipientSchema = z.object({
-  email: z.string().trim().email("Enter a valid email"),
+  campaignId: z.string().trim().min(1, "Campaign is required"),
+  email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")),
   name: z.string().trim().optional(),
-  campaignId: z.string().trim().min(1, "Campaign ID is required"),
 });
 
-type RecipientForm = { email: string; name: string; campaignId: string };
-const initial: RecipientForm = { email: "", name: "", campaignId: "" };
+type CustomerOption = Readonly<{
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}>;
+
+type RecipientForm = {
+  campaignId: string;
+  customer: CustomerOption | null;
+  email: string;
+  name: string;
+};
+
+const initial: RecipientForm = {
+  campaignId: "",
+  customer: null,
+  email: "",
+  name: "",
+};
 
 export const EmailRecipientFormPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
 
   const getQuery = marketingApi.emailRecipients.hooks.useGet(id, isEdit);
   const createMutation = marketingApi.emailRecipients.hooks.useCreate();
   const updateMutation = marketingApi.emailRecipients.hooks.useUpdate();
+  const campaignsQuery = marketingApi.emailCampaigns.hooks.useList({ page: 1, limit: 100 }, true);
+  const campaigns = React.useMemo(() => {
+    const rows = Array.isArray(campaignsQuery.data)
+      ? campaignsQuery.data
+      : ((campaignsQuery.data as { data?: unknown[] } | undefined)?.data ?? []);
+    return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
+  }, [campaignsQuery.data]);
+
   const [form, setForm] = React.useState<RecipientForm>(initial);
 
   React.useEffect(() => {
     if (!isEdit || !getQuery.data) return;
-    const r = getQuery.data as Record<string, unknown>;
-    setForm({ email: read(r.email), name: read(r.name), campaignId: read(r.campaignId) });
+    const recipient = getQuery.data as Record<string, unknown>;
+    const customer = recipient.customer as Record<string, unknown> | undefined;
+    setForm({
+      campaignId: read((recipient.campaign as Record<string, unknown> | undefined)?.id ?? recipient.campaignId),
+      customer: customer
+        ? {
+            id: read(customer.id),
+            name: read(customer.fullname || customer.name || [read(customer.firstname), read(customer.lastname)].filter(Boolean).join(" ")),
+            email: read(customer.email),
+            phone: read(customer.phone),
+          }
+        : null,
+      email: read(recipient.email),
+      name: read(recipient.name),
+    });
   }, [getQuery.data, isEdit]);
 
-  const saving = createMutation.isPending || updateMutation.isPending;
-  const up = <K extends keyof RecipientForm>(k: K, v: RecipientForm[K]) => setForm((p) => ({ ...p, [k]: v }));
+  React.useEffect(() => {
+    const campaignId = searchParams.get("campaignId")?.trim();
+    if (!campaignId || isEdit) return;
+    setForm((prev) => (prev.campaignId ? prev : { ...prev, campaignId }));
+  }, [isEdit, searchParams]);
 
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
-    e.preventDefault();
+  const saving = createMutation.isPending || updateMutation.isPending;
+  const up = <K extends keyof RecipientForm>(k: K, v: RecipientForm[K]) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  const handleCustomerChange = (customer: CustomerOption | null) => {
+    setForm((prev) => ({
+      ...prev,
+      customer,
+      email: customer ? customer.email : prev.email,
+      name: customer ? customer.name : prev.name,
+    }));
+  };
+
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
+    event.preventDefault();
     const parsed = validateOrToast(recipientSchema, form, toast);
     if (!parsed) return;
-    const payload = { email: parsed.email, name: parsed.name?.trim() || undefined, campaignId: parsed.campaignId };
+    if (!form.customer) {
+      toast.error("Please select a customer.");
+      return;
+    }
+
+    const payload = {
+      campaignId: parsed.campaignId,
+      customerId: form.customer.id,
+      email: parsed.email?.trim() || undefined,
+      name: parsed.name?.trim() || undefined,
+    };
+
     try {
       if (isEdit && id) {
         await updateMutation.mutateAsync({ id, dto: payload });
@@ -76,17 +144,45 @@ export const EmailRecipientFormPage: React.FC = () => {
     >
       <form onSubmit={onSubmit} className="space-y-6">
         <FormSection title="Recipient Details">
+          <FormField label="Campaign" required>
+            <select value={form.campaignId} onChange={(e) => up("campaignId", e.target.value)} className={inputClass}>
+              <option value="">Select a campaign…</option>
+              {campaigns.map((campaign) => (
+                <option key={read(campaign.id)} value={read(campaign.id)}>
+                  {read(campaign.title ?? campaign.name) || read(campaign.id)}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          <CustomerSearchPicker
+            label="Customer"
+            required
+            value={form.customer}
+            onChange={handleCustomerChange}
+            helperText="Search by customer name, email, or phone. The selected customer fills email automatically."
+          />
+
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Email Address" required>
-              <input type="email" value={form.email} placeholder="recipient@example.com" onChange={(e) => up("email", e.target.value)} className={inputClass} />
+            <FormField label="Recipient Name">
+              <input
+                type="text"
+                value={form.name}
+                placeholder="Full name"
+                onChange={(e) => up("name", e.target.value)}
+                className={inputClass}
+              />
             </FormField>
-            <FormField label="Name">
-              <input type="text" value={form.name} placeholder="Full name" onChange={(e) => up("name", e.target.value)} className={inputClass} />
+            <FormField label="Email Override">
+              <input
+                type="email"
+                value={form.email}
+                placeholder="recipient@example.com"
+                onChange={(e) => up("email", e.target.value)}
+                className={inputClass}
+              />
             </FormField>
           </div>
-          <FormField label="Campaign ID" required>
-            <input type="text" value={form.campaignId} placeholder="Paste campaign UUID" onChange={(e) => up("campaignId", e.target.value)} className={inputClass} />
-          </FormField>
         </FormSection>
 
         <FormActions

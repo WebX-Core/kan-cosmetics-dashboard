@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, Package, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes } from "lucide-react";
+import { Edit2, Package, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star } from "lucide-react";
 import { catalogApi } from "@/features/catalog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -312,6 +312,15 @@ export const SubcategoryDetailPage: React.FC = () => {
                   >
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/dashboard/products/${row.id}/reviews?name=${encodeURIComponent(row.name)}`);
+                    }}
+                  >
+                    <Star className="mr-2 h-4 w-4" />
+                    Reviews
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(event) => {

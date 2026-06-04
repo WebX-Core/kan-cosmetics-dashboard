@@ -4,7 +4,7 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
-import { useCartAggregate } from "@/features/commerce";
+import { useAbandonedCartAggregate, useCartAggregate } from "@/features/commerce";
 
 type CartRow = Readonly<{
   id: string;
@@ -18,25 +18,42 @@ type CartRow = Readonly<{
 const toText = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 const toNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
 
-const mapCartRows = (payload: unknown): ReadonlyArray<CartRow> => {
-  const rows = Array.isArray(payload)
-    ? payload
-    : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+type SummaryPayload = Readonly<{
+  data?: Readonly<{
+    rows?: ReadonlyArray<Record<string, unknown>>;
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  }>;
+}>;
 
-  return rows.map((entry) => {
-    const item = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
-    const status = toText(item.status, "Active").toLowerCase();
-    const mappedStatus = status.includes("abandon") ? "Abandoned" : status.includes("convert") ? "Converted" : "Active";
-    return {
-      id: toText(item.id, crypto.randomUUID()),
-      customerName: toText(item.customerName ?? item.fullname, "Unknown"),
-      customerEmail: toText(item.customerEmail ?? item.email, "—"),
-      items: toNumber(item.items ?? item.itemsCount),
-      total: toNumber(item.total ?? item.totalAmount),
-      status: mappedStatus,
-    } as CartRow;
-  });
+const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
+  if (!payload || typeof payload !== "object") return [];
+  const rows = (payload as SummaryPayload).data?.rows;
+  return Array.isArray(rows) ? rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null) : [];
 };
+
+const getFullName = (row: Record<string, unknown>): string => {
+  const first = toText(row.firstname);
+  const middle = toText(row.middlename);
+  const last = toText(row.lastname);
+  const parts = [first, middle, last].filter((part) => part.trim().length > 0);
+  return parts.length > 0 ? parts.join(" ") : toText(row.customerName ?? row.fullname, "Unknown");
+};
+
+const mapCartRows = (payload: unknown, status: CartRow["status"]): ReadonlyArray<CartRow> =>
+  getRows(payload).map((entry) => {
+    const item = entry;
+    return {
+      id: toText(item.customerId ?? item.id, crypto.randomUUID()),
+      customerName: getFullName(item),
+      customerEmail: toText(item.email, "—"),
+      items: toNumber(item.itemCount ?? item.itemsCount ?? item.abandonedItemCount),
+      total: toNumber(item.totalAmount ?? item.abandonedTotalAmount ?? item.total),
+      status,
+    };
+  });
 
 const LIMIT = 20;
 
@@ -45,11 +62,15 @@ export const CartsPage: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState("all");
   const [page, setPage] = React.useState(1);
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const query = useCartAggregate();
+  const activeQuery = useCartAggregate();
+  const abandonedQuery = useAbandonedCartAggregate();
 
   const carts = React.useMemo(
-    () => (query.data ?? []).flatMap((payload) => mapCartRows(payload)),
-    [query.data]
+    () => [
+      ...mapCartRows(activeQuery.data, "Active"),
+      ...mapCartRows(abandonedQuery.data, "Abandoned"),
+    ],
+    [activeQuery.data, abandonedQuery.data]
   );
 
   const tabFiltered = React.useMemo(() => {
@@ -145,7 +166,7 @@ export const CartsPage: React.FC = () => {
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1); }}
         searchPlaceholder="Search carts..."
-        emptyMessage={query.isLoading ? "Loading carts..." : "No carts found."}
+        emptyMessage={activeQuery.isLoading || abandonedQuery.isLoading ? "Loading carts..." : "No carts found."}
         showPagination={true}
         currentPage={page}
         totalPages={totalPages}
