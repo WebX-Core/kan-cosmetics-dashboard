@@ -30,15 +30,6 @@ type OrderRow = Readonly<{
 const readString = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
 
-const readNumber = (value: unknown, fallback = 0): number => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-};
-
 const normalizeStatus = (value: unknown, fallback = "PENDING"): string => {
   const status = readString(value, fallback).trim().toUpperCase();
   if (!status) return fallback;
@@ -57,10 +48,10 @@ const getCustomerName = (item: Record<string, unknown>): string => {
 const getOrderRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   if (!payload || typeof payload !== "object") return [];
   const data = payload as { data?: { orders?: unknown[] } | unknown[] };
-  const rows = Array.isArray(data.data)
+  const rows: unknown[] = Array.isArray(data.data)
     ? data.data
     : Array.isArray((data.data as { orders?: unknown[] } | undefined)?.orders)
-      ? (data.data as { orders?: unknown[] }).orders
+      ? (data.data as { orders?: unknown[] }).orders ?? []
       : [];
   return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
 };

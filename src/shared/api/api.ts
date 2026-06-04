@@ -1,6 +1,6 @@
 // src/shared/api/api.ts
 import axios from "axios";
-import type { AxiosRequestConfig, AxiosResponse } from "axios";
+import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import type { ApiEnvelope } from "../types/common.types";
 import { triggerGlobalLogout } from "../../app/providers/authEvents";
 import { getRecaptchaToken, shouldSkipRecaptcha } from "../security/recaptcha";
@@ -19,7 +19,9 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-const withRecaptchaHeader = async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
+const withRecaptchaHeader = async (
+  config: InternalAxiosRequestConfig,
+): Promise<InternalAxiosRequestConfig> => {
   const requestPath = String(config.url ?? "");
   if (shouldSkipRecaptcha(config.method, requestPath)) {
     return config;
@@ -30,17 +32,13 @@ const withRecaptchaHeader = async (config: AxiosRequestConfig): Promise<AxiosReq
     throw new Error("reCAPTCHA token is required for all API requests.");
   }
 
-  const headers = { ...(config.headers ?? {}) };
-  headers["x-recaptcha-token"] = token;
+  config.headers.set("x-recaptcha-token", token);
   const sessionToken = getSessionToken();
   if (sessionToken) {
-    headers.Authorization = `Bearer ${sessionToken}`;
+    config.headers.set("Authorization", `Bearer ${sessionToken}`);
   }
 
-  return {
-    ...config,
-    headers,
-  };
+  return config;
 };
 
 api.interceptors.request.use((config) => withRecaptchaHeader(config));
