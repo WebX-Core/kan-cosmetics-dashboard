@@ -10,6 +10,7 @@ import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
+import { usePermission } from "@/shared/hooks/usePermission";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,7 @@ type ProductRow = Readonly<{
   name: string;
   slug: string;
   sku: string;
+  productType: string;
   image: string;
   price: number;
   stock: number;
@@ -74,6 +76,7 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
         name: text(item.name ?? item.title, "Untitled Product"),
         slug: text(item.slug, ""),
         sku: text(item.sku, "—"),
+        productType: text(item.productType, ""),
         image: text(item.coverImage ?? item.mainImage ?? item.image ?? item.thumbnail ?? item.imageUrl, ""),
         price:
           toNumber(item.price) ??
@@ -94,6 +97,13 @@ export const ProductsListPage: React.FC = () => {
   const toast = useToast();
   const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === "/dashboard/products/deleted";
+
+  const canProductUpdate  = usePermission("product:update");
+  const canProductDelete  = usePermission("product:delete");
+  const canReviewView     = usePermission("review:view");
+  const canFaqView        = usePermission("faq:view");
+  const canVariantView    = usePermission("product-variant:view");
+  const canSeoView        = usePermission("seo:view");
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlySet<string>>(new Set());
@@ -172,6 +182,16 @@ export const ProductsListPage: React.FC = () => {
           <div>
             <div className="font-medium text-gray-900">{r.name}</div>
             <div className="text-xs text-gray-400">{r.slug}</div>
+            {r.productType === "LIPSTICK" ? (
+              <div className="mt-1 flex items-center gap-2">
+                <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700">
+                  Lipstick
+                </span>
+                <span className="text-[11px] text-[#6e6e73]">
+                  Variant image and try-on live in the variant editor
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
       ),
@@ -212,62 +232,76 @@ export const ProductsListPage: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigate(`/dashboard/products/${r.id}/edit`);
-                }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigate(`/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`);
-                }}
-              >
-                <Star className="mr-2 h-4 w-4" />
-                Reviews
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigate(`/dashboard/products/${r.id}/faqs`);
-                }}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Manage FAQs
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigate(`/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
-                }}
-              >
-                <Boxes className="mr-2 h-4 w-4" />
-                Manage Variants
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigate(`/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`);
-                }}
-              >
-                <Globe className="mr-2 h-4 w-4" />
-                SEO
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-[#b42318] focus:text-[#b42318]"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  confirm.prompt("delete", [r.id]);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              {canProductUpdate && (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/dashboard/products/${r.id}/edit`);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {canReviewView && (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`);
+                  }}
+                >
+                  <Star className="mr-2 h-4 w-4" />
+                  Reviews
+                </DropdownMenuItem>
+              )}
+              {canFaqView && (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/dashboard/products/${r.id}/faqs`);
+                  }}
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Manage FAQs
+                </DropdownMenuItem>
+              )}
+              {canVariantView && (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                  }}
+                >
+                  <Boxes className="mr-2 h-4 w-4" />
+                  Manage Variants
+                </DropdownMenuItem>
+              )}
+              {canSeoView && (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`);
+                  }}
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  SEO
+                </DropdownMenuItem>
+              )}
+              {canProductDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-[#b42318] focus:text-[#b42318]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      confirm.prompt("delete", [r.id]);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )

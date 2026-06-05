@@ -1,8 +1,7 @@
 import React from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
-import { Loader2, Trash2, UploadCloud } from "lucide-react";
-import RichTextEditor from "@/shared/components/RichTextEditor";
+import { Loader2, Plus, Trash2, UploadCloud, X } from "lucide-react";
 import { catalogApi } from "@/features/catalog";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import {
@@ -20,7 +19,7 @@ const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
 const MAX_GALLERY_IMAGES = 10;
 type ProductMediaType = "IMAGE" | "VIDEO";
 type MediaUpload = Readonly<{ file: File; type: ProductMediaType }>;
-type ExistingMedia = Readonly<{ url: string; type: ProductMediaType }>;
+type ExistingMedia = Readonly<{ url: string; type: ProductMediaType; id?: string }>;
 
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -32,13 +31,6 @@ const schema = z.object({
   productType: z.enum(["LIPSTICK", "OTHERS"]).optional(),
   sortOrder: z.coerce.number().optional(),
   description: z.string().trim().optional(),
-  isTryOn: z.boolean().optional(),
-  lipstickColorHex: z
-    .string()
-    .trim()
-    .regex(/^#(?:[0-9a-fA-F]{6})$/, "Use HEX like #FF3366")
-    .optional()
-    .or(z.literal("")),
   stockQuantity: z.coerce.number().min(0, "Stock must be >= 0").optional(),
   reservedQuantity: z.coerce
     .number()
@@ -61,8 +53,6 @@ type Form = Readonly<{
   productType: "" | "LIPSTICK" | "OTHERS";
   sortOrder: string;
   description: string;
-  isTryOn: boolean;
-  lipstickColorHex: string;
   stockQuantity: string;
   reservedQuantity: string;
   lowStockThreshold: string;
@@ -79,8 +69,6 @@ const initial: Form = {
   productType: "",
   sortOrder: "0",
   description: "",
-  isTryOn: false,
-  lipstickColorHex: "",
   stockQuantity: "0",
   reservedQuantity: "0",
   lowStockThreshold: "0",
@@ -93,25 +81,143 @@ const readDescriptionText = (
   row: Readonly<Record<string, unknown>>,
 ): string => {
   const directDescription = read(row.description);
+  if (directDescription) return directDescription;
+  // Backward compat: old records stored description inside descriptionJson.text
   const rawDescriptionJson = row.descriptionJson;
-  if (typeof rawDescriptionJson === "string") {
-    try {
-      const parsed = JSON.parse(rawDescriptionJson) as unknown;
-      if (typeof parsed === "object" && parsed !== null) {
-        const text = read((parsed as Record<string, unknown>).text);
-        return text || directDescription;
-      }
-      return directDescription;
-    } catch {
-      return directDescription;
-    }
+  const parsed =
+    typeof rawDescriptionJson === "string"
+      ? (() => { try { return JSON.parse(rawDescriptionJson) as unknown; } catch { return null; } })()
+      : rawDescriptionJson;
+  if (typeof parsed === "object" && parsed !== null) {
+    return read((parsed as Record<string, unknown>).text);
   }
-  if (typeof rawDescriptionJson === "object" && rawDescriptionJson !== null) {
-    const text = read((rawDescriptionJson as Record<string, unknown>).text);
-    return text || directDescription;
-  }
-  return directDescription;
+  return "";
 };
+
+type FreeFromItem = { title: string };
+const parseFreeFrom = (value: unknown): FreeFromItem[] => {
+  const arr =
+    typeof value === "string"
+      ? (() => { try { return JSON.parse(value) as unknown; } catch { return []; } })()
+      : value;
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item) => ({
+      title: typeof item.title === "string" ? item.title : "",
+    }))
+    .filter((item) => item.title);
+};
+type DescriptionJsonForm = {
+  problemItSolves: string[];
+  whoItsFor: string[];
+  keyIngredients: string[];
+  howToUseInstructions: string[];
+  howToUseProTip: string;
+};
+const emptyDescJson = (): DescriptionJsonForm => ({
+  problemItSolves: [],
+  whoItsFor: [],
+  keyIngredients: [],
+  howToUseInstructions: [],
+  howToUseProTip: "",
+});
+const parseDescJson = (value: unknown): DescriptionJsonForm => {
+  const obj =
+    typeof value === "string"
+      ? (() => { try { return JSON.parse(value) as unknown; } catch { return {}; } })()
+      : value;
+  if (typeof obj !== "object" || obj === null) return emptyDescJson();
+  const r = obj as Record<string, unknown>;
+  const toStrArr = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  const howToUse = typeof r.howToUse === "object" && r.howToUse !== null
+    ? (r.howToUse as Record<string, unknown>)
+    : {};
+  return {
+    problemItSolves: toStrArr(r.problemItSolves),
+    whoItsFor: toStrArr(r.whoItsFor),
+    keyIngredients: toStrArr(r.keyIngredients),
+    howToUseInstructions: toStrArr(howToUse.instructions),
+    howToUseProTip: typeof howToUse.proTip === "string" ? howToUse.proTip : "",
+  };
+};
+
+const StringListInput: React.FC<{
+  label: string;
+  placeholder: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+}> = ({ label, placeholder, items, onChange }) => {
+  const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
+  const update = (index: number, value: string) => {
+    const next = [...items];
+    next[index] = value;
+    onChange(next);
+  };
+
+  const remove = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const add = () => {
+    onChange([...items, ""]);
+    // focus the new input on next render
+    setTimeout(() => inputRefs.current[items.length]?.focus(), 0);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (index === items.length - 1) add();
+      else inputRefs.current[index + 1]?.focus();
+    }
+    if (e.key === "Backspace" && items[index] === "" && items.length > 0) {
+      e.preventDefault();
+      remove(index);
+      setTimeout(() => inputRefs.current[Math.max(0, index - 1)]?.focus(), 0);
+    }
+  };
+
+  return (
+    <div>
+      <p className="mb-1.5 text-[13px] font-medium text-[#1d1d1f]">{label}</p>
+      <div className="space-y-1.5">
+        {items.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">{index + 1}.</span>
+            <input
+              ref={(el) => { inputRefs.current[index] = el; }}
+              type="text"
+              value={item}
+              onChange={(e) => update(index, e.target.value)}
+              onKeyDown={(e) => onKeyDown(e, index)}
+              placeholder={placeholder}
+              className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+            />
+            <button
+              type="button"
+              onClick={() => remove(index)}
+              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={add}
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[#0071e3] hover:text-[#0071e3]"
+        >
+          <Plus size={12} />
+          Add item
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const isValidImageFile = (file: File): boolean =>
   file.type.startsWith("image/") && file.size <= MAX_IMAGE_SIZE_BYTES;
 const isValidGalleryMediaFile = (file: File): boolean => {
@@ -136,7 +242,8 @@ const readMedia = (value: unknown): ExistingMedia | null => {
     : isVideoUrl(url)
       ? "VIDEO"
       : "IMAGE";
-  return { url, type };
+  const id = read(row.id) || undefined;
+  return { url, type, id };
 };
 
 const inputClass =
@@ -308,9 +415,10 @@ export const ProductCreatePage: React.FC = () => {
   const [existingGallery, setExistingGallery] = React.useState<
     ReadonlyArray<ExistingMedia>
   >([]);
-  const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>(
-    [],
-  );
+  const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>([]);
+  const [removedMediaAssetIds, setRemovedMediaAssetIds] = React.useState<ReadonlyArray<string>>([]);
+  const [freeFrom, setFreeFrom] = React.useState<FreeFromItem[]>([]);
+  const [descJson, setDescJson] = React.useState<DescriptionJsonForm>(emptyDescJson);
 
   React.useEffect(() => {
     if (isEdit || !prefillSubcategoryId) return;
@@ -402,18 +510,19 @@ export const ProductCreatePage: React.FC = () => {
       productType: (read(row.productType) as Form["productType"]) || "",
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
       description: descriptionText,
-      isTryOn: Boolean(row.isTryOn),
-      lipstickColorHex: read(row.lipstickColorHex),
       stockQuantity: "0",
       reservedQuantity: "0",
       lowStockThreshold: "0",
       inventoryInStock: true,
     });
 
+    setFreeFrom(parseFreeFrom(row.keyFeatures));
+    setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
     setExistingHoverImage(read(row.hoverImage));
     setExistingGallery(gallery);
     setRemovedUrls([]);
+    setRemovedMediaAssetIds([]);
     setCoverImageFile(null);
     setHoverImageFile(null);
     setGalleryFiles([]);
@@ -502,14 +611,6 @@ export const ProductCreatePage: React.FC = () => {
     const parsed = validateOrToast(schema, form, toast);
     if (!parsed) return;
 
-    if (
-      parsed.productType !== "LIPSTICK" &&
-      (parsed.isTryOn || parsed.lipstickColorHex)
-    ) {
-      toast.error("Try-on fields are only allowed for LIPSTICK products.");
-      return;
-    }
-
     const slug = slugify(parsed.slug || parsed.title);
     const payload = {
       title: parsed.title,
@@ -520,25 +621,34 @@ export const ProductCreatePage: React.FC = () => {
       weight: parsed.weight || undefined,
       productType: parsed.productType || undefined,
       sortOrder: parsed.sortOrder ?? 0,
-      descriptionJson: parsed.description
-        ? { text: parsed.description }
-        : undefined,
-      isTryOn:
-        parsed.productType === "LIPSTICK" ? Boolean(parsed.isTryOn) : undefined,
-      lipstickColorHex:
-        parsed.productType === "LIPSTICK"
-          ? parsed.lipstickColorHex || undefined
-          : undefined,
+      description: parsed.description || undefined,
+      descriptionJson: (() => {
+        const obj: Record<string, unknown> = {
+          problemItSolves: descJson.problemItSolves.length ? descJson.problemItSolves : [],
+        };
+        if (descJson.whoItsFor.length) obj.whoItsFor = descJson.whoItsFor;
+        if (descJson.keyIngredients.length) obj.keyIngredients = descJson.keyIngredients;
+        if (descJson.howToUseInstructions.length || descJson.howToUseProTip) {
+          obj.howToUse = {
+            ...(descJson.howToUseInstructions.length ? { instructions: descJson.howToUseInstructions } : {}),
+            ...(descJson.howToUseProTip ? { proTip: descJson.howToUseProTip } : {}),
+          };
+        }
+        return obj;
+      })(),
+      keyFeatures: (() => {
+        const items = freeFrom
+          .filter(({ title }) => title.trim())
+          .map(({ title }) => ({ title: title.trim() }));
+        return items.length ? items : undefined;
+      })(),
       coverImage: coverImageFile ?? undefined,
       hoverImage: hoverImageFile ?? undefined,
       gallery: galleryFiles.length
         ? galleryFiles.map((item) => item.file)
         : undefined,
-      mediaAssets: galleryFiles.length ? galleryFiles : undefined,
-      mediaAssetTypes: galleryFiles.length
-        ? galleryFiles.map((item) => item.type)
-        : undefined,
       removeUrls: removedUrls.length ? removedUrls : undefined,
+      removeMediaAssetIds: removedMediaAssetIds.length ? removedMediaAssetIds : undefined,
     };
 
     try {
@@ -669,9 +779,6 @@ export const ProductCreatePage: React.FC = () => {
                   setForm((p) => ({
                     ...p,
                     productType: e.target.value as Form["productType"],
-                    isTryOn: e.target.value === "LIPSTICK" ? p.isTryOn : false,
-                    lipstickColorHex:
-                      e.target.value === "LIPSTICK" ? p.lipstickColorHex : "",
                   }))
                 }
                 className={selectClass}
@@ -682,43 +789,6 @@ export const ProductCreatePage: React.FC = () => {
               </select>
             </FormField>
           </div>
-
-          {form.productType === "LIPSTICK" ? (
-            <div className="mt-3 grid gap-[13px] md:grid-cols-2">
-              <FormField label="Enable Try On">
-                <div className="flex h-11 items-end">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={form.isTryOn}
-                    onClick={() =>
-                      setForm((p) => ({ ...p, isTryOn: !p.isTryOn }))
-                    }
-                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                      form.isTryOn ? "bg-[#0071e3]" : "bg-[#d2d2d7]"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                        form.isTryOn ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </FormField>
-              <FormField label="Lipstick Color HEX">
-                <input
-                  type="text"
-                  value={form.lipstickColorHex}
-                  placeholder="#FF3366"
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, lipstickColorHex: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </FormField>
-            </div>
-          ) : null}
         </FormSection>
 
         <FormSection
@@ -851,6 +921,11 @@ export const ProductCreatePage: React.FC = () => {
                       isVideo={item.type === "VIDEO"}
                       onRemove={() => {
                         markRemovedUrl(item.url);
+                        if (item.id) {
+                          setRemovedMediaAssetIds((prev) =>
+                            prev.includes(item.id!) ? prev : [...prev, item.id!],
+                          );
+                        }
                         setExistingGallery((prev) =>
                           prev.filter((entry) => entry.url !== item.url),
                         );
@@ -889,11 +964,94 @@ export const ProductCreatePage: React.FC = () => {
         </FormSection>
 
         <FormSection title="Description">
-          <RichTextEditor
-            initialContent={form.description}
-            onChange={(v) => setForm((p) => ({ ...p, description: v }))}
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
             placeholder="Describe this product…"
+            rows={4}
+            className="w-full rounded-lg border border-[#d2d2d7] bg-white px-3 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#86868b] focus:border-[#0071e3] focus:outline-none resize-none"
           />
+        </FormSection>
+
+        <FormSection
+          title="Product Details"
+          description="Structured information shown on the product page."
+        >
+          <div className="space-y-4">
+            <StringListInput
+              label="Problem It Solves"
+              placeholder="e.g. Dry hair, Frizz control…"
+              items={descJson.problemItSolves}
+              onChange={(v) => setDescJson((p) => ({ ...p, problemItSolves: v }))}
+            />
+            <StringListInput
+              label="Who It's For"
+              placeholder="e.g. All hair types, Dry skin…"
+              items={descJson.whoItsFor}
+              onChange={(v) => setDescJson((p) => ({ ...p, whoItsFor: v }))}
+            />
+            <StringListInput
+              label="Key Ingredients"
+              placeholder="e.g. Keratin, Argan Oil…"
+              items={descJson.keyIngredients}
+              onChange={(v) => setDescJson((p) => ({ ...p, keyIngredients: v }))}
+            />
+            <StringListInput
+              label="How To Use — Steps"
+              placeholder="e.g. Apply on wet hair…"
+              items={descJson.howToUseInstructions}
+              onChange={(v) => setDescJson((p) => ({ ...p, howToUseInstructions: v }))}
+            />
+            <div>
+              <p className="mb-1.5 text-[13px] font-medium text-[#1d1d1f]">How To Use — Pro Tip</p>
+              <input
+                type="text"
+                value={descJson.howToUseProTip}
+                onChange={(e) => setDescJson((p) => ({ ...p, howToUseProTip: e.target.value }))}
+                placeholder="e.g. Use twice a week for visible smoothness"
+                className="h-[38px] w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              />
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Free From"
+          description="Highlight what this product is free from (e.g. Paraben Free, Sulfate Free)."
+        >
+          <div className="space-y-2">
+            {freeFrom.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">{idx + 1}.</span>
+                <input
+                  type="text"
+                  value={item.title}
+                  onChange={(e) =>
+                    setFreeFrom((prev) =>
+                      prev.map((it, i) => (i === idx ? { title: e.target.value } : it))
+                    )
+                  }
+                  placeholder="e.g. Paraben Free"
+                  className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                />
+                <button
+                  type="button"
+                  title="Remove item"
+                  onClick={() => setFreeFrom((prev) => prev.filter((_, i) => i !== idx))}
+                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setFreeFrom((prev) => [...prev, { title: "" }])}
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[#0071e3] hover:text-[#0071e3]"
+            >
+              <Plus size={12} /> Add item
+            </button>
+          </div>
         </FormSection>
 
         {!isEdit ? (

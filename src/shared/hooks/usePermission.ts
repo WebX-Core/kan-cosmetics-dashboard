@@ -7,10 +7,10 @@ export function usePermission(permission: AppPermission) {
   return useMemo(() => {
     const backendPermissions = state.permissions ?? [];
     if (backendPermissions.length > 0) {
-      return backendPermissions.includes(permission);
+      return backendPermissions.includes("*") || backendPermissions.includes(permission);
     }
     // Fallback to static role map when backend permissions are not hydrated.
-    if (state.isAuthenticated && state.role === null) return true;
+    if (!state.isAuthenticated || state.role === null) return false;
     return can(state.role, permission);
   }, [permission, state.isAuthenticated, state.permissions, state.role]);
 }

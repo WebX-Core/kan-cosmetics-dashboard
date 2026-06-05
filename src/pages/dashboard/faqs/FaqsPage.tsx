@@ -10,6 +10,7 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { engagementApi } from "@/features/engagement";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { useUserStore } from "@/store/UserStore";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 type Row = Readonly<{ id: string; question: string; answer: string; type: string; isSite: boolean; isActive: boolean; status: string; category: string; views: number }>;
@@ -48,6 +49,7 @@ export const FaqsPage: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const isDeletedView = location.pathname.endsWith("/deleted");
+  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const productIdFilter = searchParams.get("productId") ?? "";
   const productNameFilter = searchParams.get("productName") ?? "";
@@ -227,16 +229,18 @@ export const FaqsPage: React.FC = () => {
       onNew={isDeletedView ? undefined : () => navigate(`/dashboard/faqs/create`)}
       newButtonLabel={isDeletedView ? undefined : "New FAQ"}
       actions={
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate(isDeletedView ? "/dashboard/faqs" : "/dashboard/faqs/deleted")}
-            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Trash2 size={13} />
-            {isDeletedView ? "Back to FAQs" : "View Deleted"}
-          </button>
-        </div>
+        isSudoAdmin ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(isDeletedView ? "/dashboard/faqs" : "/dashboard/faqs/deleted")}
+              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+            >
+              <Trash2 size={13} />
+              {isDeletedView ? "Back to FAQs" : "View Deleted"}
+            </button>
+          </div>
+        ) : undefined
       }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}

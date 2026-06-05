@@ -6,6 +6,7 @@ import { queryClient } from "../../shared/api/queryClient";
 import { registerLogoutHandler } from "./authEvents";
 import type { Role, User } from "../../features/auth/auth.types";
 import { clearSessionToken } from "@/shared/auth/sessionToken";
+import { useUserStore } from "@/store/UserStore";
 
 export type AuthState = Readonly<{
   isAuthenticated: boolean;
@@ -60,6 +61,25 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       role: user?.role ?? null,
       permissions,
     });
+    if (user) {
+      useUserStore.getState().saveInfo({
+        user: {
+          id: user.id,
+          email: user.email,
+          isVerified: user.isVerified,
+          role: user.role,
+          firstname: user.firstname,
+          middlename: user.middlename ?? null,
+          lastname: user.lastname,
+          phone: user.phone,
+          gender: user.gender,
+          address: user.address,
+          profilePicture: user.profileUrl ?? null,
+          createdAt: user.createdAt ?? "",
+          updatedAt: user.updatedAt ?? "",
+        },
+      });
+    }
   };
 
   const clearAuth = () => {
@@ -70,6 +90,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       role: null,
       permissions: [],
     });
+    useUserStore.getState().logout();
   };
 
   React.useEffect(() => {

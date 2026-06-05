@@ -1,9 +1,43 @@
 import React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useLogout } from "@/features/auth";
+
+// Maps each sidebar module key to the backend route-module names that grant access.
+// Keys absent from this map are always visible (e.g. "overview").
+const SIDEBAR_BACKEND_MODULES: Readonly<Record<string, ReadonlyArray<string>>> = {
+  overview:                  [], // visible if user has any permissions at all
+  products:                  ["product", "product-variant", "product-tag", "product-attribute"],
+  categories:                ["category", "subcategory"],
+  inventory:                 ["inventory"],
+  orders:                    ["order"],
+  payments:                  ["payment"],
+  coupons:                   ["coupon", "coupon-usage"],
+  delivery:                  ["shipment", "shipment-tracking", "courier", "courier-branch", "courier-pickup-address", "pickup-request", "delivery-api-log", "delivery-webhook-event"],
+  carts:                     ["cart"],
+  wishlists:                 ["wishlist"],
+  customers:                 ["customer-address", "customer-ban", "purchase-history"],
+  "product-inquiries":       ["inquiry"],
+  "site-inquiries":          ["site-inquiry"],
+  contacts:                  ["contact"],
+  reviews:                   ["review"],
+  testimonials:              ["review"],
+  faqs:                      ["faq"],
+  "blog-posts":              ["blog"],
+  newsletter:                ["newsletter"],
+  "email-campaigns":         ["email-campaign"],
+  "email-recipients":        ["email-recipient"],
+  "email-recipient-buckets": ["email-recipient-bucket"],
+  "email-queue":             ["email-queue"],
+  "email-logs":              ["email-log"],
+  "web-push-notifications":  ["web-push-notification"],
+  "web-push-subscriptions":  ["web-push-subscription"],
+  seo:                       ["__sudoadmin_only__"],
+  "activity-logs":           ["user-activity"],
+  "audit-logs":              ["audit-log"],
+  users:                     ["admin"],
+};
 import { useAuth } from "@/app/providers/AuthContext";
 import { usePermission } from "@/shared/hooks/usePermission";
-import { can, type AppPermission } from "@/shared/auth/permissions";
 import { Sidebar } from "@/shared/components/dashboard/Sidebar";
 import { TopNav } from "@/shared/components/dashboard/TopNav";
 import { useContactList } from "@/features/contact";
@@ -21,8 +55,8 @@ export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const logout = useLogout();
   const { clearAuth, state } = useAuth();
-  const canUsersManage = usePermission("users.manage");
-  const canContactManage = usePermission("contact.manage");
+  const canUsersManage = usePermission("admin:manage");
+  const canContactManage = usePermission("contact:manage");
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [viewedContactIds, setViewedContactIds] = React.useState<ReadonlySet<string>>(new Set());
   const contactList = useContactList({ page: 1, limit: 100 }, Boolean(state.user) && canContactManage);
@@ -117,32 +151,33 @@ export const DashboardLayout: React.FC = () => {
     }
   };
 
-  const hasPermission = React.useCallback(
-    (permission: AppPermission): boolean => {
-      if (state.permissions.length > 0) return state.permissions.includes(permission);
-      return can(state.role, permission);
-    },
-    [state.permissions, state.role]
-  );
+  // Derive the set of backend module names the user has any permission for.
+  // null = wildcard (*) → all modules accessible.
+  const accessibleModules = React.useMemo((): ReadonlySet<string> | null => {
+    const perms = state.permissions;
+    if (perms.includes("*")) return null;
+    if (perms.length === 0) return null; // no perms in DB → fall back to role
+    return new Set(perms.map((p) => p.split(":")[0]).filter(Boolean));
+  }, [state.permissions]);
 
   const hasModuleAccess = React.useCallback(
     (moduleKey: string): boolean => {
-      const permissionByModuleKey: Readonly<Record<string, AppPermission>> = {
-        users: "users.manage",
-        permissions: "users.manage",
-        contacts: "contact.manage",
-        "product-inquiries": "contact.manage",
-        "site-inquiries": "contact.manage",
-        reviews: "contact.manage",
-        faqs: "contact.manage",
-        "customer-bans": "contact.manage",
-        "customer-addresses": "contact.manage",
-      };
-      const needed = permissionByModuleKey[moduleKey];
-      if (!needed) return true;
-      return hasPermission(needed);
+      const required = SIDEBAR_BACKEND_MODULES[moduleKey];
+      // SUDOADMIN-only modules
+      if (required?.includes("__sudoadmin_only__")) {
+        return state.role === "SUDOADMIN";
+      }
+      // Wildcard or SUDOADMIN/ADMIN with no explicit DB perms → show all
+      if (accessibleModules === null) {
+        return state.role === "SUDOADMIN" || state.role === "ADMIN" || state.permissions.includes("*");
+      }
+      // Key not in map → always visible
+      if (!required) return true;
+      // Empty array → visible only if user has any permissions at all
+      if (required.length === 0) return accessibleModules.size > 0;
+      return required.some((m) => accessibleModules.has(m));
     },
-    [hasPermission]
+    [accessibleModules, state.role, state.permissions]
   );
 
   return (

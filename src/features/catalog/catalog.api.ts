@@ -54,46 +54,54 @@ export const catalogApi = {
     { key: "products", basePath: "/product" },
     {
       create: (dto) => {
-        const { coverImage, hoverImage, gallery, mediaAssets, mediaAssetTypes, ...rest } = dto;
-        const derivedMediaAssets = mediaAssets ?? [];
-        const derivedGallery = gallery ?? (derivedMediaAssets.length ? derivedMediaAssets.map((item) => item.file) : undefined);
-        const derivedMediaTypes = mediaAssetTypes ?? (derivedMediaAssets.length ? derivedMediaAssets.map((item) => item.type) : undefined);
+        const { coverImage, hoverImage, gallery, keyFeatures, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
-            mediaAssetTypes: derivedMediaTypes as FormFieldValue,
-            galleryTypes: derivedMediaTypes as FormFieldValue,
+            keyFeatures: keyFeatures !== undefined ? JSON.stringify(keyFeatures) : undefined,
           },
           files: {
             coverImage: (coverImage ?? undefined) as FormFileValue,
             hoverImage: (hoverImage ?? undefined) as FormFileValue,
-            gallery: (derivedGallery ?? undefined) as FormFileValue,
-            mediaAssets: (derivedGallery ?? undefined) as FormFileValue,
+            gallery: (gallery?.length ? gallery : undefined) as FormFileValue,
           },
         };
       },
       update: (dto) => {
-        const { coverImage, hoverImage, gallery, mediaAssets, mediaAssetTypes, ...rest } = dto;
-        const derivedMediaAssets = mediaAssets ?? [];
-        const derivedGallery = gallery ?? (derivedMediaAssets.length ? derivedMediaAssets.map((item) => item.file) : undefined);
-        const derivedMediaTypes = mediaAssetTypes ?? (derivedMediaAssets.length ? derivedMediaAssets.map((item) => item.type) : undefined);
+        const { coverImage, hoverImage, gallery, keyFeatures, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
-            mediaAssetTypes: derivedMediaTypes as FormFieldValue,
-            galleryTypes: derivedMediaTypes as FormFieldValue,
+            keyFeatures: keyFeatures !== undefined ? JSON.stringify(keyFeatures) : undefined,
           },
           files: {
             coverImage: (coverImage ?? undefined) as FormFileValue,
             hoverImage: (hoverImage ?? undefined) as FormFileValue,
-            gallery: (derivedGallery ?? undefined) as FormFileValue,
-            mediaAssets: (derivedGallery ?? undefined) as FormFileValue,
+            gallery: (gallery?.length ? gallery : undefined) as FormFileValue,
           },
         };
       },
     }
   ),
-  productVariants: makeStandardCrud<Record<string, unknown>, ProductVariantDto, ProductVariantDto>({ key: "productVariants", basePath: "/product-variant" }),
+  productVariants: makeStandardCrud<Record<string, unknown>, ProductVariantDto, ProductVariantDto>(
+    { key: "productVariants", basePath: "/product-variant" },
+    {
+      create: (dto) => {
+        const { image, ...rest } = dto;
+        return {
+          fields: rest as Readonly<Record<string, FormFieldValue>>,
+          files: { image: (image ?? undefined) as FormFileValue },
+        };
+      },
+      update: (dto) => {
+        const { image, ...rest } = dto;
+        return {
+          fields: rest as Readonly<Record<string, FormFieldValue>>,
+          files: { image: (image ?? undefined) as FormFileValue },
+        };
+      },
+    }
+  ),
   productTags: makeStandardCrud<Record<string, unknown>, ProductTagDto, ProductTagDto>({ key: "productTags", basePath: "/product-tag" }),
   productAttributes: makeStandardCrud<Record<string, unknown>, ProductAttributeDto, ProductAttributeDto>({ key: "productAttributes", basePath: "/product-attribute" }),
   inventory: makeStandardCrud<Record<string, unknown>, InventoryDto, InventoryDto>({ key: "inventory", basePath: "/inventory" }),

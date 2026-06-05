@@ -4,12 +4,9 @@ import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
 import { gsap } from "gsap";
 import { useAuth } from "../app/providers/AuthContext";
-import { useSignin, type User } from "@/features/auth";
-import { identityApi } from "@/features/identity";
+import { useSignin, type User, type SigninResponse } from "@/features/auth";
 import { parseApiError } from "@/shared/utils/apiError";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { setSessionToken } from "@/shared/auth/sessionToken";
-import { resolveProfileImageUrl } from "@/shared/utils/profileImage";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
@@ -69,55 +66,21 @@ export const LoginPage: React.FC = () => {
   }, []);
 
   /* ── helpers ─────────────────────────────────────────────────── */
-  const asUser = (payload: unknown, email: string): User => {
-    const s = typeof payload === "object" && payload !== null
-      ? (payload as Record<string, unknown>) : {};
-    const roleValue = s.role;
-    const role = roleValue === "SUDOADMIN" || roleValue === "ADMIN" || roleValue === "USER"
-      ? roleValue : "USER";
-    const emailPrefix = email.split("@")[0] ?? "";
-    const inferredName =
-      (typeof s.username === "string" && s.username.trim()) ||
-      (typeof s.name    === "string" && s.name.trim())    ||
-      emailPrefix;
+  const asUser = (response: SigninResponse, email: string): User => {
+    const nameParts = (response.name ?? "").trim().split(/\s+/).filter(Boolean);
     return {
-      id:         typeof s.id        === "string" ? s.id : email,
-      firstname:  typeof s.firstname === "string" && s.firstname.trim().length > 0
-                    ? s.firstname : inferredName || "User",
-      middlename: typeof s.middlename === "string" ? s.middlename : undefined,
-      lastname:   typeof s.lastname  === "string" ? s.lastname  : "",
-      email:      typeof s.email     === "string" ? s.email     : email,
-      phone:      typeof s.phone     === "string" ? s.phone     : "",
-      address:    typeof s.address   === "string" ? s.address   : "",
-      gender:     s.gender === "MALE" || s.gender === "FEMALE" || s.gender === "OTHER"
-                    ? s.gender : "OTHER",
-      role,
-      isVerified: s.isVerified === true,
-      sortOrder:  typeof s.sortOrder === "number" ? s.sortOrder : undefined,
-      profileUrl: resolveProfileImageUrl(s) || undefined,
-      isDeleted:  s.isDeleted === true,
-      createdAt:  typeof s.createdAt === "string" ? s.createdAt : undefined,
-      updatedAt:  typeof s.updatedAt === "string" ? s.updatedAt : undefined,
+      id: response.id || email,
+      firstname: nameParts[0] || email.split("@")[0] || "User",
+      middlename: nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : undefined,
+      lastname: nameParts.length > 1 ? (nameParts[nameParts.length - 1] ?? "") : "",
+      email,
+      phone: "",
+      address: "",
+      gender: "OTHER",
+      role: response.role,
+      isVerified: response.isVerified,
+      profileUrl: response.profilePicture ?? undefined,
     };
-  };
-
-  const getToken = (payload: unknown): string | null => {
-    if (typeof payload !== "object" || payload === null) return null;
-    const s = payload as Record<string, unknown>;
-    const val = (["accessToken", "token", "jwt", "idToken"] as const)
-      .map(k => s[k]).find(v => typeof v === "string" && v.length > 0);
-    return typeof val === "string" ? val : null;
-  };
-
-  const extractPerms = (payload: unknown): ReadonlyArray<string> => {
-    if (!Array.isArray(payload)) return [];
-    return payload.map(row => {
-      if (typeof row !== "object" || row === null) return "";
-      const rec = row as Record<string, unknown>;
-      const perm = typeof rec.permission === "object" && rec.permission !== null
-        ? (rec.permission as Record<string, unknown>) : rec;
-      return typeof perm.key === "string" ? perm.key : "";
-    }).filter(Boolean);
   };
 
   const handleSubmit = async (e: { preventDefault(): void }) => {
@@ -130,15 +93,10 @@ export const LoginPage: React.FC = () => {
     const email = parsed.data.email.trim().toLowerCase();
     try {
       const response = await signin.mutateAsync({ email, password: parsed.data.password });
-      const token = getToken(response);
-      if (token) setSessionToken(token);
       const user = asUser(response, email);
-      let permissions: ReadonlyArray<string> = [];
-      if (user.id) {
-        try {
-          permissions = extractPerms(await identityApi.userPermissions.listByUser(user.id));
-        } catch { /* non-fatal */ }
-      }
+      const permissions: ReadonlyArray<string> = response.permissions.filter(
+        (p): p is string => typeof p === "string"
+      );
       setAuthenticated(user, permissions);
       navigate(from, { replace: true });
       toast.success("Signed in");

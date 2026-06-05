@@ -1,3 +1,19 @@
+export type ProductDescriptionJson = Readonly<{
+  problemItSolves?: ReadonlyArray<string>;
+  whoItsFor?: ReadonlyArray<string>;
+  keyIngredients?: ReadonlyArray<string>;
+  howToUse?: Readonly<{
+    instructions?: ReadonlyArray<string>;
+    proTip?: string;
+  }>;
+}>;
+
+// Sent to backend as `keyFeatures`; labelled "Free From" in the UI
+export type ProductFreeFrom = Readonly<{
+  title: string;
+  iconUrl?: string | null;
+}>;
+
 export type CategoryDto = Readonly<{
   title?: string;
   slug?: string;
@@ -29,23 +45,20 @@ export type ProductDto = Readonly<{
   subcategoryId?: string;
   title?: string;
   slug?: string;
-  descriptionJson?: unknown;
+  description?: string;
+  descriptionJson?: ProductDescriptionJson | Record<string, unknown>;
+  keyFeatures?: ReadonlyArray<ProductFreeFrom>;
   weight?: string;
   sku?: string;
   price?: string;
   productType?: string;
-  isTryOn?: boolean;
-  lipstickColorHex?: string;
   additionalInformationJson?: unknown;
   removeUrls?: ReadonlyArray<string>;
   removeMediaAssetIds?: ReadonlyArray<string>;
   sortOrder?: number;
-  isDeleted?: boolean;
   coverImage?: File | null;
   hoverImage?: File | null;
   gallery?: ReadonlyArray<File>;
-  mediaAssets?: ReadonlyArray<ProductMediaUpload>;
-  mediaAssetTypes?: ReadonlyArray<ProductMediaType>;
 }>;
 
 export type ProductVariantDto = Readonly<{
@@ -57,8 +70,11 @@ export type ProductVariantDto = Readonly<{
   price?: string;
   compareAtPrice?: string;
   weight?: string;
+  colorHex?: string;
   isDefault?: boolean;
   isActive?: boolean;
+  isTryOn?: boolean;
+  image?: File | null;
   removeUrls?: ReadonlyArray<string>;
   sortOrder?: number;
 }>;

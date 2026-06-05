@@ -1,5 +1,6 @@
 import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useUserStore } from "@/store/UserStore";
 import { catalogApi } from "@/features/catalog";
 import { engagementApi } from "@/features/engagement";
 import { commerceApi } from "@/features/commerce";
@@ -1317,6 +1318,7 @@ export const UserMetadataPage: React.FC = () => {
     [],
   );
   const [isDeletedView, setIsDeletedView] = React.useState(false);
+  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const confirm = useConfirmAction();
 
   const q = telemetryApi.userMetadata.hooks.useList(
@@ -1536,7 +1538,7 @@ export const UserMetadataPage: React.FC = () => {
       subtitle="Session and device metadata captured for users."
       onBack={isDeletedView ? () => setIsDeletedView(false) : undefined}
       actions={
-        !isDeletedView ? (
+        !isDeletedView && isSudoAdmin ? (
           <button
             type="button"
             onClick={() => {

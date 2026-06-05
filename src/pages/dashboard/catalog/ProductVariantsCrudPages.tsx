@@ -32,8 +32,10 @@ type VariantForm = Readonly<{
   price: string;
   compareAtPrice: string;
   weight: string;
+  colorHex: string;
   isDefault: boolean;
   isActive: boolean;
+  isTryOn: boolean;
 }>;
 
 const initialForm: VariantForm = {
@@ -45,8 +47,10 @@ const initialForm: VariantForm = {
   price: "",
   compareAtPrice: "",
   weight: "",
+  colorHex: "",
   isDefault: false,
   isActive: true,
+  isTryOn: false,
 };
 
 const variantSchema = z.object({
@@ -58,8 +62,15 @@ const variantSchema = z.object({
   price: z.string().trim().min(1, "Price is required"),
   compareAtPrice: z.string().trim().optional(),
   weight: z.string().trim().optional(),
+  colorHex: z
+    .string()
+    .trim()
+    .regex(/^#(?:[0-9a-fA-F]{6})$/, "Use HEX like #FF3366")
+    .optional()
+    .or(z.literal("")),
   isDefault: z.boolean(),
   isActive: z.boolean(),
+  isTryOn: z.boolean(),
 });
 
 const inputClass =
@@ -88,6 +99,8 @@ const toVariantRows = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): 
     productId: String(row.productId ?? (row.product as Record<string, unknown> | undefined)?.id ?? "—"),
     isActive: row.isActive !== false,
   }));
+
+const readString = (value: unknown): string => (typeof value === "string" ? value : "");
 
 export const ProductVariantsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -582,8 +595,20 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
   const getQuery = catalogApi.productVariants.hooks.useGet(id, isEdit);
   const createMutation = catalogApi.productVariants.hooks.useCreate();
   const updateMutation = catalogApi.productVariants.hooks.useUpdate();
-
   const [form, setForm] = React.useState<VariantForm>({ ...initialForm, productId: productFilter });
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const [existingImage, setExistingImage] = React.useState<string>("");
+  const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>([]);
+  const productQuery = catalogApi.products.hooks.useGet(
+    form.productId,
+    z.string().uuid().safeParse(form.productId).success,
+  );
+  const selectedProductType = readString((productQuery.data as Record<string, unknown> | undefined)?.productType);
+  const canEnableTryOn = selectedProductType === "LIPSTICK";
+  const previewImage = React.useMemo(
+    () => (imageFile ? URL.createObjectURL(imageFile) : ""),
+    [imageFile],
+  );
 
   React.useEffect(() => {
     if (!isEdit) return;
@@ -599,10 +624,26 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
       price: String(row.price ?? ""),
       compareAtPrice: String(row.compareAtPrice ?? ""),
       weight: String(row.weight ?? ""),
+      colorHex: String(row.colorHex ?? ""),
       isDefault: Boolean(row.isDefault),
       isActive: row.isActive !== false,
+      isTryOn: Boolean(row.isTryOn),
     });
+    setExistingImage(readString(row.image));
+    setRemovedUrls([]);
+    setImageFile(null);
   }, [getQuery.data, isEdit, productFilter]);
+
+  React.useEffect(() => {
+    if (canEnableTryOn || !form.isTryOn) return;
+    setForm((prev) => ({ ...prev, isTryOn: false }));
+  }, [canEnableTryOn, form.isTryOn]);
+
+  React.useEffect(() => {
+    return () => {
+      if (previewImage) URL.revokeObjectURL(previewImage);
+    };
+  }, [previewImage]);
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
@@ -612,10 +653,16 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
     if (!parsed) return;
 
     try {
+      const payload = {
+        ...parsed,
+        image: imageFile ?? undefined,
+        removeUrls: removedUrls.length ? removedUrls : undefined,
+      };
+
       if (isEdit && id) {
-        await updateMutation.mutateAsync({ id, dto: parsed });
+        await updateMutation.mutateAsync({ id, dto: payload });
       } else {
-        await createMutation.mutateAsync(parsed);
+        await createMutation.mutateAsync(payload);
       }
 
       navigate(
@@ -716,9 +763,18 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                 className={inputClass}
               />
             </FormField>
+            <FormField label="Color HEX">
+              <input
+                type="text"
+                value={form.colorHex}
+                placeholder="#FF3366"
+                onChange={(e) => setForm((prev) => ({ ...prev, colorHex: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
@@ -735,6 +791,79 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               />
               Active
             </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={form.isTryOn}
+                disabled={!canEnableTryOn}
+                onChange={(e) => setForm((prev) => ({ ...prev, isTryOn: e.target.checked }))}
+              />
+              Try On
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_220px]">
+            <FormField
+              label="Variant Image"
+              hint="Optional. Replaces the current image on update."
+            >
+              <div className="flex flex-col gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setImageFile(file);
+                    if (file) {
+                      setRemovedUrls((prev) => prev.filter((entry) => entry !== "image"));
+                    }
+                    event.currentTarget.value = "";
+                  }}
+                  className={inputClass}
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null);
+                      if (existingImage) {
+                        setRemovedUrls((prev) => (prev.includes("image") ? prev : [...prev, "image"]));
+                        setExistingImage("");
+                      }
+                    }}
+                    className="inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
+                  >
+                    Remove Image
+                  </button>
+                  {removedUrls.includes("image") ? (
+                    <span className="text-xs text-[#86868b]">Image will be removed on save.</span>
+                  ) : null}
+                </div>
+              </div>
+            </FormField>
+            <div className="rounded-xl border border-[#d2d2d7] bg-[#f5f5f7] p-3">
+              <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
+                Preview
+              </p>
+              {imageFile || existingImage ? (
+                <img
+                  src={previewImage || existingImage}
+                  alt="Variant preview"
+                  className="h-40 w-full rounded-lg border border-[#e5e5e7] bg-white object-contain p-2"
+                />
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-[#d2d2d7] bg-white text-sm text-[#86868b]">
+                  No image selected
+                </div>
+              )}
+              <p className="mt-2 text-xs text-[#6e6e73]">
+                {canEnableTryOn
+                  ? "Try-on is allowed for lipstick products."
+                  : selectedProductType
+                    ? "Try-on is only allowed when the parent product is LIPSTICK."
+                    : "Enter a valid product UUID to validate lipstick-only fields."}
+              </p>
+            </div>
           </div>
         </FormSection>
 

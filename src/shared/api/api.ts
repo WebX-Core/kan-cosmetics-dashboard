@@ -4,7 +4,6 @@ import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import type { ApiEnvelope } from "../types/common.types";
 import { triggerGlobalLogout } from "../../app/providers/authEvents";
 import { getRecaptchaToken, shouldSkipRecaptcha } from "../security/recaptcha";
-import { getSessionToken } from "../auth/sessionToken";
 
 
 /* =========================
@@ -33,11 +32,6 @@ const withRecaptchaHeader = async (
   }
 
   config.headers.set("x-recaptcha-token", token);
-  const sessionToken = getSessionToken();
-  if (sessionToken) {
-    config.headers.set("Authorization", `Bearer ${sessionToken}`);
-  }
-
   return config;
 };
 

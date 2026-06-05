@@ -3,7 +3,8 @@ import type { UUID } from "../../shared/types/common.types";
 
 /* -------- Enums -------- */
 export type Gender = "MALE" | "FEMALE" | "OTHER";
-export type Role = "SUDOADMIN" | "ADMIN" | "USER";
+export type KnownRole = "SUDOADMIN" | "ADMIN" | "USER";
+export type Role = KnownRole | (string & {});
 
 /* -------- DTOs -------- */
 export type SignupDto = Readonly<{
@@ -66,6 +67,26 @@ export type User = Readonly<{
 /* -------- Common small responses -------- */
 export type SuccessResponse = Readonly<{
   success: boolean;
+}>;
+
+export type PermissionDetail = Readonly<{
+  id: string;
+  slug: string;
+  key: string;
+  module: string;
+  action: string;
+}>;
+
+export type SigninResponse = Readonly<{
+  status: number;
+  message: string;
+  id: string;
+  role: Role;
+  isVerified: boolean;
+  name: string;
+  profilePicture?: string | null;
+  permissions: ReadonlyArray<string>;
+  permissionDetails: ReadonlyArray<PermissionDetail>;
 }>;
 
 export type SignupResponse = User;

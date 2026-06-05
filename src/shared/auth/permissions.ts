@@ -1,38 +1,13 @@
-import type { Role } from "@/features/auth";
+import type { KnownRole, Role } from "@/features/auth";
 
-export type AppPermission =
-  | "dashboard.view"
-  | "users.manage"
-  | "contact.manage"
-  | "entity.create"
-  | "entity.update"
-  | "entity.delete"
-  | "entity.recover"
-  | "entity.destroy";
+// Backend generates permissions dynamically as `module:action`.
+// Examples: "product:view", "seo:create", "admin:manage", "inventory:delete"
+export type AppPermission = string;
 
-const ROLE_PERMISSIONS: Readonly<Record<Role, ReadonlySet<AppPermission>>> = {
-  SUDOADMIN: new Set<AppPermission>([
-    "dashboard.view",
-    "users.manage",
-    "contact.manage",
-    "entity.create",
-    "entity.update",
-    "entity.delete",
-    "entity.recover",
-    "entity.destroy",
-  ]),
-  ADMIN: new Set<AppPermission>([
-    "dashboard.view",
-    "users.manage",
-    "contact.manage",
-    "entity.create",
-    "entity.update",
-    "entity.delete",
-  ]),
-  USER: new Set<AppPermission>(["dashboard.view"]),
-};
+// Static fallback for SUDOADMIN/ADMIN when DB returns no permissions.
+const ROLE_GRANTS_ALL: ReadonlySet<KnownRole> = new Set<KnownRole>(["SUDOADMIN", "ADMIN"]);
 
-export function can(role: Role | null | undefined, permission: AppPermission): boolean {
+export function can(role: Role | null | undefined, _permission: AppPermission): boolean {
   if (!role) return false;
-  return ROLE_PERMISSIONS[role].has(permission);
+  return ROLE_GRANTS_ALL.has(role as KnownRole);
 }

@@ -177,7 +177,7 @@ export const AppRouter: React.FC = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route element={<RoleGuard allow={["ADMIN", "SUDOADMIN"]} />}>
-            <Route element={<PermissionGuard permission="users.manage" />}>
+            <Route element={<PermissionGuard permission="admin:manage" />}>
               <Route
                 path="/dashboard/users"
                 element={<UsersPage />}
@@ -381,10 +381,10 @@ export const AppRouter: React.FC = () => {
 
           <Route path="/dashboard/testimonials" element={<TestimonialsPage />} />
           <Route path="/dashboard/testimonials/deleted" element={<TestimonialsPage />} />
-          <Route element={<PermissionGuard permission="entity.create" />}>
+          <Route element={<PermissionGuard permission="review:create" />}>
             <Route path="/dashboard/testimonials/create" element={<TestimonialFormPage />} />
           </Route>
-          <Route element={<PermissionGuard permission="entity.update" />}>
+          <Route element={<PermissionGuard permission="review:update" />}>
             <Route path="/dashboard/testimonials/:id/edit" element={<TestimonialFormPage />} />
           </Route>
           <Route path="/dashboard/faqs" element={<FaqsPage />} />
@@ -437,9 +437,11 @@ export const AppRouter: React.FC = () => {
             element={<BlogPostEditPage />}
           />
           <Route path="/dashboard/blog-posts/:id" element={<BlogPostsPage />} />
-          <Route path="/dashboard/seo-metadata" element={<SeoListPage />} />
-          <Route path="/dashboard/seo-metadata/create" element={<SeoFormPage />} />
-          <Route path="/dashboard/seo-metadata/:id/edit" element={<SeoFormPage />} />
+          <Route element={<RoleGuard allow={["SUDOADMIN"]} />}>
+            <Route path="/dashboard/seo-metadata" element={<SeoListPage />} />
+            <Route path="/dashboard/seo-metadata/create" element={<SeoFormPage />} />
+            <Route path="/dashboard/seo-metadata/:id/edit" element={<SeoFormPage />} />
+          </Route>
           <Route path="/dashboard/newsletter" element={<NewsletterPage />} />
           <Route path="/dashboard/newsletter/deleted" element={<NewsletterPage />} />
           <Route path="/dashboard/activity-logs" element={<ActivityLogsPage />} />
@@ -493,10 +495,10 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/delivery/webhook-events/:id/edit" element={<DeliveryWebhookEventsEditPage />} />
 
           <Route path="/dashboard/team" element={<TeamPage />} />
-          <Route element={<PermissionGuard permission="entity.create" />}>
+          <Route element={<PermissionGuard permission="teammember:create" />}>
             <Route path="/dashboard/team/create" element={<TeamCreatePage />} />
           </Route>
-          <Route element={<PermissionGuard permission="entity.update" />}>
+          <Route element={<PermissionGuard permission="teammember:update" />}>
             <Route
               path="/dashboard/team/:slug/edit"
               element={<TeamEditPage />}
@@ -506,13 +508,13 @@ export const AppRouter: React.FC = () => {
 
 
           <Route path="/dashboard/newsroom" element={<NewsroomPage />} />
-          <Route element={<PermissionGuard permission="entity.create" />}>
+          <Route element={<PermissionGuard permission="blog:create" />}>
             <Route
               path="/dashboard/newsroom/create"
               element={<NewsroomCreatePage />}
             />
           </Route>
-          <Route element={<PermissionGuard permission="entity.update" />}>
+          <Route element={<PermissionGuard permission="blog:update" />}>
             <Route
               path="/dashboard/newsroom/:slug/edit"
               element={<NewsroomEditPage />}
