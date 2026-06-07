@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ArrowRight,
   MoreHorizontal,
   TrendingUp,
   TrendingDown,
@@ -16,6 +17,7 @@ import { useOrders, usePaymentsAggregate } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
 import { useInquiryList, useSiteInquiryList } from "@/features/engagement";
 import { useAdminUsersList } from "@/features/adminUsers";
+import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
 
 // ──────────────────────────────────────────────
 // Sales Overview interactive line chart
@@ -25,10 +27,30 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
   values,
 }) => {
   const [hovered, setHovered] = React.useState<number | null>(null);
+  const chartRef = React.useRef<HTMLDivElement | null>(null);
+  const [chartWidth, setChartWidth] = React.useState(0);
+
+  React.useEffect(() => {
+    const element = chartRef.current;
+    if (!element) return;
+
+    const updateWidth = () => setChartWidth(element.clientWidth);
+    updateWidth();
+
+    const observer = new ResizeObserver(() => updateWidth());
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   const maxValue = Math.max(...values, 1);
   const yMax = Math.ceil(maxValue / 1000) * 1000 || 1000;
   const yLevels = [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax];
-  const W = 520, H = 200, pL = 36, pR = 12, pT = 22, pB = 28;
+  const W = Math.max(chartWidth || 0, 520),
+    H = 200,
+    pL = 36,
+    pR = 12,
+    pT = 22,
+    pB = 28;
   const cW = W - pL - pR;
   const cH = H - pT - pB;
   const n = months.length;
@@ -45,116 +67,153 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
     return `${acc} C ${cpX} ${prev.y}, ${cpX} ${pt.y}, ${pt.x} ${pt.y}`;
   }, "");
 
-  const areaD = pts.length > 0
-    ? `${pathD} L ${pts[pts.length - 1].x} ${pT + cH} L ${pts[0].x} ${pT + cH} Z`
-    : "";
+  const areaD =
+    pts.length > 0
+      ? `${pathD} L ${pts[pts.length - 1].x} ${pT + cH} L ${pts[0].x} ${pT + cH} Z`
+      : "";
 
   const colW = n > 1 ? cW / (n - 1) : cW;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full"
-      style={{ height: 200 }}
-      preserveAspectRatio="xMidYMid meet"
-      onMouseLeave={() => setHovered(null)}
-    >
-      <defs>
-        <linearGradient id="salesLineGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0071e3" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#0071e3" stopOpacity="0.01" />
-        </linearGradient>
-      </defs>
+    <div ref={chartRef} className="w-full">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="block w-full"
+        style={{ height: 200 }}
+        preserveAspectRatio="xMidYMid meet"
+        onMouseLeave={() => setHovered(null)}
+      >
+        <defs>
+          <linearGradient id="salesLineGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0071e3" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#0071e3" stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
 
-      {/* Vertical hover line */}
-      {hovered !== null && (
-        <line
-          x1={pts[hovered].x}
-          y1={pT}
-          x2={pts[hovered].x}
-          y2={pT + cH}
-          stroke="#0071e3"
-          strokeWidth={1}
-          strokeDasharray="3 3"
-          opacity={0.4}
-        />
-      )}
+        {/* Vertical hover line */}
+        {hovered !== null && (
+          <line
+            x1={pts[hovered].x}
+            y1={pT}
+            x2={pts[hovered].x}
+            y2={pT + cH}
+            stroke="#0071e3"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            opacity={0.4}
+          />
+        )}
 
-      {/* Grid lines + Y labels */}
-      {yLevels.map((v) => {
-        const y = pT + cH - (v / yMax) * cH;
-        return (
-          <g key={v}>
-            <line x1={pL} y1={y} x2={W - pR} y2={y} stroke="var(--line-soft)" strokeWidth={1} />
-            <text x={pL - 5} y={y + 4} textAnchor="end" fontSize={9} fill="var(--text-tertiary)">
-              {v === 0 ? "0" : `${Math.round(v / 1000)}K`}
-            </text>
-          </g>
-        );
-      })}
+        {/* Grid lines + Y labels */}
+        {yLevels.map((v) => {
+          const y = pT + cH - (v / yMax) * cH;
+          return (
+            <g key={v}>
+              <line
+                x1={pL}
+                y1={y}
+                x2={W - pR}
+                y2={y}
+                stroke="var(--line-soft)"
+                strokeWidth={1}
+              />
+              <text
+                x={pL - 5}
+                y={y + 4}
+                textAnchor="end"
+                fontSize={9}
+                fill="var(--text-tertiary)"
+              >
+                {v === 0 ? "0" : `${Math.round(v / 1000)}K`}
+              </text>
+            </g>
+          );
+        })}
 
-      {/* Area fill */}
-      {areaD && <path d={areaD} fill="url(#salesLineGrad)" />}
+        {/* Area fill */}
+        {areaD && <path d={areaD} fill="url(#salesLineGrad)" />}
 
-      {/* Line */}
-      {pathD && (
-        <path
-          d={pathD}
-          fill="none"
-          stroke="#0071e3"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
+        {/* Line */}
+        {pathD && (
+          <path
+            d={pathD}
+            fill="none"
+            stroke="#0071e3"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
 
-      {/* Per-point: X label, hover zone, dot, tooltip */}
-      {pts.map((pt, i) => {
-        const isHovered = hovered === i;
-        const tooltipX = Math.min(Math.max(pt.x - 38, pL), W - pR - 76);
-        const tooltipY = pt.y - 36;
-        return (
-          <g key={months[i]}>
-            <text x={pt.x} y={H - 6} textAnchor="middle" fontSize={10} fill="var(--text-tertiary)">
-              {months[i]}
-            </text>
+        {/* Per-point: X label, hover zone, dot, tooltip */}
+        {pts.map((pt, i) => {
+          const isHovered = hovered === i;
+          const tooltipX = Math.min(Math.max(pt.x - 38, pL), W - pR - 76);
+          const tooltipY = pt.y - 36;
+          return (
+            <g key={months[i]}>
+              <text
+                x={pt.x}
+                y={H - 6}
+                textAnchor="middle"
+                fontSize={10}
+                fill="var(--text-tertiary)"
+              >
+                {months[i]}
+              </text>
 
-            {/* Invisible wide hit area */}
-            <rect
-              x={pt.x - colW / 2}
-              y={pT}
-              width={colW}
-              height={cH}
-              fill="transparent"
-              style={{ cursor: "crosshair" }}
-              onMouseEnter={() => setHovered(i)}
-            />
+              {/* Invisible wide hit area */}
+              <rect
+                x={pt.x - colW / 2}
+                y={pT}
+                width={colW}
+                height={cH}
+                fill="transparent"
+                style={{ cursor: "crosshair" }}
+                onMouseEnter={() => setHovered(i)}
+              />
 
-            {/* Dot */}
-            <circle
-              cx={pt.x}
-              cy={pt.y}
-              r={isHovered ? 5.5 : 3}
-              fill={isHovered ? "#0071e3" : "white"}
-              stroke="#0071e3"
-              strokeWidth={2}
-              style={{ transition: "r 100ms ease, fill 100ms ease" }}
-              pointerEvents="none"
-            />
+              {/* Dot */}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isHovered ? 5.5 : 3}
+                fill={isHovered ? "#0071e3" : "white"}
+                stroke="#0071e3"
+                strokeWidth={2}
+                style={{ transition: "r 100ms ease, fill 100ms ease" }}
+                pointerEvents="none"
+              />
 
-            {/* Tooltip */}
-            {isHovered && (
-              <g pointerEvents="none">
-                <rect x={tooltipX} y={tooltipY} width={76} height={24} rx={6} fill="#1d1d1f" opacity={0.88} />
-                <text x={tooltipX + 38} y={tooltipY + 15} textAnchor="middle" fontSize={11} fill="white" fontWeight="600">
-                  {values[i].toLocaleString()}
-                </text>
-              </g>
-            )}
-          </g>
-        );
-      })}
-    </svg>
+              {/* Tooltip */}
+              {isHovered && (
+                <g pointerEvents="none">
+                  <rect
+                    x={tooltipX}
+                    y={tooltipY}
+                    width={76}
+                    height={24}
+                    rx={6}
+                    fill="#1d1d1f"
+                    opacity={0.88}
+                  />
+                  <text
+                    x={tooltipX + 38}
+                    y={tooltipY + 15}
+                    textAnchor="middle"
+                    fontSize={11}
+                    fill="white"
+                    fontWeight="600"
+                  >
+                    {values[i].toLocaleString()}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 };
 
@@ -227,6 +286,9 @@ const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
   return now - 30 * day;
 };
 
+const viewAllButtonClassName =
+  "inline-flex h-[24px] items-center  rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#0071e3] transition-colors hover:bg-[#f5f5f7] hover:border-[#0071e3]/25 hover:text-[#0066cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]/25 active:scale-[0.98]";
+
 const orderStatusStyle: Record<
   "Processing" | "Shipped" | "Pending" | "Delivered" | "Cancelled",
   string
@@ -248,6 +310,18 @@ const inquiryTypeStyle: Record<"Product" | "Site", string> = {
   Product:
     "bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[var(--badge-primary-text)]",
   Site: "bg-slate-100 text-slate-700",
+};
+const formatOrderStatusLabel = (
+  status: string,
+): keyof typeof orderStatusStyle => {
+  const normalized = status
+    .toLowerCase()
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+  const label = normalized.join(" ") || "Pending";
+  if (label in orderStatusStyle) return label as keyof typeof orderStatusStyle;
+  return "Pending";
 };
 type PaymentRow = Readonly<{
   amount: number;
@@ -340,14 +414,7 @@ export const DashboardOverviewPage: React.FC = () => {
   const siteInquiryQuery = useSiteInquiryList({ page: 1, limit: 100 });
 
   const orders = React.useMemo(() => {
-    const payload = ordersQuery.data as unknown;
-    const p = payload as Record<string, unknown> | undefined;
-    const rows = Array.isArray(payload)
-      ? payload
-      : Array.isArray(p?.orders)
-      ? (p.orders as unknown[])
-      : ((p as { data?: unknown[] } | undefined)?.data ?? []);
-    return rows as ReadonlyArray<Record<string, unknown>>;
+    return getOrderRows(ordersQuery.data);
   }, [ordersQuery.data]);
 
   const products = React.useMemo(
@@ -394,6 +461,7 @@ export const DashboardOverviewPage: React.FC = () => {
         type: "Product" as const,
         status: mapStatus(toText(row.status, "New")),
         date: formatDate(row.createdAt),
+        createdAt: new Date(toText(row.createdAt)).getTime(),
       })),
       ...siteRows.map((row) => ({
         id: toText(row.id, crypto.randomUUID()),
@@ -403,8 +471,11 @@ export const DashboardOverviewPage: React.FC = () => {
         type: "Site" as const,
         status: mapStatus(toText(row.status, "New")),
         date: formatDate(row.createdAt),
+        createdAt: new Date(toText(row.createdAt)).getTime(),
       })),
-    ].slice(0, 8);
+    ]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 6);
   }, [inquiryQuery.data, siteInquiryQuery.data]);
 
   const payments = React.useMemo(
@@ -652,7 +723,8 @@ export const DashboardOverviewPage: React.FC = () => {
         const category =
           (id && productCategoryById.get(id)) || fallbackCategory;
         if (!category || !id) return;
-        if (!allCategoryNames.includes(category)) allCategoryNames.push(category);
+        if (!allCategoryNames.includes(category))
+          allCategoryNames.push(category);
         const set = soldProductIdsByCategory.get(category) ?? new Set<string>();
         set.add(id);
         soldProductIdsByCategory.set(category, set);
@@ -671,10 +743,10 @@ export const DashboardOverviewPage: React.FC = () => {
       0,
     );
     return [...categoryCounts.entries()].map(([name, count]) => ({
-        name,
-        count,
-        pct: total > 0 ? Math.round((count / total) * 100) : 0,
-      }));
+      name,
+      count,
+      pct: total > 0 ? Math.round((count / total) * 100) : 0,
+    }));
   }, [categories, products, orders, categoryRange]);
 
   const visitorRows = React.useMemo(() => {
@@ -714,7 +786,10 @@ export const DashboardOverviewPage: React.FC = () => {
       }));
   }, [inquiryQuery.data, siteInquiryQuery.data, visitorsRange, currentTime]);
   const categoryBandPaths = React.useMemo(() => {
-    const total = productSalesCategories.reduce((sum, item) => sum + item.count, 0);
+    const total = productSalesCategories.reduce(
+      (sum, item) => sum + item.count,
+      0,
+    );
     if (total <= 0) return [] as ReadonlyArray<{ d: string; share: number }>;
     let startLeft = 0;
     let startRight = 0;
@@ -746,27 +821,21 @@ export const DashboardOverviewPage: React.FC = () => {
 
   const recentOrders = React.useMemo(
     () =>
-      orders.slice(0, 6).map((row) => ({
-        id: toText(row.orderNumber ?? row.id, "—"),
-        customer: toText(row.customerName ?? row.fullname, "Customer"),
-        email: toText(row.customerEmail ?? row.email, "—"),
-        amount: formatNpr(toNum(row.total ?? row.totalAmount)),
-        status: ([
-          "Processing",
-          "Shipped",
-          "Pending",
-          "Delivered",
-          "Cancelled",
-        ].includes(toText(row.status))
-          ? toText(row.status)
-          : "Pending") as
-          | "Processing"
-          | "Shipped"
-          | "Pending"
-          | "Delivered"
-          | "Cancelled",
-        date: formatDate(row.createdAt ?? row.placedAt),
-      })),
+      orders
+        .map((row) => {
+          const order = normalizeOrderRow(row);
+          return {
+            createdAt: new Date(toText(order.placedAt)).getTime(),
+            id: toText(order.orderNumber ?? order.id, "—"),
+            customer: toText(order.customerName, "Customer"),
+            email: toText(order.customerEmail, "—"),
+            amount: formatNpr(toNum(order.total)),
+            status: formatOrderStatusLabel(order.status),
+            date: formatDate(order.placedAt),
+          };
+        })
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 6),
     [orders],
   );
   return (
@@ -776,9 +845,8 @@ export const DashboardOverviewPage: React.FC = () => {
         className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
         style={rowAnimation(0)}
       >
-
         {/* Total Orders */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
               <RotateCcw size={15} className="text-blue-600" />
@@ -798,7 +866,7 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
 
         {/* Total Sales */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-50">
               <ShoppingCart size={15} className="text-violet-600" />
@@ -818,7 +886,7 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
 
         {/* Customer Growth */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50">
               <BarChart2 size={15} className="text-amber-600" />
@@ -834,7 +902,11 @@ export const DashboardOverviewPage: React.FC = () => {
             <span
               className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${growthPct >= 0 ? "bg-(--badge-success-bg) text-(--badge-success-text)" : "bg-(--badge-danger-bg) text-(--badge-danger-text)"}`}
             >
-              {growthPct >= 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+              {growthPct >= 0 ? (
+                <TrendingUp size={9} />
+              ) : (
+                <TrendingDown size={9} />
+              )}
               {growthPct >= 0 ? "+" : "-"}
               {Math.abs(growthPct)}%
             </span>
@@ -842,7 +914,7 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
 
         {/* Total Revenue */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm transition-colors hover:border-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50">
               <CoinIcon />
@@ -860,17 +932,167 @@ export const DashboardOverviewPage: React.FC = () => {
             </span>
           </div>
         </div>
-
       </div>
 
-      {/* ── Row 2: Sales Overview | Activity+Growth | Distribution ── */}
+      {/* ── Row 2: Recent Orders | Inquiries ── */}
       <div
         className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
         style={rowAnimation(90)}
       >
-        {/* Sales Overview */}
-        <div className="col-span-12 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm lg:col-span-6">
-          <div className="flex items-start justify-between">
+        <div className="col-span-12 lg:col-span-7">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <h2 className="text-sm font-semibold text-(--text)">
+              Recent Orders
+            </h2>
+            <button type="button" className={viewAllButtonClassName}>
+              <span>View all</span>
+              <ArrowRight size={14} strokeWidth={2} />
+            </button>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-(--line) bg-(--bg)">
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Order
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Customer
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Amount
+                    </th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Status
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--line)">
+                  {recentOrders.map((o) => (
+                    <tr
+                      key={o.id}
+                      className="transition-colors hover:bg-(--bg)"
+                    >
+                      <td className="px-5 py-3.5 font-mono text-xs font-medium text-(--text-secondary)">
+                        {o.id}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="font-medium text-(--text)">
+                          {o.customer}
+                        </p>
+                        <p className="text-[10px] text-(--text-tertiary)">
+                          {o.email}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-(--text)">
+                        {o.amount}
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${orderStatusStyle[o.status]}`}
+                        >
+                          {o.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-xs text-(--text-secondary)">
+                        {o.date}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-span-12 lg:col-span-5">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                {inquiries.filter((i) => i.status === "New").length} new
+              </span>
+              <button type="button" className={viewAllButtonClassName}>
+                <span>View all</span>
+                <ArrowRight size={14} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="overflow-hidden">
+              <table className="w-full table-fixed text-sm">
+                <thead>
+                  <tr className="border-b border-(--line) bg-(--bg)">
+                    <th className="w-[31%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Customer
+                    </th>
+                    <th className="w-[34%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Subject
+                    </th>
+                    <th className="w-[17%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Type
+                    </th>
+                    <th className="w-[18%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--line)">
+                  {inquiries.map((inq) => (
+                    <tr
+                      key={inq.id}
+                      className="transition-colors hover:bg-(--bg)"
+                    >
+                      <td className="px-4 py-3">
+                        <p className="truncate text-xs font-medium text-(--text)">
+                          {inq.name}
+                        </p>
+                        <p className="truncate text-[10px] text-(--text-tertiary)">
+                          {inq.email}
+                        </p>
+                      </td>
+                      <td className="max-w-0 px-4 py-3">
+                        <p className="truncate text-xs text-(--text-secondary)">
+                          {inq.subject}
+                        </p>
+                        <p className="truncate text-[10px] text-(--text-tertiary)">
+                          {inq.date}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
+                        >
+                          {inq.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${inquiryStatusStyle[inq.status]}`}
+                        >
+                          {inq.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 3: Sales Overview ── */}
+      <div
+        className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
+        style={rowAnimation(180)}
+      >
+        <div className="col-span-12">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
             <h2 className="text-base font-semibold text-(--text)">
               Sales Overview
             </h2>
@@ -906,148 +1128,42 @@ export const DashboardOverviewPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-start gap-8">
-            <div>
-              <p className="text-xs text-(--text-tertiary)">Total Earnings</p>
-              <p className="text-2xl font-bold text-(--text)">
-                {formatNpr(paymentRevenue)}
-              </p>
-              <p className="flex items-center gap-0.5 text-xs font-medium text-(--badge-success-text)">
-                <TrendingUp size={10} /> +2.34%
-              </p>
-            </div>
-            <div className="ml-auto flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
-                <div className="h-2.5 w-2.5 rounded-sm bg-primary" />
-                Earnings
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mt-3 flex flex-wrap items-start gap-8">
+              <div>
+                <p className="text-xs text-(--text-tertiary)">Total Earnings</p>
+                <p className="text-2xl font-bold text-(--text)">
+                  {formatNpr(paymentRevenue)}
+                </p>
+                <p className="flex items-center gap-0.5 text-xs font-medium text-(--badge-success-text)">
+                  <TrendingUp size={10} /> +2.34%
+                </p>
+              </div>
+              <div className="ml-auto flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
+                  <div className="h-2.5 w-2.5 rounded-sm bg-primary" />
+                  Earnings
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-2">
-            <SalesLineChart
-              months={paymentMonthly.map((m) => m.label)}
-              values={paymentMonthly.map((m) => m.value)}
-            />
-          </div>
-        </div>
-
-        {/* Middle column: Sales Activity */}
-        <div className="col-span-12 flex flex-col gap-4 lg:col-span-3">
-          {/* Sales Activity */}
-          <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-(--text)">
-                Sales Activity
-              </h2>
-              <button className="text-(--text-tertiary) hover:text-(--text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-                <MoreHorizontal size={15} />
-              </button>
+            <div className="mt-2">
+              <SalesLineChart
+                months={paymentMonthly.map((m) => m.label)}
+                values={paymentMonthly.map((m) => m.value)}
+              />
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--surface-soft)">
-                  <Package size={16} className="text-(--text-secondary)" />
-                </div>
-                <div>
-                  <p className="text-xs text-(--text-tertiary)">Packed</p>
-                  <p className="text-base font-bold text-(--text)">
-                    {pendingCount.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_16%,white)]">
-                  <CheckCircle2 size={16} className="text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-(--text-tertiary)">Delivered</p>
-                  <p className="text-base font-bold text-(--text)">
-                    {deliveredCount.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--surface-soft)">
-                  <Truck size={16} className="text-(--text-secondary)" />
-                </div>
-                <div>
-                  <p className="text-xs text-(--text-tertiary)">Shipped</p>
-                  <p className="text-base font-bold text-(--text)">
-                    {shippedCount.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--surface-soft)">
-                  <FileText size={16} className="text-(--text-secondary)" />
-                </div>
-                <div>
-                  <p className="text-xs text-(--text-tertiary)">Invoiced</p>
-                  <p className="text-base font-bold text-(--text)">
-                    {formatNpr(revenue)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Products */}
-        <div className="col-span-12 rounded-2xl border border-slate-200 bg-slate-50 shadow-sm lg:col-span-3">
-          <div className="flex items-center justify-between border-b border-(--line) px-5 py-4">
-            <h2 className="text-sm font-semibold text-(--text)">
-              Top Products
-            </h2>
-            <div className="flex items-center overflow-hidden rounded-lg border border-(--line) bg-(--surface-soft) text-xs">
-              <button
-                type="button"
-                onClick={() => setTopProductsRange("7d")}
-                className={`px-2.5 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${topProductsRange === "7d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                7D
-              </button>
-              <button
-                type="button"
-                onClick={() => setTopProductsRange("30d")}
-                className={`px-2.5 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${topProductsRange === "30d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                30D
-              </button>
-            </div>
-          </div>
-          <div className="divide-y divide-(--line)">
-            {topProducts.map((p, i) => (
-              <div key={p.name} className="flex items-center gap-3 px-5 py-3">
-                <span className="w-4 shrink-0 text-xs text-(--text-tertiary)">
-                  {i + 1}
-                </span>
-                <span className="text-lg leading-none">{p.img}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-(--text)">
-                    {p.name}
-                  </p>
-                  <p className="text-[10px] text-(--text-tertiary)">
-                    {p.category}
-                  </p>
-                </div>
-                <span className="shrink-0 text-xs font-semibold text-(--text)">
-                  {p.revenue}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Row 3: Product Category | Map | Visitors ── */}
+      {/* ── Row 4: Product Sales Category ── */}
       <div
         className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
-        style={rowAnimation(180)}
+        style={rowAnimation(270)}
       >
-        {/* Product Sales Category */}
-        <div className="col-span-12 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm lg:col-span-8">
-          <div className="flex items-center justify-between px-5 pb-3 pt-5">
+        <div className="col-span-12">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
             <h2 className="text-sm font-semibold text-(--text)">
               Product Sales Category
             </h2>
@@ -1083,306 +1199,304 @@ export const DashboardOverviewPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Category column headers */}
-          <div className="px-5">
-            <div
-              className="grid gap-0"
-              style={{
-                gridTemplateColumns: `repeat(${Math.max(
-                  productSalesCategories.length,
-                  1,
-                )}, minmax(0, 1fr))`,
-              }}
-            >
-              {productSalesCategories.map((item, index) => (
-                <button
-                  type="button"
-                  key={item.name}
-                  onMouseEnter={() => setActiveCategoryBand(index)}
-                  onMouseLeave={() => setActiveCategoryBand(null)}
-                  onFocus={() => setActiveCategoryBand(index)}
-                  onBlur={() => setActiveCategoryBand(null)}
-                  className={`flex flex-col gap-0.5 px-2 py-2 text-left transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index > 0 ? "border-l border-(--line)" : ""} ${activeCategoryBand === index ? "bg-[color-mix(in_srgb,var(--primary)_10%,white)]" : "bg-transparent"}`}
-                >
-                <Users size={17} className="text-(--text-tertiary)" />
-                <span
-                  className={`text-base font-bold leading-tight ${activeCategoryBand === index || index === 0 ? "text-primary" : "text-(--text)"}`}
-                >
-                  {item.pct}%
-                </span>
-                <span className="text-[10px] leading-snug text-(--text-secondary)">
-                  {item.name}
-                </span>
-                <span className="mt-0.5 text-[10px] text-(--text-tertiary)">
-                  <span className="font-semibold text-(--text-secondary)">
-                    {item.count}
-                  </span>{" "}
-                  Products
-                </span>
-                </button>
-              ))}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            {/* Category column headers */}
+            <div className="px-5">
+              <div
+                className="grid gap-0"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.max(
+                    productSalesCategories.length,
+                    1,
+                  )}, minmax(0, 1fr))`,
+                }}
+              >
+                {productSalesCategories.map((item, index) => (
+                  <button
+                    type="button"
+                    key={item.name}
+                    onMouseEnter={() => setActiveCategoryBand(index)}
+                    onMouseLeave={() => setActiveCategoryBand(null)}
+                    onFocus={() => setActiveCategoryBand(index)}
+                    onBlur={() => setActiveCategoryBand(null)}
+                    className={`flex flex-col gap-0.5 px-2 py-2 text-left transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index > 0 ? "border-l border-(--line)" : ""} ${activeCategoryBand === index ? "bg-[color-mix(in_srgb,var(--primary)_10%,white)]" : "bg-transparent"}`}
+                  >
+                    <Users size={17} className="text-(--text-tertiary)" />
+                    <span
+                      className={`text-base font-bold leading-tight ${activeCategoryBand === index || index === 0 ? "text-primary" : "text-(--text)"}`}
+                    >
+                      {item.pct}%
+                    </span>
+                    <span className="text-[10px] leading-snug text-(--text-secondary)">
+                      {item.name}
+                    </span>
+                    <span className="mt-0.5 text-[10px] text-(--text-tertiary)">
+                      <span className="font-semibold text-(--text-secondary)">
+                        {item.count}
+                      </span>{" "}
+                      Products
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="px-5 pb-3">
-            <svg
-              viewBox="0 0 540 100"
-              className="w-full"
-              style={{ height: 100, display: "block" }}
-              preserveAspectRatio="none"
-              onMouseLeave={() => setActiveCategoryBand(null)}
-            >
-              {productSalesCategories.length > 1
-                ? Array.from(
-                    { length: productSalesCategories.length - 1 },
-                    (_, idx) => (
-                      <line
-                        key={`divider-${idx}`}
-                        x1={((idx + 1) * 540) / productSalesCategories.length}
-                        y1={0}
-                        x2={((idx + 1) * 540) / productSalesCategories.length}
-                        y2={100}
-                        stroke="var(--line)"
-                        strokeWidth="1"
-                        opacity="0.9"
+            <div className="px-5 pb-3">
+              <svg
+                viewBox="0 0 540 100"
+                className="w-full"
+                style={{ height: 100, display: "block" }}
+                preserveAspectRatio="none"
+                onMouseLeave={() => setActiveCategoryBand(null)}
+              >
+                {productSalesCategories.length > 1
+                  ? Array.from(
+                      { length: productSalesCategories.length - 1 },
+                      (_, idx) => (
+                        <line
+                          key={`divider-${idx}`}
+                          x1={((idx + 1) * 540) / productSalesCategories.length}
+                          y1={0}
+                          x2={((idx + 1) * 540) / productSalesCategories.length}
+                          y2={100}
+                          stroke="var(--line)"
+                          strokeWidth="1"
+                          opacity="0.9"
+                        />
+                      ),
+                    )
+                  : null}
+                {categoryBandPaths.length === 0 ? (
+                  <rect x={0} y={94} width={540} height={6} fill="#bfdbfe" />
+                ) : (
+                  categoryBandPaths.map((band, index) => {
+                    const blueBands = [
+                      "#1d4ed8",
+                      "#2563eb",
+                      "#3b82f6",
+                      "#60a5fa",
+                      "#93c5fd",
+                      "#1e40af",
+                      "#0ea5e9",
+                      "#38bdf8",
+                    ];
+                    const isActive =
+                      activeCategoryBand === null ||
+                      activeCategoryBand === index;
+                    return (
+                      <path
+                        key={`band-${index}`}
+                        d={band.d}
+                        fill={blueBands[index % blueBands.length]}
+                        fillOpacity={isActive ? 0.95 : 0.35}
+                        className="cursor-pointer transition-opacity duration-200"
+                        onMouseEnter={() => setActiveCategoryBand(index)}
                       />
-                    ),
-                  )
-                : null}
-              {categoryBandPaths.length === 0 ? (
-                <rect x={0} y={94} width={540} height={6} fill="#bfdbfe" />
-              ) : (
-                categoryBandPaths.map((band, index) => {
-                  const blueBands = [
-                    "#1d4ed8",
-                    "#2563eb",
-                    "#3b82f6",
-                    "#60a5fa",
-                    "#93c5fd",
-                    "#1e40af",
-                    "#0ea5e9",
-                    "#38bdf8",
-                  ];
-                  const isActive =
-                    activeCategoryBand === null || activeCategoryBand === index;
-                  return (
-                    <path
-                      key={`band-${index}`}
-                      d={band.d}
-                      fill={blueBands[index % blueBands.length]}
-                      fillOpacity={isActive ? 0.95 : 0.35}
-                      className="cursor-pointer transition-opacity duration-200"
-                      onMouseEnter={() => setActiveCategoryBand(index)}
-                    />
-                  );
-                })
-              )}
-            </svg>
+                    );
+                  })
+                )}
+              </svg>
+            </div>
           </div>
         </div>
 
-        {/* Visitors */}
-        <div className="col-span-12 rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm lg:col-span-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-(--text)">Visitors</h2>
-            <div className="flex items-center overflow-hidden rounded-lg border border-(--line) bg-(--surface-soft) text-xs">
-              <button
-                type="button"
-                onClick={() => setVisitorsRange("today")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${visitorsRange === "today" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisitorsRange("7d")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${visitorsRange === "7d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                7D
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisitorsRange("30d")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${visitorsRange === "30d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                30D
+        {/* ── Row 5: Sales Activity | Top Products | Visitors ── */}
+        <div
+          className={`col-span-12 grid w-full grid-cols-1 gap-4 lg:grid-cols-3 ${animateRows ? "overview-rise" : "opacity-0"}`}
+          style={rowAnimation(360)}
+        >
+          <div className="flex w-full min-w-0 flex-col  gap-2">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <h2 className="text-sm font-semibold text-(--text)">
+                Sales Activity
+              </h2>
+              <button className="text-(--text-tertiary) hover:text-(--text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                <MoreHorizontal size={15} />
               </button>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            {visitorRows.map(({ country, count, pct }) => (
-              <div key={country}>
-                <div className="mb-1 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base leading-none">🌐</span>
-                    <span className="text-sm font-medium text-(--text-secondary)">
-                      {country}
-                    </span>
+            <div className="h-full w-full rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div className="grid grid-cols-1 gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--surface-soft)">
+                    <Package size={16} className="text-(--text-secondary)" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-(--text-secondary)">
-                      {count.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-(--text-tertiary)">
-                      {pct}%
-                    </span>
+                  <div>
+                    <p className="text-xs text-(--text-tertiary)">Packed</p>
+                    <p className="text-base font-bold text-(--text)">
+                      {pendingCount.toLocaleString()}
+                    </p>
                   </div>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-(--surface-soft)">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.max(4, pct)}%`,
-                      background: "var(--primary)",
-                    }}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary)_16%,white)]">
+                    <CheckCircle2 size={16} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--text-tertiary)">Delivered</p>
+                    <p className="text-base font-bold text-(--text)">
+                      {deliveredCount.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--surface-soft)">
+                    <Truck size={16} className="text-(--text-secondary)" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--text-tertiary)">Shipped</p>
+                    <p className="text-base font-bold text-(--text)">
+                      {shippedCount.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--surface-soft)">
+                    <FileText size={16} className="text-(--text-secondary)" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-(--text-tertiary)">Invoiced</p>
+                    <p className="text-base font-bold text-(--text)">
+                      {formatNpr(revenue)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Row 4: Recent Orders | Inquiries ── */}
-      <div
-        className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
-        style={rowAnimation(270)}
-      >
-        {/* Recent Orders */}
-        <div className="col-span-12 rounded-2xl border border-slate-200 bg-slate-50 shadow-sm lg:col-span-7">
-          <div className="flex items-center justify-between border-b border-(--line) px-5 py-4">
-            <h2 className="text-sm font-semibold text-(--text)">
-              Recent Orders
-            </h2>
-            <button className="text-sm font-medium text-primary hover:text-(--primary-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-              View all →
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-(--line) bg-(--bg)">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Order
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Customer
-                  </th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Amount
-                  </th>
-                  <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--line)">
-                {recentOrders.map((o) => (
-                  <tr key={o.id} className="transition-colors hover:bg-(--bg)">
-                    <td className="px-5 py-3.5 font-mono text-xs font-medium text-(--text-secondary)">
-                      {o.id}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="font-medium text-(--text)">{o.customer}</p>
-                      <p className="text-[10px] text-(--text-tertiary)">
-                        {o.email}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-semibold text-(--text)">
-                      {o.amount}
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${orderStatusStyle[o.status]}`}
-                      >
-                        {o.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs text-(--text-secondary)">
-                      {o.date}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Inquiries */}
-        <div className="col-span-12 rounded-2xl border border-slate-200 bg-slate-50 shadow-sm lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-(--line) px-5 py-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                {inquiries.filter((i) => i.status === "New").length} new
-              </span>
             </div>
-            <button className="text-sm font-medium text-primary hover:text-(--primary-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-              View all →
-            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-(--line) bg-(--bg)">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Customer
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Subject
-                  </th>
-                  <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Type
-                  </th>
-                  <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--line)">
-                {inquiries.map((inq) => (
-                  <tr
-                    key={inq.id}
-                    className="transition-colors hover:bg-(--bg)"
-                  >
-                    <td className="px-5 py-3">
-                      <p className="text-xs font-medium text-(--text)">
-                        {inq.name}
-                      </p>
-                      <p className="text-[10px] text-(--text-tertiary)">
-                        {inq.email}
-                      </p>
-                    </td>
-                    <td className="max-w-[140px] px-5 py-3">
-                      <p className="truncate text-xs text-(--text-secondary)">
-                        {inq.subject}
-                      </p>
-                      <p className="text-[10px] text-(--text-tertiary)">
-                        {inq.date}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
-                      >
-                        {inq.type}
+
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <h2 className="text-sm font-semibold text-(--text)">
+                Top Products
+              </h2>
+              <div className="flex items-center overflow-hidden rounded-lg border border-(--line) bg-(--surface-soft) text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTopProductsRange("7d")}
+                  className={`px-2.5 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${topProductsRange === "7d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
+                >
+                  7D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTopProductsRange("30d")}
+                  className={`px-2.5 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${topProductsRange === "30d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
+                >
+                  30D
+                </button>
+              </div>
+            </div>
+            <div className="h-full w-full rounded-2xl border border-slate-200 bg-slate-50">
+              {topProducts.length > 0 ? (
+                <div className="divide-y divide-(--line)">
+                  {topProducts.map((p, i) => (
+                    <div
+                      key={p.name}
+                      className="flex items-center gap-3 px-5 py-3"
+                    >
+                      <span className="w-4 shrink-0 text-xs text-(--text-tertiary)">
+                        {i + 1}
                       </span>
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${inquiryStatusStyle[inq.status]}`}
-                      >
-                        {inq.status}
+                      <span className="text-lg leading-none">{p.img}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-(--text)">
+                          {p.name}
+                        </p>
+                        <p className="text-[10px] text-(--text-tertiary)">
+                          {p.category}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs font-semibold text-(--text)">
+                        {p.revenue}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-[260px] flex-col items-center justify-center px-6 text-center">
+                  <p className="text-sm font-medium text-(--text)">
+                    No top products yet
+                  </p>
+                  <p className="mt-1 text-xs text-(--text-tertiary)">
+                    Top-selling items will appear here once orders exist.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <h2 className="text-sm font-semibold text-(--text)">Visitors</h2>
+              <div className="flex items-center overflow-hidden rounded-lg border border-(--line) bg-(--surface-soft) text-xs">
+                <button
+                  type="button"
+                  onClick={() => setVisitorsRange("today")}
+                  className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${visitorsRange === "today" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisitorsRange("7d")}
+                  className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${visitorsRange === "7d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
+                >
+                  7D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisitorsRange("30d")}
+                  className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${visitorsRange === "30d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
+                >
+                  30D
+                </button>
+              </div>
+            </div>
+            <div className="h-full w-full rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              {visitorRows.length > 0 ? (
+                <div className="space-y-3">
+                  {visitorRows.map(({ country, count, pct }) => (
+                    <div key={country}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base leading-none">🌐</span>
+                          <span className="text-sm font-medium text-(--text-secondary)">
+                            {country}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-(--text-secondary)">
+                            {count.toLocaleString()}
+                          </span>
+                          <span className="text-xs text-(--text-tertiary)">
+                            {pct}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-(--surface-soft)">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.max(4, pct)}%`,
+                            background: "var(--primary)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-[260px] flex-col items-center justify-center px-2 text-center">
+                  <p className="text-sm font-medium text-(--text)">
+                    No visitor data yet
+                  </p>
+                  <p className="mt-1 text-xs text-(--text-tertiary)">
+                    Visitor sources will populate once customer activity
+                    arrives.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

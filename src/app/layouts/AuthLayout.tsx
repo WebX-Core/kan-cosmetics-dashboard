@@ -116,7 +116,7 @@ export const AuthLayout: React.FC = () => {
     <div
       ref={rootRef}
       className="flex min-h-screen opacity-0"
-      style={{ background: "#f7f5f6" }}
+      style={{ background: "#fff" }}
     >
       {/* ── Left panel ─────────────────────────────────────────── */}
       <div
@@ -124,17 +124,20 @@ export const AuthLayout: React.FC = () => {
         className="relative hidden select-none flex-col justify-between overflow-hidden p-14 lg:flex lg:w-[54%]"
         style={{ background: "#ffffff" }}
       >
+        <img
+          src="/login/Artboard1.png"
+          alt="KAN Cosmetics visual"
+          className="pointer-events-none  absolute left-100 top-1/2 z-0 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 object-contain"
+        />
         {/* Subtle ambient orb */}
         <div
           ref={orbRef}
           aria-hidden="true"
-          className="pointer-events-none absolute"
+          className="pointer-events-none absolute flex justify-between pl-20"
           style={{
             width: 640,
             height: 640,
             borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(180,80,110,0.07) 0%, rgba(160,60,90,0.03) 50%, transparent 72%)",
             left: "48%",
             top: "48%",
             transform: "translate(-50%, -50%)",
@@ -143,76 +146,28 @@ export const AuthLayout: React.FC = () => {
         />
 
         {/* Logo */}
-        <img
-          ref={logoRef}
-          src="/logo/kan_logo_gold-01.png"
-          alt="KAN Cosmetics"
-          className="relative z-10 h-9 w-auto object-contain"
-          style={{ opacity: 0.9 }}
-        />
-
-        {/* Brand statement */}
-        <div className="relative z-10">
-          <div className="mb-5 flex items-center gap-3">
-            <p
-              ref={eyebrowRef}
-              className="text-[10px] font-semibold uppercase tracking-[0.44em]"
-              style={{ color: "rgba(160,100,120,0.55)" }}
-            >
-              Nepal's Premier
-            </p>
-            <span
-              ref={ruleRef}
-              className="block h-px flex-1"
-              style={{ background: "rgba(180,120,140,0.18)" }}
-            />
-          </div>
-
-          <h1
-            className="font-black"
-            style={{
-              fontSize: "clamp(54px, 6.6vw, 94px)",
-              letterSpacing: "-0.03em",
-              lineHeight: 0.9,
-            }}
-          >
-            {/* overflow-hidden containers are the mask for each line */}
-            <span className="block overflow-hidden">
-              <span
-                ref={line1Ref}
-                className="block"
-                style={{ color: "#1a0a12" }}
-              >
-                Beauty
-              </span>
-            </span>
-            <span className="block overflow-hidden">
-              <span
-                ref={line2Ref}
-                className="block"
-                style={{ color: "#1a0a12" }}
-              >
-                Brand.
-              </span>
-            </span>
-          </h1>
-
+        <div>
+          <img
+            ref={logoRef}
+            src="/logo/kan-blue.png"
+            alt="KAN Cosmetics"
+            className="relative z-10 h-9 w-auto self-start object-contain"
+            style={{ opacity: 0.9 }}
+          />
+          <h3 className="text-4xl font-medium text-zinc-950 py-4">
+            Manage your orders and products from one simple dashboard.
+          </h3>
+        </div>
+        <div>
+          {" "}
           <p
-            ref={subRef}
-            className="mt-7 text-[13px] leading-relaxed"
-            style={{ color: "rgba(60,30,45,0.38)", maxWidth: 268 }}
+            ref={copyRef}
+            className="relative z-10 text-[11px]"
+            style={{ color: "rgb(60,30,45)" }}
           >
-            Manage products, orders, and customers from one elegant dashboard.
+            © {new Date().getFullYear()} KAN Cosmetics
           </p>
         </div>
-
-        <p
-          ref={copyRef}
-          className="relative z-10 text-[11px]"
-          style={{ color: "rgba(60,30,45,0.25)" }}
-        >
-          © {new Date().getFullYear()} KAN Cosmetics
-        </p>
       </div>
 
       {/* ── Right panel ────────────────────────────────────────── */}

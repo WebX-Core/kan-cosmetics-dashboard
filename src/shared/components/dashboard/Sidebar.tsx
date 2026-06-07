@@ -43,11 +43,7 @@ export const Sidebar: React.FC<Props> = ({
       {/* Logo — golden: 55px height */}
       <div className="flex h-[55px] items-center justify-between border-b border-[#e5e5e7] px-[21px]">
         <NavLink to="/dashboard" end onClick={onCloseMobile}>
-          <img
-            src="/logo/kan_logo_gold-01.png"
-            className="h-7 w-auto"
-            alt="KAN"
-          />
+          <img src="/logo/kan-blue.png" className="h-7 w-auto" alt="KAN" />
         </NavLink>
         <button
           className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7] md:hidden"

@@ -29,16 +29,19 @@ const inputCls =
   "h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 text-[14px] text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10";
 
 export const LoginPage: React.FC = () => {
-  const [values, setValues]       = useState<LoginValues>({ email: "", password: "" });
-  const [errors, setErrors]       = useState<FieldErrors>({});
-  const [showPwd, setShowPwd]     = useState(false);
+  const [values, setValues] = useState<LoginValues>({
+    email: "",
+    password: "",
+  });
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const navigate   = useNavigate();
-  const toast      = useToast();
-  const location   = useLocation();
-  const signin     = useSignin();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const location = useLocation();
+  const signin = useSignin();
   const from = useMemo(() => {
     const st = location.state as { from?: string } | null;
     return st?.from ?? "/dashboard";
@@ -71,8 +74,10 @@ export const LoginPage: React.FC = () => {
     return {
       id: response.id || email,
       firstname: nameParts[0] || email.split("@")[0] || "User",
-      middlename: nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : undefined,
-      lastname: nameParts.length > 1 ? (nameParts[nameParts.length - 1] ?? "") : "",
+      middlename:
+        nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : undefined,
+      lastname:
+        nameParts.length > 1 ? (nameParts[nameParts.length - 1] ?? "") : "",
       email,
       phone: "",
       address: "",
@@ -86,16 +91,22 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     const parsed = loginSchema.safeParse(values);
-    if (!parsed.success) { setErrors(toFieldErrors(parsed.error)); return; }
+    if (!parsed.success) {
+      setErrors(toFieldErrors(parsed.error));
+      return;
+    }
     setErrors({});
     setSubmitting(true);
     setSubmitError(null);
     const email = parsed.data.email.trim().toLowerCase();
     try {
-      const response = await signin.mutateAsync({ email, password: parsed.data.password });
+      const response = await signin.mutateAsync({
+        email,
+        password: parsed.data.password,
+      });
       const user = asUser(response, email);
       const permissions: ReadonlyArray<string> = response.permissions.filter(
-        (p): p is string => typeof p === "string"
+        (p): p is string => typeof p === "string",
       );
       setAuthenticated(user, permissions);
       navigate(from, { replace: true });
@@ -114,14 +125,18 @@ export const LoginPage: React.FC = () => {
       {/* Heading */}
       <div className="mb-7">
         <h2 className="text-[20px] font-bold tracking-tight text-gray-900">
-          Sign in
+          Welcome back
         </h2>
         <p className="mt-1 text-[13px] text-gray-500">
-          Welcome back to KAN dashboard.
+          Sign in to manage orders, products, and your KAN dashboard.
         </p>
       </div>
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
+      <form
+        onSubmit={(e) => void handleSubmit(e)}
+        className="space-y-4"
+        noValidate
+      >
         {/* Email */}
         <div className="space-y-1.5">
           <label className="block text-[12px] font-medium text-gray-700">
@@ -129,7 +144,9 @@ export const LoginPage: React.FC = () => {
           </label>
           <input
             value={values.email}
-            onChange={(e) => setValues(p => ({ ...p, email: e.target.value }))}
+            onChange={(e) =>
+              setValues((p) => ({ ...p, email: e.target.value }))
+            }
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
@@ -156,7 +173,9 @@ export const LoginPage: React.FC = () => {
           <div className="relative">
             <input
               value={values.password}
-              onChange={(e) => setValues(p => ({ ...p, password: e.target.value }))}
+              onChange={(e) =>
+                setValues((p) => ({ ...p, password: e.target.value }))
+              }
               type={showPwd ? "text" : "password"}
               autoComplete="current-password"
               placeholder="••••••••"
@@ -164,7 +183,7 @@ export const LoginPage: React.FC = () => {
             />
             <button
               type="button"
-              onClick={() => setShowPwd(v => !v)}
+              onClick={() => setShowPwd((v) => !v)}
               aria-label={showPwd ? "Hide password" : "Show password"}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
             >
@@ -188,7 +207,7 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="h-11 w-full rounded-lg bg-blue-600 text-[14px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="h-11 w-full rounded-lg bg-[#161a4d] text-[14px] font-semibold text-white transition-colors hover:bg-[#161a4d]/50 disabled:opacity-50"
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>

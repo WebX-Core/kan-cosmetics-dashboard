@@ -19,7 +19,11 @@ const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
 const MAX_GALLERY_IMAGES = 10;
 type ProductMediaType = "IMAGE" | "VIDEO";
 type MediaUpload = Readonly<{ file: File; type: ProductMediaType }>;
-type ExistingMedia = Readonly<{ url: string; type: ProductMediaType; id?: string }>;
+type ExistingMedia = Readonly<{
+  url: string;
+  type: ProductMediaType;
+  id?: string;
+}>;
 
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -86,7 +90,13 @@ const readDescriptionText = (
   const rawDescriptionJson = row.descriptionJson;
   const parsed =
     typeof rawDescriptionJson === "string"
-      ? (() => { try { return JSON.parse(rawDescriptionJson) as unknown; } catch { return null; } })()
+      ? (() => {
+          try {
+            return JSON.parse(rawDescriptionJson) as unknown;
+          } catch {
+            return null;
+          }
+        })()
       : rawDescriptionJson;
   if (typeof parsed === "object" && parsed !== null) {
     return read((parsed as Record<string, unknown>).text);
@@ -98,11 +108,20 @@ type FreeFromItem = { title: string };
 const parseFreeFrom = (value: unknown): FreeFromItem[] => {
   const arr =
     typeof value === "string"
-      ? (() => { try { return JSON.parse(value) as unknown; } catch { return []; } })()
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return [];
+          }
+        })()
       : value;
   if (!Array.isArray(arr)) return [];
   return arr
-    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null,
+    )
     .map((item) => ({
       title: typeof item.title === "string" ? item.title : "",
     }))
@@ -125,15 +144,22 @@ const emptyDescJson = (): DescriptionJsonForm => ({
 const parseDescJson = (value: unknown): DescriptionJsonForm => {
   const obj =
     typeof value === "string"
-      ? (() => { try { return JSON.parse(value) as unknown; } catch { return {}; } })()
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return {};
+          }
+        })()
       : value;
   if (typeof obj !== "object" || obj === null) return emptyDescJson();
   const r = obj as Record<string, unknown>;
   const toStrArr = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-  const howToUse = typeof r.howToUse === "object" && r.howToUse !== null
-    ? (r.howToUse as Record<string, unknown>)
-    : {};
+  const howToUse =
+    typeof r.howToUse === "object" && r.howToUse !== null
+      ? (r.howToUse as Record<string, unknown>)
+      : {};
   return {
     problemItSolves: toStrArr(r.problemItSolves),
     whoItsFor: toStrArr(r.whoItsFor),
@@ -167,7 +193,10 @@ const StringListInput: React.FC<{
     setTimeout(() => inputRefs.current[items.length]?.focus(), 0);
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+  const onKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (index === items.length - 1) add();
@@ -186,9 +215,13 @@ const StringListInput: React.FC<{
       <div className="space-y-1.5">
         {items.map((item, index) => (
           <div key={index} className="flex items-center gap-2">
-            <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">{index + 1}.</span>
+            <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">
+              {index + 1}.
+            </span>
             <input
-              ref={(el) => { inputRefs.current[index] = el; }}
+              ref={(el) => {
+                inputRefs.current[index] = el;
+              }}
               type="text"
               value={item}
               onChange={(e) => update(index, e.target.value)}
@@ -281,10 +314,7 @@ const HoverPreviewCard: React.FC<{
   const baseSrc = coverSrc || hoverSrc;
   if (!baseSrc) return null;
   return (
-    <div className="rounded-xl border border-[#d2d2d7] bg-linear-to-b from-[#f8f9fb] to-[#eef2f7] p-3">
-      <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-        Live Preview
-      </p>
+    <div className="rounded-xl   p-3">
       <div className="group relative h-56 overflow-hidden rounded-lg border border-[#e5e5e7] bg-white">
         <img
           src={baseSrc}
@@ -415,10 +445,15 @@ export const ProductCreatePage: React.FC = () => {
   const [existingGallery, setExistingGallery] = React.useState<
     ReadonlyArray<ExistingMedia>
   >([]);
-  const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>([]);
-  const [removedMediaAssetIds, setRemovedMediaAssetIds] = React.useState<ReadonlyArray<string>>([]);
+  const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>(
+    [],
+  );
+  const [removedMediaAssetIds, setRemovedMediaAssetIds] = React.useState<
+    ReadonlyArray<string>
+  >([]);
   const [freeFrom, setFreeFrom] = React.useState<FreeFromItem[]>([]);
-  const [descJson, setDescJson] = React.useState<DescriptionJsonForm>(emptyDescJson);
+  const [descJson, setDescJson] =
+    React.useState<DescriptionJsonForm>(emptyDescJson);
 
   React.useEffect(() => {
     if (isEdit || !prefillSubcategoryId) return;
@@ -624,14 +659,21 @@ export const ProductCreatePage: React.FC = () => {
       description: parsed.description || undefined,
       descriptionJson: (() => {
         const obj: Record<string, unknown> = {
-          problemItSolves: descJson.problemItSolves.length ? descJson.problemItSolves : [],
+          problemItSolves: descJson.problemItSolves.length
+            ? descJson.problemItSolves
+            : [],
         };
         if (descJson.whoItsFor.length) obj.whoItsFor = descJson.whoItsFor;
-        if (descJson.keyIngredients.length) obj.keyIngredients = descJson.keyIngredients;
+        if (descJson.keyIngredients.length)
+          obj.keyIngredients = descJson.keyIngredients;
         if (descJson.howToUseInstructions.length || descJson.howToUseProTip) {
           obj.howToUse = {
-            ...(descJson.howToUseInstructions.length ? { instructions: descJson.howToUseInstructions } : {}),
-            ...(descJson.howToUseProTip ? { proTip: descJson.howToUseProTip } : {}),
+            ...(descJson.howToUseInstructions.length
+              ? { instructions: descJson.howToUseInstructions }
+              : {}),
+            ...(descJson.howToUseProTip
+              ? { proTip: descJson.howToUseProTip }
+              : {}),
           };
         }
         return obj;
@@ -648,7 +690,9 @@ export const ProductCreatePage: React.FC = () => {
         ? galleryFiles.map((item) => item.file)
         : undefined,
       removeUrls: removedUrls.length ? removedUrls : undefined,
-      removeMediaAssetIds: removedMediaAssetIds.length ? removedMediaAssetIds : undefined,
+      removeMediaAssetIds: removedMediaAssetIds.length
+        ? removedMediaAssetIds
+        : undefined,
     };
 
     try {
@@ -923,7 +967,9 @@ export const ProductCreatePage: React.FC = () => {
                         markRemovedUrl(item.url);
                         if (item.id) {
                           setRemovedMediaAssetIds((prev) =>
-                            prev.includes(item.id!) ? prev : [...prev, item.id!],
+                            prev.includes(item.id!)
+                              ? prev
+                              : [...prev, item.id!],
                           );
                         }
                         setExistingGallery((prev) =>
@@ -966,7 +1012,9 @@ export const ProductCreatePage: React.FC = () => {
         <FormSection title="Description">
           <textarea
             value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
             placeholder="Describe this product…"
             rows={4}
             className="w-full rounded-lg border border-[#d2d2d7] bg-white px-3 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#86868b] focus:border-[#0071e3] focus:outline-none resize-none"
@@ -982,7 +1030,9 @@ export const ProductCreatePage: React.FC = () => {
               label="Problem It Solves"
               placeholder="e.g. Dry hair, Frizz control…"
               items={descJson.problemItSolves}
-              onChange={(v) => setDescJson((p) => ({ ...p, problemItSolves: v }))}
+              onChange={(v) =>
+                setDescJson((p) => ({ ...p, problemItSolves: v }))
+              }
             />
             <StringListInput
               label="Who It's For"
@@ -994,20 +1044,28 @@ export const ProductCreatePage: React.FC = () => {
               label="Key Ingredients"
               placeholder="e.g. Keratin, Argan Oil…"
               items={descJson.keyIngredients}
-              onChange={(v) => setDescJson((p) => ({ ...p, keyIngredients: v }))}
+              onChange={(v) =>
+                setDescJson((p) => ({ ...p, keyIngredients: v }))
+              }
             />
             <StringListInput
               label="How To Use — Steps"
               placeholder="e.g. Apply on wet hair…"
               items={descJson.howToUseInstructions}
-              onChange={(v) => setDescJson((p) => ({ ...p, howToUseInstructions: v }))}
+              onChange={(v) =>
+                setDescJson((p) => ({ ...p, howToUseInstructions: v }))
+              }
             />
             <div>
-              <p className="mb-1.5 text-[13px] font-medium text-[#1d1d1f]">How To Use — Pro Tip</p>
+              <p className="mb-1.5 text-[13px] font-medium text-[#1d1d1f]">
+                How To Use — Pro Tip
+              </p>
               <input
                 type="text"
                 value={descJson.howToUseProTip}
-                onChange={(e) => setDescJson((p) => ({ ...p, howToUseProTip: e.target.value }))}
+                onChange={(e) =>
+                  setDescJson((p) => ({ ...p, howToUseProTip: e.target.value }))
+                }
                 placeholder="e.g. Use twice a week for visible smoothness"
                 className="h-[38px] w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
               />
@@ -1022,13 +1080,17 @@ export const ProductCreatePage: React.FC = () => {
           <div className="space-y-2">
             {freeFrom.map((item, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">{idx + 1}.</span>
+                <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">
+                  {idx + 1}.
+                </span>
                 <input
                   type="text"
                   value={item.title}
                   onChange={(e) =>
                     setFreeFrom((prev) =>
-                      prev.map((it, i) => (i === idx ? { title: e.target.value } : it))
+                      prev.map((it, i) =>
+                        i === idx ? { title: e.target.value } : it,
+                      ),
                     )
                   }
                   placeholder="e.g. Paraben Free"
@@ -1037,7 +1099,9 @@ export const ProductCreatePage: React.FC = () => {
                 <button
                   type="button"
                   title="Remove item"
-                  onClick={() => setFreeFrom((prev) => prev.filter((_, i) => i !== idx))}
+                  onClick={() =>
+                    setFreeFrom((prev) => prev.filter((_, i) => i !== idx))
+                  }
                   className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
                 >
                   <X size={13} />

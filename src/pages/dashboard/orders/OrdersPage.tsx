@@ -14,6 +14,7 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useOrders } from "@/features/commerce";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
 
 type OrderRow = Readonly<{
   id: string;
@@ -26,52 +27,6 @@ type OrderRow = Readonly<{
   placedAt: string;
   status: string;
 }>;
-
-const readString = (value: unknown, fallback = ""): string =>
-  typeof value === "string" ? value : fallback;
-
-const normalizeStatus = (value: unknown, fallback = "PENDING"): string => {
-  const status = readString(value, fallback).trim().toUpperCase();
-  if (!status) return fallback;
-  if (["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "CANCELED"].includes(status)) return status;
-  return status;
-};
-
-const getCustomerName = (item: Record<string, unknown>): string => {
-  const parts = [item.firstname, item.middlename, item.lastname]
-    .map((part) => readString(part).trim())
-    .filter(Boolean);
-  if (parts.length > 0) return parts.join(" ");
-  return readString(item.customerName ?? item.fullname, "Unknown");
-};
-
-const getOrderRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
-  if (!payload || typeof payload !== "object") return [];
-  const data = payload as { data?: { orders?: unknown[] } | unknown[] };
-  const rows: unknown[] = Array.isArray(data.data)
-    ? data.data
-    : Array.isArray((data.data as { orders?: unknown[] } | undefined)?.orders)
-      ? (data.data as { orders?: unknown[] }).orders ?? []
-      : [];
-  return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
-};
-
-const toOrderRow = (record: unknown): OrderRow => {
-  const item = (
-    typeof record === "object" && record !== null ? record : {}
-  ) as Record<string, unknown>;
-  return {
-    id: readString(item.id, crypto.randomUUID()),
-    orderNumber: readString(item.orderNumber ?? item.orderId, "—"),
-    customerName: getCustomerName(item),
-    customerEmail: readString(item.customerEmail ?? item.email, "—"),
-    paymentMethod: readString(item.paymentMethod, "—"),
-    paymentStatus: readString(item.paymentStatus, "—"),
-    total: readString(item.totalAmount ?? item.total ?? "0.00", "0.00"),
-    placedAt: readString(item.placedAt ?? item.createdAt, "—"),
-    status: normalizeStatus(item.orderStatus ?? item.status),
-  };
-};
 
 export const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -92,7 +47,9 @@ export const OrdersPage: React.FC = () => {
   });
 
   const orders = React.useMemo(() => {
-    return getOrderRows(ordersQuery.data).map(toOrderRow);
+    return getOrderRows(ordersQuery.data).map(
+      (row) => normalizeOrderRow(row) as OrderRow,
+    );
   }, [ordersQuery.data]);
 
   const totalPages =

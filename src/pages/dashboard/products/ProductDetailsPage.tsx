@@ -1,24 +1,21 @@
+/* Hallmark · macrostructure: Workbench · tone: utilitarian-premium · anchor hue: cool-blue
+ * design.md managed project — tokens deferred to DESIGN.md (Apple-inspired system)
+ * pre-emit critique: P5 H5 E5 S5 R4 V4
+ */
 import React from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  Boxes,
-  Calendar,
-  CircleDollarSign,
-  MessageSquare,
   Edit2,
-  FileText,
   ImageIcon,
-  Info,
-  Palette,
-  Ruler,
-  Tag,
+  CheckCircle2,
 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
-import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { catalogApi } from "@/features/catalog";
 import { engagementApi } from "@/features/engagement";
 import { useQuery } from "@tanstack/react-query";
+
+// ── helpers ──────────────────────────────────────────────────────────────────
 
 const readText = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
@@ -90,18 +87,15 @@ const imageFromUnknown = (value: unknown): string => {
   if (typeof value === "object" && value !== null) {
     const row = value as Record<string, unknown>;
     return readText(
-      row.fileUrl ??
-        row.url ??
-        row.imageUrl ??
-        row.image ??
-        row.path ??
-        row.src,
+      row.fileUrl ?? row.url ?? row.imageUrl ?? row.image ?? row.path ?? row.src,
     );
   }
   return "";
 };
+
 type ProductMediaType = "IMAGE" | "VIDEO";
 type ProductMedia = Readonly<{ url: string; type: ProductMediaType }>;
+
 const mediaTypeFromString = (value: string): ProductMediaType =>
   value.toUpperCase().includes("VIDEO") ? "VIDEO" : "IMAGE";
 const isVideoUrl = (url: string): boolean =>
@@ -115,10 +109,7 @@ const mediaFromUnknown = (value: unknown): ProductMedia | null => {
   const url = imageFromUnknown(row);
   if (!url) return null;
   const typeRaw = readText(row.type ?? row.mediaType ?? row.assetType);
-  return {
-    url,
-    type: typeRaw ? mediaTypeFromString(typeRaw) : "IMAGE",
-  };
+  return { url, type: typeRaw ? mediaTypeFromString(typeRaw) : "IMAGE" };
 };
 
 const kvRowsFromJson = (
@@ -161,6 +152,11 @@ const extractProductRecord = (
   return null;
 };
 
+// ── detail-section accent palette ────────────────────────────────────────────
+const SECTION_ACCENTS = ["#0071e3", "#1a9e6b", "#c07d0a", "#86868b"] as const;
+
+// ── component ────────────────────────────────────────────────────────────────
+
 export const ProductDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -180,16 +176,11 @@ export const ProductDetailsPage: React.FC = () => {
       const current = extractProductRecord(query.data);
       if (current) return;
       try {
-        const list = await catalogApi.products.service.list({
-          page: 1,
-          limit: 1000,
-        });
+        const list = await catalogApi.products.service.list({ page: 1, limit: 1000 });
         const matched = list.data.find((entry) => {
           if (typeof entry !== "object" || entry === null) return false;
           const row = entry as Record<string, unknown>;
-          const rowId = readText(row.id);
-          const rowSlug = readText(row.slug);
-          return rowId === id || rowSlug === id;
+          return readText(row.id) === id || readText(row.slug) === id;
         });
         if (!active) return;
         setFallbackProduct(
@@ -203,9 +194,7 @@ export const ProductDetailsPage: React.FC = () => {
       }
     };
     void loadFallback();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [id, query.data, query.isError]);
 
   const product = React.useMemo(
@@ -216,6 +205,7 @@ export const ProductDetailsPage: React.FC = () => {
     () => readText(product?.id ?? id),
     [product?.id, id],
   );
+
   const reviewsQuery = useQuery({
     queryKey: ["productReviews", resolvedProductId],
     queryFn: () =>
@@ -223,6 +213,7 @@ export const ProductDetailsPage: React.FC = () => {
     enabled: Boolean(resolvedProductId),
   });
 
+  // ── derived values ──────────────────────────────────────────────────────────
   const title = readText(product?.title ?? product?.name, "Untitled Product");
   const sku = readText(product?.sku, "—");
   const slug = readText(product?.slug, "—");
@@ -230,14 +221,11 @@ export const ProductDetailsPage: React.FC = () => {
   const salePrice = readText(product?.salePrice, price);
   const weight = readText(product?.weight, "—");
   const productType = readText(product?.productType, "—");
-  const createdAt = formatDateTime(
-    readText(product?.createdAt ?? product?.created_at),
-  );
-  const updatedAt = formatDateTime(
-    readText(product?.updatedAt ?? product?.updated_at),
-  );
+  const createdAt = formatDateTime(readText(product?.createdAt ?? product?.created_at));
+  const updatedAt = formatDateTime(readText(product?.updatedAt ?? product?.updated_at));
   const status: "Active" | "Inactive" =
     product?.isDeleted === true ? "Inactive" : "Active";
+
   const productReviews = React.useMemo(() => {
     const payload = reviewsQuery.data;
     const envelope =
@@ -247,13 +235,14 @@ export const ProductDetailsPage: React.FC = () => {
     const items: unknown[] = Array.isArray(payload)
       ? payload
       : Array.isArray(envelope?.data)
-      ? (envelope!.data as unknown[])
-      : [];
+        ? (envelope!.data as unknown[])
+        : [];
     return items.filter(
       (entry): entry is Record<string, unknown> =>
         typeof entry === "object" && entry !== null,
     );
   }, [reviewsQuery.data]);
+
   const reviewStats = React.useMemo(() => {
     const total = productReviews.length;
     if (!total) return { total: 0, avg: "0.0" };
@@ -276,21 +265,17 @@ export const ProductDetailsPage: React.FC = () => {
       : null;
 
   const categoryTitle = readText(category?.title ?? category?.name, "—");
-  const subcategoryTitle = readText(
-    subcategory?.title ?? subcategory?.name,
-    "—",
-  );
+  const subcategoryTitle = readText(subcategory?.title ?? subcategory?.name, "—");
+
   const derivedReturnPath =
     readText(category?.id) && readText(subcategory?.id)
       ? `/dashboard/categories/${readText(category?.id)}/subcategories/${readText(subcategory?.id)}`
       : "";
-  const backPath =
-    explicitReturnPath || derivedReturnPath || "/dashboard/categories";
+  const backPath = explicitReturnPath || derivedReturnPath || "/dashboard/categories";
 
   const descriptionText = (() => {
     const direct = readText(product?.description);
     if (direct) return direct;
-    // Backward compat: old records stored description inside descriptionJson.text
     const descJson = parseObject(product?.descriptionJson);
     return readText(descJson.text, "No description available.");
   })();
@@ -310,9 +295,10 @@ export const ProductDetailsPage: React.FC = () => {
     const r = obj as Record<string, unknown>;
     const toStrArr = (v: unknown): string[] =>
       Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-    const howToUse = typeof r.howToUse === "object" && r.howToUse !== null
-      ? (r.howToUse as Record<string, unknown>)
-      : {};
+    const howToUse =
+      typeof r.howToUse === "object" && r.howToUse !== null
+        ? (r.howToUse as Record<string, unknown>)
+        : {};
     const sections: Array<{ title: string; items: string[]; proTip?: string }> = [];
     const ps = toStrArr(r.problemItSolves);
     if (ps.length) sections.push({ title: "Problem It Solves", items: ps });
@@ -330,9 +316,7 @@ export const ProductDetailsPage: React.FC = () => {
 
   const additionalInfoRows = kvRowsFromJson(product?.additionalInformationJson);
 
-  const coverImage = readText(
-    product?.coverImage ?? product?.image ?? product?.thumbnail,
-  );
+  const coverImage = readText(product?.coverImage ?? product?.image ?? product?.thumbnail);
   const hoverImage = readText(product?.hoverImage);
 
   const mediaAssetItems = parseArray(product?.mediaAssets)
@@ -346,6 +330,7 @@ export const ProductDetailsPage: React.FC = () => {
       [...mediaAssetItems, ...galleryItems].map((item) => [item.url, item]),
     ).values(),
   );
+
   const variantRows = parseArray(product?.variants).filter(
     (entry): entry is Record<string, unknown> =>
       typeof entry === "object" && entry !== null,
@@ -362,8 +347,10 @@ export const ProductDetailsPage: React.FC = () => {
   const variantColorHex = readText(primaryLipstickVariant?.colorHex, "—");
   const variantIsTryOn = Boolean(primaryLipstickVariant?.isTryOn);
   const variantCount = variantRows.length;
-  const heroImage = variantImage || coverImage;
+  // Don't surface the try-on variant image as the hero — it's virtual, not a product shot
+  const heroImage = variantIsTryOn ? coverImage : (variantImage || coverImage);
 
+  // ── not found ───────────────────────────────────────────────────────────────
   if (!id || (!query.isLoading && !query.isError && !product)) {
     return (
       <PageLayout
@@ -378,599 +365,335 @@ export const ProductDetailsPage: React.FC = () => {
     );
   }
 
+  // ── loading ─────────────────────────────────────────────────────────────────
   if (query.isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#0071e3] border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#0071e3] border-t-transparent" />
       </div>
     );
   }
 
+  // ── render ──────────────────────────────────────────────────────────────────
   return (
     <PageLayout
       title={title}
-      subtitle="Complete product information"
+      subtitle={`${categoryTitle} · ${subcategoryTitle}`}
       onBack={() => navigate(backPath)}
       actions={
         <button
           type="button"
           onClick={() =>
-            navigate(
-              `/dashboard/products/${id}/edit?returnPath=${encodeURIComponent(backPath)}`,
-            )
+            navigate(`/dashboard/products/${id}/edit?returnPath=${encodeURIComponent(backPath)}`)
           }
           className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
         >
           <Edit2 size={13} strokeWidth={2} />
-          Edit Product
+          Edit
         </button>
       }
     >
-      <section className="overflow-hidden rounded-2xl border border-[#e5e5e7] bg-linear-to-b from-white to-[#f5f5f7]">
-        <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="flex flex-col justify-between gap-6 p-6 lg:p-8">
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#f5f5f7] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73]">
-                  Product Hero
+
+      {/* ── Hero ── white panel on gray page; no outer border needed ─────────── */}
+      <div className="overflow-hidden rounded-2xl bg-white">
+        <div className="grid lg:grid-cols-[380px_1fr]">
+
+          {/* Image */}
+          <div className="relative flex min-h-[300px] items-center justify-center bg-[#f2f2f4] p-10">
+            {heroImage ? (
+              <img
+                src={heroImage}
+                alt={title}
+                className="max-h-[260px] w-auto max-w-full object-contain"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-[#86868b]">
+                <ImageIcon size={36} strokeWidth={1} />
+                <p className="text-[13px]">No image</p>
+              </div>
+            )}
+          </div>
+
+          {/* Identity */}
+          <div className="flex flex-col gap-7 p-8 lg:p-10">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={status} />
+              <span className="text-[12px] text-[#6e6e73]">{productType}</span>
+            </div>
+
+            <div>
+              <h2 className="text-[30px] font-semibold leading-[1.06] tracking-[-0.04em] text-[#1d1d1f] sm:text-[34px]" style={{ textWrap: "balance" }}>
+                {title}
+              </h2>
+              <div className="mt-2.5 flex items-baseline gap-3">
+                <span className="text-[22px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+                  {formatCurrency(price)}
                 </span>
-                {productType === "LIPSTICK" ? (
-                  <span className="rounded-full bg-rose-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-700">
-                    Lipstick Variant Focus
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-[#f5f5f7] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73]">
-                    Product Overview
+                {salePrice !== price && (
+                  <span className="text-[14px] font-medium text-[#0071e3]">
+                    {formatCurrency(salePrice)} sale
                   </span>
                 )}
               </div>
-              <div className="max-w-2xl space-y-3">
-                <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-[#1d1d1f] sm:text-[34px]">
-                  {title}
-                </h2>
-                <p className="max-w-xl text-[15px] leading-6 text-[#6e6e73]">
-                  {productType === "LIPSTICK" && heroImage
-                    ? "The primary variant image is surfaced here so the lipstick finish, shade, and presentation are visible before the rest of the catalog detail."
-                    : "Core product identity, merchandising signals, and variant context are grouped here for a faster read."}
-                </p>
-              </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-[#e5e5e7] bg-white p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                  Product Type
-                </p>
-                <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                  {productType}
-                </p>
-              </div>
-              <div className="rounded-xl border border-[#e5e5e7] bg-white p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                  Primary Variant
-                </p>
-                <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                  {readText(primaryLipstickVariant?.title, variantCount ? "Variant Available" : "None")}
-                </p>
-              </div>
-              <div className="rounded-xl border border-[#e5e5e7] bg-white p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                  Variant Count
-                </p>
-                <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                  {variantCount}
-                </p>
-              </div>
+
+            {/* Meta — flat label/value pairs, no box */}
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
+              {[
+                { label: "SKU", value: sku },
+                { label: "Weight", value: weight !== "—" ? `${weight} g` : "—" },
+                { label: "Category", value: categoryTitle },
+                { label: "Subcategory", value: subcategoryTitle },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] text-[#86868b]">{label}</p>
+                  <p className="mt-0.5 text-[13px] font-medium text-[#1d1d1f]">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[#f0f0f2] pt-5 text-[13px] text-[#6e6e73]">
+              <span>
+                {reviewStats.total} {reviewStats.total === 1 ? "review" : "reviews"}
+                {reviewStats.total > 0 ? ` · ${reviewStats.avg} avg` : ""}
+              </span>
+              <span>{variantCount} {variantCount === 1 ? "variant" : "variants"}</span>
+              {variantColorHex && variantColorHex !== "—" && (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full border border-[#d2d2d7]" style={{ backgroundColor: variantColorHex }} />
+                  <span className="font-mono text-[11px]">{variantColorHex}</span>
+                </span>
+              )}
+              <span className="ml-auto font-mono text-[11px] text-[#86868b]">{slug}</span>
             </div>
           </div>
-          <div className="border-t border-[#e5e5e7] bg-white p-4 lg:border-l lg:border-t-0 lg:p-6">
-            <div className="flex h-full min-h-[280px] items-center justify-center rounded-2xl border border-dashed border-[#d2d2d7] bg-linear-to-b from-[#fbfbfc] to-[#f4f4f7] p-4">
-              {heroImage ? (
-                <div className="relative flex h-full w-full items-center justify-center">
-                  <img
-                    src={heroImage}
-                    alt={`${title} hero`}
-                    className="max-h-[380px] w-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.10)]"
-                  />
-                  {variantIsTryOn ? (
-                    <span className="absolute left-4 top-4 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
-                      Try On Enabled
-                    </span>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#86868b] shadow-sm">
-                    <ImageIcon size={22} />
+        </div>
+      </div>
+
+      {/* ── Content + Sidebar ─────────────────────────────────────────────────── */}
+      <div className="grid gap-5 lg:grid-cols-[1fr_268px]">
+
+        {/* Main — one white panel, internal spacing as separator */}
+        <div className="rounded-xl bg-white px-7 py-7">
+
+          <div>
+            <p className="mb-2.5 text-[12px] font-semibold text-[#86868b]">Description</p>
+            <p className="whitespace-pre-wrap text-[15px] leading-[1.72] text-[#1d1d1f]">
+              {descriptionText}
+            </p>
+          </div>
+
+          {productDetailSections.map((section, i) => {
+            const accent = SECTION_ACCENTS[i % SECTION_ACCENTS.length];
+            return (
+              <div key={section.title} className="mt-7 border-t border-[#f2f2f4] pt-7">
+                <p className="mb-3 text-[13px] font-semibold text-[#1d1d1f]">{section.title}</p>
+                {section.items.length > 0 && (
+                  <ul className="space-y-2.5">
+                    {section.items.map((item) => (
+                      <li key={item} className="flex items-start gap-3 text-[14px] leading-[1.6] text-[#1d1d1f]">
+                        <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {section.proTip && (
+                  <div className="mt-4 rounded-lg bg-[#f5f5f7] px-4 py-3">
+                    <p className="text-[13px] leading-[1.6] text-[#1d1d1f]">
+                      <span className="font-semibold">Pro tip — </span>
+                      {section.proTip}
+                    </p>
                   </div>
-                  <p className="mt-3 text-sm font-medium text-[#1d1d1f]">
-                    No hero image available
-                  </p>
-                  <p className="mt-1 text-xs text-[#6e6e73]">
-                    Add a variant image to make the lipstick hero visible here.
-                  </p>
+                )}
+              </div>
+            );
+          })}
+
+          {freeFromItems.length > 0 && (
+            <div className="mt-7 border-t border-[#f2f2f4] pt-7">
+              <p className="mb-3 text-[12px] font-semibold text-[#86868b]">Free from</p>
+              <div className="flex flex-wrap gap-2">
+                {freeFromItems.map((label) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f7] px-3.5 py-1.5 text-[13px] font-medium text-[#1d1d1f]"
+                  >
+                    <CheckCircle2 size={12} className="shrink-0 text-[#1a9e6b]" strokeWidth={2.5} />
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar — SKU/Price/Weight/Type/Color already in hero; show Try On + timeline + variants */}
+        <div className="self-start space-y-0 rounded-xl bg-white">
+          {/* Try On — only field not surfaced in hero */}
+          <div className="flex items-center justify-between px-5 py-3">
+            <dt className="text-[12px] text-[#86868b]">Try On</dt>
+            <dd className={`text-right text-[13px] font-medium ${variantIsTryOn ? "text-[#1a9e6b]" : "text-[#1d1d1f]"}`}>
+              {variantIsTryOn ? "Enabled" : "Disabled"}
+            </dd>
+          </div>
+
+          <dl className="divide-y divide-[#f2f2f4] border-t border-[#ebebed]">
+            <div className="px-5 py-3">
+              <dt className="text-[11px] text-[#86868b]">Created</dt>
+              <dd className="mt-0.5 text-[13px] font-medium text-[#1d1d1f]">{createdAt}</dd>
+            </div>
+            <div className="px-5 py-3">
+              <dt className="text-[11px] text-[#86868b]">Updated</dt>
+              <dd className="mt-0.5 text-[13px] font-medium text-[#1d1d1f]">{updatedAt}</dd>
+            </div>
+            <div className="px-5 py-3">
+              <dt className="mb-1.5 text-[11px] text-[#86868b]">Status</dt>
+              <dd><StatusBadge status={status} /></dd>
+            </div>
+          </dl>
+
+          {additionalInfoRows.length > 0 && (
+            <dl className="divide-y divide-[#f2f2f4] border-t border-[#ebebed]">
+              {additionalInfoRows.map((row) => (
+                <div key={row.key} className="flex items-start justify-between gap-4 px-5 py-3">
+                  <dt className="shrink-0 capitalize text-[12px] text-[#86868b]">{row.key}</dt>
+                  <dd className="break-all text-right text-[13px] font-medium text-[#1d1d1f]">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {/* Variants — compact list in sidebar */}
+          {variantRows.length > 0 && (
+            <div className="border-t border-[#ebebed]">
+              <div className="flex items-baseline justify-between px-5 py-3">
+                <p className="text-[12px] font-semibold text-[#1d1d1f]">Variants</p>
+                <p className="text-[11px] text-[#86868b]">{variantCount}</p>
+              </div>
+              <ul className="divide-y divide-[#f2f2f4]">
+                {variantRows.map((variant, index) => {
+                  const isPrimary =
+                    variant.id === primaryLipstickVariant?.id ||
+                    (index === 0 && !primaryLipstickVariant);
+                  const variantImageUrl = readText(variant.image);
+                  const hex = readText(variant.colorHex);
+                  return (
+                    <li
+                      key={readText(variant.id, String(index))}
+                      className={`flex items-center gap-3 px-5 py-2.5 ${isPrimary ? "bg-[#f8fbff]" : ""}`}
+                    >
+                      {/* Thumbnail or color swatch */}
+                      {!variant.isTryOn && variantImageUrl ? (
+                        <img src={variantImageUrl} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-[#f5f5f7] object-contain p-0.5" />
+                      ) : hex && hex !== "—" ? (
+                        <span className="h-9 w-9 shrink-0 rounded-lg border border-[#d2d2d7]" style={{ backgroundColor: hex }} />
+                      ) : (
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f7]">
+                          <ImageIcon size={14} strokeWidth={1} className="text-[#86868b]" />
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[12px] font-medium text-[#1d1d1f]">
+                          {readText(variant.title, "Variant")}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[11px] text-[#86868b]">{formatCurrency(variant.price)}</p>
+                          {variant.isTryOn && (
+                            <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700">Try On</span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Media ─── no outer border; image cells use bg contrast only ──────── */}
+      <div className="rounded-xl bg-white px-6 py-6">
+        <div className="mb-5 flex items-baseline justify-between">
+          <p className="text-[15px] font-semibold text-[#1d1d1f]">Media</p>
+          {allGalleryItems.length > 0 && (
+            <p className="text-[12px] text-[#86868b]">
+              {allGalleryItems.length} gallery {allGalleryItems.length === 1 ? "item" : "items"}
+            </p>
+          )}
+        </div>
+
+        {/* Cover / Hover / Preview — bg-tint cells, no item borders */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Cover", src: coverImage },
+            { label: "Hover", src: hoverImage },
+          ].map(({ label, src }) => (
+            <div key={label}>
+              <p className="mb-2 text-[12px] font-medium text-[#86868b]">{label}</p>
+              <div className="overflow-hidden rounded-xl bg-[#f2f2f4]">
+                {src ? (
+                  <img src={src} alt={label} className="h-44 w-full object-contain p-4" />
+                ) : (
+                  <div className="flex h-44 items-center justify-center text-[#86868b]">
+                    <ImageIcon size={20} strokeWidth={1} />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          <div>
+            <p className="mb-2 text-[12px] font-medium text-[#86868b]">Hover preview</p>
+            <div className="group relative h-44 overflow-hidden rounded-xl bg-[#f2f2f4]">
+              {coverImage || hoverImage ? (
+                <>
+                  <img
+                    src={coverImage || hoverImage}
+                    alt="cover"
+                    className="h-full w-full object-contain p-4 transition-opacity duration-200"
+                  />
+                  {hoverImage && (
+                    <img
+                      src={hoverImage}
+                      alt="hover"
+                      className="absolute inset-0 h-full w-full bg-[#f2f2f4] object-contain p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    />
+                  )}
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center text-[#86868b]">
+                  <ImageIcon size={20} strokeWidth={1} />
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCardV2
-          label="Status"
-          value={status}
-          icon={Tag}
-          colorVariant="blue"
-          compact
-        />
-        <StatCardV2
-          label="Sale Price"
-          value={`Rs ${salePrice}`}
-          icon={CircleDollarSign}
-          colorVariant="emerald"
-          compact
-        />
-        <StatCardV2
-          label="Category"
-          value={categoryTitle}
-          icon={Boxes}
-          colorVariant="cyan"
-          compact
-        />
-        <StatCardV2
-          label="Subcategory"
-          value={subcategoryTitle}
-          icon={Tag}
-          colorVariant="blue"
-          compact
-        />
-        <StatCardV2
-          label="Reviews"
-          value={`${reviewStats.total} (${reviewStats.avg})`}
-          icon={MessageSquare}
-          colorVariant="amber"
-          compact
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-xl border border-[#e5e5e7] bg-white p-5 lg:col-span-2">
-          <div className="mb-4 flex items-center gap-2">
-            <Info size={16} className="text-[#6e6e73]" />
-            <h2 className="text-[16px] font-semibold text-[#1d1d1f]">
-              Core Details
-            </h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                SKU
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {sku}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Slug
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {slug}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Base Price
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                Rs {price}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Weight
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {weight}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Product Type
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {productType}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Variant Try On
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {variantIsTryOn ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3 sm:col-span-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Variant Color Hex
-              </p>
-              <div className="mt-1 flex items-center gap-2">
-                <Palette size={14} className="text-[#86868b]" />
-                <p className="text-[14px] font-medium text-[#1d1d1f]">
-                  {variantColorHex}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Calendar size={16} className="text-[#6e6e73]" />
-            <h2 className="text-[16px] font-semibold text-[#1d1d1f]">
-              Timeline
-            </h2>
-          </div>
-          <div className="space-y-3">
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Created
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {createdAt}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Updated
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#1d1d1f]">
-                {updatedAt}
-              </p>
-            </div>
-            <div className="rounded-lg bg-[#f5f5f7] p-3">
-              <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Record State
-              </p>
-              <div className="mt-1">
-                <StatusBadge status={status} />
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {variantRows.length ? (
-        <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Boxes size={16} className="text-[#6e6e73]" />
-            <h2 className="text-[16px] font-semibold text-[#1d1d1f]">
-              Variants
-            </h2>
-            <span className="rounded-full bg-[#f5f5f7] px-2.5 py-0.5 text-[11px] font-medium text-[#6e6e73]">
-              {variantCount}
-            </span>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-            <div className="rounded-xl border border-[#d2d2d7] bg-linear-to-b from-[#f8f9fb] to-[#eef2f7] p-3">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Primary Variant
-              </p>
-              <div className="rounded-lg border border-[#e5e5e7] bg-white p-3">
-                {variantImage ? (
-                  <img
-                    src={variantImage}
-                    alt="Primary variant"
-                    className="h-52 w-full rounded-md object-contain"
-                  />
-                ) : (
-                  <div className="flex h-52 items-center justify-center rounded-md bg-[#f5f5f7] text-sm text-[#86868b]">
-                    No variant image
-                  </div>
-                )}
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-[#1d1d1f]">
-                      {readText(primaryLipstickVariant?.title, "Variant")}
-                    </span>
-                    {variantIsTryOn ? (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                        Try On
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-                        Standard
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-[#6e6e73]">
-                    {readText(primaryLipstickVariant?.variantType, "Type")} ·{" "}
-                    {readText(primaryLipstickVariant?.variantValue, "Value")}
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-[#6e6e73]">Price</span>
-                    <span className="font-medium text-[#1d1d1f]">
-                      {formatCurrency(primaryLipstickVariant?.price)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-[#6e6e73]">Color</span>
-                    <span className="font-mono text-[12px] font-medium text-[#1d1d1f]">
-                      {variantColorHex}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {variantRows.map((variant, index) => {
-                const isPrimary =
-                  variant.id === primaryLipstickVariant?.id ||
-                  (index === 0 && !primaryLipstickVariant);
-                const variantImageUrl = readText(variant.image);
-                return (
-                  <div
-                    key={readText(variant.id, String(index))}
-                    className={`rounded-xl border bg-white p-3 ${
-                      isPrimary ? "border-[#0071e3]/30 ring-1 ring-[#0071e3]/10" : "border-[#e5e5e7]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-[#1d1d1f]">
-                          {readText(variant.title, "Variant")}
-                        </p>
-                        <p className="text-xs text-[#6e6e73]">
-                          {readText(variant.variantType, "Type")} · {readText(variant.variantValue, "Value")}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {variant.isDefault ? (
-                          <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73]">
-                            Default
-                          </span>
-                        ) : null}
-                        {variant.isTryOn ? (
-                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                            Try On
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="mt-3 overflow-hidden rounded-lg border border-[#e5e5e7] bg-[#f5f5f7]">
-                      {variantImageUrl ? (
-                        <img
-                          src={variantImageUrl}
-                          alt={readText(variant.title, "Variant")}
-                          className="h-36 w-full object-contain p-2"
-                        />
-                      ) : (
-                        <div className="flex h-36 items-center justify-center text-xs text-[#86868b]">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-3 text-sm">
-                      <span className="text-[#6e6e73]">Price</span>
-                      <span className="font-medium text-[#1d1d1f]">
-                        {formatCurrency(variant.price)}
-                      </span>
-                    </div>
-                    {readText(variant.colorHex) ? (
-                      <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                        <span className="text-[#6e6e73]">Color</span>
-                        <span className="font-mono text-[12px] font-medium text-[#1d1d1f]">
-                          {readText(variant.colorHex)}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <FileText size={16} className="text-[#6e6e73]" />
-          <h2 className="text-[16px] font-semibold text-[#1d1d1f]">
-            Description
-          </h2>
-        </div>
-        <p className="whitespace-pre-wrap text-[14px] leading-6 text-[#1d1d1f]">
-          {descriptionText}
-        </p>
-      </section>
-
-      {productDetailSections.length > 0 && (
-        <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Info size={16} className="text-[#6e6e73]" />
-            <h2 className="text-[16px] font-semibold text-[#1d1d1f]">Product Details</h2>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            {productDetailSections.map((section) => (
-              <div key={section.title}>
-                <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">
-                  {section.title}
-                </p>
-                {section.items.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {section.items.map((item) => (
-                      <span
-                        key={item}
-                        className="rounded-full border border-[#e5e5e7] bg-[#f5f5f7] px-3 py-1 text-[13px] text-[#1d1d1f]"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {section.proTip && (
-                  <p className="mt-2 text-[13px] italic text-[#6e6e73]">
-                    <span className="font-medium not-italic text-[#1d1d1f]">Pro Tip: </span>
-                    {section.proTip}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {freeFromItems.length > 0 && (
-        <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Tag size={16} className="text-[#6e6e73]" />
-            <h2 className="text-[16px] font-semibold text-[#1d1d1f]">Free From</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {freeFromItems.map((label) => (
-              <span
-                key={label}
-                className="rounded-full border border-[#d2d2d7] bg-[#f5f5f7] px-3 py-1 text-[13px] font-medium text-[#1d1d1f]"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Ruler size={16} className="text-[#6e6e73]" />
-          <h2 className="text-[16px] font-semibold text-[#1d1d1f]">
-            Additional Information
-          </h2>
-        </div>
-        {additionalInfoRows.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {additionalInfoRows.map((row) => (
-              <div key={row.key} className="rounded-lg bg-[#f5f5f7] p-3">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                  {row.key}
-                </p>
-                <p className="mt-1 wrap-break-word text-[14px] font-medium text-[#1d1d1f]">
-                  {row.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[14px] text-[#6e6e73]">
-            No additional information available.
-          </p>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-[#e5e5e7] bg-white p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <ImageIcon size={16} className="text-[#6e6e73]" />
-          <h2 className="text-[16px] font-semibold text-[#1d1d1f]">Images</h2>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_320px]">
-          <div className="rounded-xl border border-[#d2d2d7] bg-linear-to-b from-[#f8f9fb] to-[#eef2f7] p-3">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-              Cover Image
-            </p>
-            {coverImage ? (
-              <img
-                src={coverImage}
-                alt="Cover"
-                className="h-48 w-full rounded-lg border border-[#e5e5e7] bg-white object-contain p-2"
-              />
-            ) : (
-              <div className="flex h-48 items-center justify-center rounded-lg border border-[#e5e5e7] bg-white text-[#86868b]">
-                Not available
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-[#d2d2d7] bg-linear-to-b from-[#f8f9fb] to-[#eef2f7] p-3">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-              Hover Image
-            </p>
-            {hoverImage ? (
-              <img
-                src={hoverImage}
-                alt="Hover"
-                className="h-48 w-full rounded-lg border border-[#e5e5e7] bg-white object-contain p-2"
-              />
-            ) : (
-              <div className="flex h-48 items-center justify-center rounded-lg border border-[#e5e5e7] bg-white text-[#86868b]">
-                Not available
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-[#d2d2d7] bg-linear-to-b from-[#f8f9fb] to-[#eef2f7] p-3">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-              Frontend Hover Preview
-            </p>
-            <div className="group relative h-48 overflow-hidden rounded-lg border border-[#e5e5e7] bg-white">
-              <img
-                src={coverImage || hoverImage}
-                alt="Product preview"
-                className="h-full w-full object-contain p-2 transition-opacity duration-200"
-              />
-              {hoverImage ? (
-                <img
-                  src={hoverImage}
-                  alt="Product hover preview"
-                  className="absolute inset-0 h-full w-full bg-white object-contain p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                />
-              ) : null}
-            </div>
-            <p className="mt-2 text-[12px] text-[#6e6e73]">
-              Hover this card to see hover-image state.
-            </p>
+            <p className="mt-1.5 text-[11px] text-[#86868b]">Hover to preview swap</p>
           </div>
         </div>
 
-        <div className="mt-4">
-          <div className="mb-3 flex items-center justify-between rounded-lg border border-[#d2d2d7] bg-[#f5f5f7] px-3 py-2">
-            <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-              Gallery Media
-            </p>
-            <p className="text-[12px] font-medium text-[#1d1d1f]">
-              {allGalleryItems.length} total
-            </p>
-          </div>
-          {allGalleryItems.length ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {allGalleryItems.length > 0 ? (
+          <div className="mt-6">
+            <p className="mb-3 text-[12px] font-medium text-[#86868b]">Gallery</p>
+            <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-6 lg:grid-cols-8">
               {allGalleryItems.map((item, index) => (
                 <div
                   key={`${item.url}-${index}`}
-                  className="overflow-hidden rounded-xl border border-[#d2d2d7] bg-linear-to-b from-white to-[#f6f7fa] p-2 shadow-sm"
+                  className="aspect-square overflow-hidden rounded-lg bg-[#f2f2f4]"
                 >
                   {item.type === "VIDEO" ? (
-                    <video
-                      src={item.url}
-                      className="h-28 w-full rounded-md bg-white object-contain"
-                      controls
-                      muted
-                    />
+                    <video src={item.url} className="h-full w-full object-cover" controls muted />
                   ) : (
-                    <img
-                      src={item.url}
-                      alt={`Gallery ${index + 1}`}
-                      className="h-28 w-full rounded-md object-contain bg-white"
-                    />
+                    <img src={item.url} alt={`Gallery ${index + 1}`} className="h-full w-full object-cover" />
                   )}
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="rounded-lg border border-[#e5e5e7] bg-white px-4 py-6 text-center text-[13px] text-[#86868b]">
-              No gallery media available.
-            </div>
-          )}
-        </div>
-      </section>
+          </div>
+        ) : (
+          <p className="mt-6 text-[13px] text-[#86868b]">No gallery media uploaded.</p>
+        )}
+      </div>
     </PageLayout>
   );
 };

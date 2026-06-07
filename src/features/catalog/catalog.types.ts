@@ -11,7 +11,6 @@ export type ProductDescriptionJson = Readonly<{
 // Sent to backend as `keyFeatures`; labelled "Free From" in the UI
 export type ProductFreeFrom = Readonly<{
   title: string;
-  iconUrl?: string | null;
 }>;
 
 export type CategoryDto = Readonly<{
