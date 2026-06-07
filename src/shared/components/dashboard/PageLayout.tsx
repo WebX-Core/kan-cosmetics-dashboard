@@ -43,11 +43,6 @@ export const PageLayout: React.FC<Props> = ({
 
   return (
     <div className={`space-y-[21px] p-[34px] ${isDeleted ? "bg-rose-50/40 min-h-screen" : ""}`}>
-      {/* Deleted state top strip */}
-      {isDeleted && (
-        <div className="-mx-[34px] -mt-[34px] mb-0 h-[3px] bg-gradient-to-r from-red-400 via-red-500 to-rose-400" />
-      )}
-
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-[13px]">
         <div>

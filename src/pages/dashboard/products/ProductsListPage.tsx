@@ -95,8 +95,12 @@ export const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
   const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === "/dashboard/products/deleted";
+  const categoryId = searchParams.get("categoryId") ?? "";
+  const subcategoryId = searchParams.get("subcategoryId") ?? "";
+  const showAddProductButton = !isDeletedView && Boolean(categoryId && subcategoryId);
 
   const canProductUpdate  = usePermission("product:update");
   const canProductDelete  = usePermission("product:delete");
@@ -315,8 +319,15 @@ export const ProductsListPage: React.FC = () => {
       title={isDeletedView ? "Deleted Products" : "Products"}
       subtitle={isDeletedView ? "View soft-deleted products." : "All products in the catalog."}
       onBack={isDeletedView ? () => navigate("/dashboard/products") : undefined}
-      onNew={!isDeletedView ? () => navigate("/dashboard/products/create") : undefined}
-      newButtonLabel="New Product"
+      onNew={
+        showAddProductButton
+          ? () =>
+              navigate(
+                `/dashboard/products/create?categoryId=${encodeURIComponent(categoryId)}&subcategoryId=${encodeURIComponent(subcategoryId)}&next=inventory`
+              )
+          : undefined
+      }
+      newButtonLabel="Add Product"
       actions={
         !isDeletedView && isSudoAdmin ? (
           <button type="button" onClick={() => navigate("/dashboard/products/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
@@ -352,7 +363,7 @@ export const ProductsListPage: React.FC = () => {
         rowId={(r) => r.id}
         selectedIds={selectedIds}
         onSelectionChange={(ids) => setSelectedIds(ids)}
-        bulkActions={(ids, _clear) => (
+        bulkActions={(ids) => (
           <div className="flex items-center gap-2">
             {isDeletedView ? (
               <>

@@ -311,10 +311,6 @@ export const InventoryPage: React.FC = () => {
     { key: "outofstock", label: "Out of Stock" },
     { key: "noinventory", label: "No Inventory" },
   ];
-  const activeTabIndex = Math.max(
-    0,
-    tabs.findIndex((tab) => tab.key === activeTab),
-  );
 
   const searchQuery = state.search.trim().toLowerCase();
   const [showDebounceSpinner, setShowDebounceSpinner] = React.useState(false);
@@ -459,32 +455,32 @@ export const InventoryPage: React.FC = () => {
       <div className="rounded-xl border border-[#e5e5e7] bg-white">
         {/* Tabs — normal view only */}
         {!isDeletedView && (
-          <div className="border-b border-[#e5e5e7] px-[21px] pt-[6px]">
-            <div className="relative flex items-center">
-              <span
-                className="pointer-events-none absolute bottom-0 left-0 h-[2px] bg-[#0071e3] transition-transform duration-300 ease-out"
-                style={{
-                  width: `${100 / tabs.length}%`,
-                  transform: `translateX(${activeTabIndex * 100}%)`,
-                }}
-              />
-              {tabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(tab.key);
-                    setState((p) => ({ ...p, page: 1 }));
-                  }}
-                  className={`h-[40px] flex-1 px-[10px] text-center text-[13px] font-medium transition-colors ${
-                    activeTab === tab.key
-                      ? "text-[#1d1d1f]"
-                      : "text-[#6e6e73] hover:text-[#1d1d1f]"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+          <div className="border-b border-[#e5e5e7] px-[21px] py-[10px]">
+            <div
+              className="flex items-center gap-[8px] overflow-x-auto pb-px [scrollbar-width:none]"
+              style={{ msOverflowStyle: "none" }}
+            >
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.key);
+                      setState((p) => ({ ...p, page: 1 }));
+                    }}
+                    aria-pressed={isActive}
+                    className={`flex shrink-0 items-center rounded-full border px-[13px] py-[4px] text-[13px] font-medium transition-colors ${
+                      isActive
+                        ? "border-[#0071e3] bg-[#0071e3] text-white shadow-sm"
+                        : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:border-[#b8bcc2] hover:bg-[#f5f5f7]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

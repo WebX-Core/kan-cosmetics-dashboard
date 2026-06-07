@@ -36,6 +36,24 @@ const getNestedRecord = (
   return {};
 };
 
+const extractOrderRecord = (payload: unknown): OrderRecord => {
+  const root = toRecord(payload);
+  const nestedOrder = getNestedRecord(root, ["order", "data"]);
+  if (Object.keys(nestedOrder).length > 0) {
+    const nestedDirectOrder = getNestedRecord(nestedOrder, ["order"]);
+    if (Object.keys(nestedDirectOrder).length > 0) return nestedDirectOrder;
+    if (Object.keys(nestedOrder).some((key) => key === "orderNumber" || key === "orderStatus" || key === "customer")) {
+      return nestedOrder;
+    }
+  }
+
+  if (Object.keys(root).some((key) => key === "orderNumber" || key === "orderStatus" || key === "customer")) {
+    return root;
+  }
+
+  return nestedOrder;
+};
+
 const extractName = (row: OrderRecord): string => {
   const parts = [row.firstname, row.middlename, row.lastname]
     .map((part) => text(part))
@@ -106,7 +124,7 @@ export const getOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> =>
   collectOrderRows(payload);
 
 export const getOrderCustomerName = (record: unknown): string => {
-  const row = toRecord(record);
+  const row = extractOrderRecord(record);
   const customer = extractCustomerRecord(row);
   const nestedName = extractName(customer);
   if (nestedName) return nestedName;
@@ -114,11 +132,11 @@ export const getOrderCustomerName = (record: unknown): string => {
   const directName = extractName(row);
   if (directName) return directName;
 
-  return text(row.customerName ?? row.fullname ?? row.name, "Unknown");
+  return text(row.customerName ?? row.fullname ?? row.name, "Customer");
 };
 
 export const getOrderCustomerEmail = (record: unknown): string => {
-  const row = toRecord(record);
+  const row = extractOrderRecord(record);
   const customer = extractCustomerRecord(row);
   return text(
     customer.email ?? row.customerEmail ?? row.email ?? "",
@@ -127,7 +145,7 @@ export const getOrderCustomerEmail = (record: unknown): string => {
 };
 
 export const normalizeOrderRow = (record: unknown): NormalizedOrderRow => {
-  const row = toRecord(record);
+  const row = extractOrderRecord(record);
   const customer = extractCustomerRecord(row);
   const primaryPayment = firstRecord(row.payments);
 
@@ -156,3 +174,6 @@ export const normalizeOrderRow = (record: unknown): NormalizedOrderRow => {
     status: normalizeStatus(row.orderStatus ?? row.status),
   };
 };
+
+export const getOrderDetail = (payload: unknown): OrderRecord =>
+  extractOrderRecord(payload);

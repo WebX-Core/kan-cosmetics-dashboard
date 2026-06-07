@@ -6,6 +6,7 @@ type ModernFormLayoutProps = Readonly<{
   subtitle?: string;
   eyebrow?: string;
   onBack?: () => void;
+  titleMeta?: React.ReactNode;
   stats?: ReadonlyArray<{ label: string; value: string }>;
   children: React.ReactNode;
 }>;
@@ -14,24 +15,37 @@ export const ModernFormLayout: React.FC<ModernFormLayoutProps> = ({
   title,
   subtitle,
   onBack,
+  titleMeta,
   children,
 }) => {
   return (
     <div className="compact-form min-h-screen bg-[#f5f5f7]">
       <div className="w-full space-y-[14px] p-[24px] pb-[38px]">
-        <div>
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              className="mb-[6px] flex items-center gap-[4px] text-[11px] text-[#6e6e73] transition-colors hover:text-[#1d1d1f]"
-            >
-              <ArrowLeft size={11} strokeWidth={2} />
-              Back
-            </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="mb-[6px] flex items-center gap-[4px] text-[11px] text-[#6e6e73] transition-colors hover:text-[#1d1d1f]"
+              >
+                <ArrowLeft size={11} strokeWidth={2} />
+                Back
+              </button>
+            )}
+            <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="mt-[3px] text-[11px] text-[#6e6e73]">{subtitle}</p>
+            )}
+          </div>
+
+          {titleMeta && (
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              {titleMeta}
+            </div>
           )}
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">{title}</h1>
-          {subtitle && <p className="mt-[3px] text-[11px] text-[#6e6e73]">{subtitle}</p>}
         </div>
 
         {children}

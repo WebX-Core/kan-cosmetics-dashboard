@@ -176,10 +176,6 @@ export function DataTableV2<T extends Record<string, unknown>>({
   const hasSearch = Boolean(onSearchChange);
   const hasToolbar = hasTabs || hasSearch || actions;
   const tabItems = tabs ?? [];
-  const activeTabIndex = Math.max(
-    0,
-    tabItems.findIndex((tab) => tab.key === activeTab),
-  );
   const isLoadingState = data.length === 0 && /loading/i.test(String(emptyMessage));
   const effectiveData = data;
   const skeletonRows = 6;
@@ -236,46 +232,45 @@ export function DataTableV2<T extends Record<string, unknown>>({
 
       {/* Tabs + Search toolbar */}
       {hasToolbar && (
-        <div className="flex items-center justify-between border-b border-[#e5e5e7]">
-          {/* Tabs */}
-          <div className="relative flex w-full items-center overflow-x-auto">
-            {tabItems.length > 0 ? (
-              <span
-                className="pointer-events-none absolute bottom-0 left-0 h-[2px] bg-[#0071e3] transition-transform duration-300 ease-out"
-                style={{
-                  width: `${100 / tabItems.length}%`,
-                  transform: `translateX(${activeTabIndex * 100}%)`,
-                }}
-              />
-            ) : null}
-            {tabItems.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => onTabChange?.(tab.key)}
-                className={`relative flex h-[42px] min-w-[140px] flex-1 items-center justify-center gap-[6px] px-[13px] text-[13px] font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.key
-                    ? "text-[#1d1d1f]"
-                    : "text-[#6e6e73] hover:text-[#1d1d1f]"
-                }`}
-              >
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span
-                    className={`rounded-full px-[6px] py-px text-[10px] font-semibold leading-none ${
-                      activeTab === tab.key
-                        ? "bg-[#e8f2ff] text-[#0071e3]"
-                        : "bg-[#f5f5f7] text-[#6e6e73]"
+        <div className={`flex flex-col gap-[10px] border-b border-[#e5e5e7] px-[21px] py-[10px] ${hasTabs ? "lg:flex-row lg:items-center lg:justify-between" : "lg:flex-row lg:items-center lg:justify-end"}`}>
+          {hasTabs ? (
+            <div
+              className="flex min-w-0 items-center gap-[8px] overflow-x-auto pb-px [scrollbar-width:none]"
+              style={{ msOverflowStyle: "none" }}
+            >
+              {tabItems.map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => onTabChange?.(tab.key)}
+                    aria-pressed={isActive}
+                    className={`flex shrink-0 items-center gap-[6px] rounded-full border px-[13px] py-[4px] text-[13px] font-medium transition-colors ${
+                      isActive
+                        ? "border-[#0071e3] bg-[#0071e3] text-white shadow-sm"
+                        : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:border-[#b8bcc2] hover:bg-[#f5f5f7]"
                     }`}
                   >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+                    {tab.label}
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span
+                        className={`rounded-full px-[6px] py-px text-[10px] font-semibold leading-none ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-[#f5f5f7] text-[#6e6e73]"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
-          {/* Right: search + actions */}
-          <div className="flex shrink-0 items-center gap-[8px] px-[13px] py-[8px]">
+          <div className="flex shrink-0 flex-wrap items-center gap-[8px]">
             {hasSearch && (
               <div className="relative">
                 <Search

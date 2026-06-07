@@ -287,7 +287,7 @@ const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
 };
 
 const viewAllButtonClassName =
-  "inline-flex h-[24px] items-center  rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#0071e3] transition-colors hover:bg-[#f5f5f7] hover:border-[#0071e3]/25 hover:text-[#0066cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]/25 active:scale-[0.98]";
+  "inline-flex h-[24px] items-center  rounded-full  px-2 py-2 bg-white border border-zinc-200 text-[13px] font-medium text-[#0071e3] transition-colors hover:bg-[#f5f5f7] hover:border-[#0071e3]/25 hover:text-[#0066cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]/25 active:scale-[0.98]";
 
 const orderStatusStyle: Record<
   "Processing" | "Shipped" | "Pending" | "Delivered" | "Cancelled",
