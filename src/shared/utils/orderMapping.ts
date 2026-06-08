@@ -148,6 +148,7 @@ export const normalizeOrderRow = (record: unknown): NormalizedOrderRow => {
   const row = extractOrderRecord(record);
   const customer = extractCustomerRecord(row);
   const primaryPayment = firstRecord(row.payments);
+  const paymentRecord = toRecord(row.payment);
 
   return {
     id: text(row.id, crypto.randomUUID()),
@@ -165,7 +166,7 @@ export const normalizeOrderRow = (record: unknown): NormalizedOrderRow => {
       primaryPayment.status ??
         primaryPayment.paymentStatus ??
         row.paymentStatus ??
-        row.payment?.status ??
+        paymentRecord.status ??
         "",
       "—",
     ),

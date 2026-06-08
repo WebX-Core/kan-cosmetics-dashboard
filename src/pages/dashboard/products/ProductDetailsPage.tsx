@@ -599,7 +599,7 @@ export const ProductDetailsPage: React.FC = () => {
                         </p>
                         <div className="flex items-center gap-1.5">
                           <p className="text-[11px] text-[#86868b]">{formatCurrency(variant.price)}</p>
-                          {variant.isTryOn && (
+                          {Boolean(variant.isTryOn) && (
                             <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700">Try On</span>
                           )}
                         </div>

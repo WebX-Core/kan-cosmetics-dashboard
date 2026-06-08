@@ -52,7 +52,7 @@ const getShippingAddress = (addresses: ReadonlyArray<unknown>): Record<string, u
   return toRecord(shipping ?? addresses[0]);
 };
 const sumQuantity = (items: ReadonlyArray<unknown>): number =>
-  items.reduce((sum, item) => sum + num(toRecord(item).quantity, 0), 0);
+  items.reduce<number>((sum, item) => sum + num(toRecord(item).quantity, 0), 0);
 const getItemImageCandidates = (item: Record<string, unknown>): ReadonlyArray<string> => {
   const product = toRecord(item.product);
   const variant = toRecord(item.productVariant);
