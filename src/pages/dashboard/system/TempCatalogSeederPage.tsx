@@ -408,13 +408,13 @@ export const TempCatalogSeederPage: React.FC = () => {
     <PageLayout title="Temporary Catalog Seeder" subtitle="Creates 5 categories, 3 subcategories each, and 5 products per subcategory using public/KANWEBSITE images.">
       <div className="max-w-[760px] rounded-xl border border-[#e5e5e7] bg-white p-5">
         <div className="mb-3 flex items-center gap-2 text-[14px] text-[#1d1d1f]">
-          <Beaker size={16} className="text-[#0071e3]" />
+          <Beaker size={16} className="text-[var(--primary)]" />
           This is a temporary utility route for local seeding.
         </div>
 
         <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-[#f0f0f2]">
           <div
-            className="h-full rounded-full bg-[#0071e3] transition-all duration-300"
+            className="h-full rounded-full bg-[var(--primary)] transition-all duration-300"
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
@@ -430,7 +430,7 @@ export const TempCatalogSeederPage: React.FC = () => {
           type="button"
           disabled={running}
           onClick={() => void runSeeder()}
-          className="inline-flex h-[34px] items-center gap-2 rounded-full bg-[#0071e3] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc] disabled:opacity-50"
+          className="inline-flex h-[34px] items-center gap-2 rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
         >
           {running ? <Loader2 size={14} className="animate-spin" /> : <Beaker size={14} />}
           {running ? "Seeding..." : "Run Temporary Seeder"}

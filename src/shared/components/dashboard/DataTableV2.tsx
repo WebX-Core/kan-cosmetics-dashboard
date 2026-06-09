@@ -248,7 +248,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                     aria-pressed={isActive}
                     className={`flex shrink-0 items-center gap-[6px] rounded-full border px-[13px] py-[4px] text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "border-[#0071e3] bg-[#0071e3] text-white shadow-sm"
+                        ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm"
                         : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:border-[#b8bcc2] hover:bg-[#f5f5f7]"
                     }`}
                   >
@@ -283,13 +283,13 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   placeholder={searchPlaceholder}
                   value={searchValue}
                   onChange={(e) => onSearchChange!(e.target.value)}
-                  className="h-[34px] w-[180px] rounded-full border border-[#d2d2d7] bg-[#f5f5f7] pl-[30px] pr-[30px] text-[12px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition-all focus:w-[220px] focus:border-[#0071e3] focus:bg-white focus:ring-2 focus:ring-[#0071e3]/10"
+                  className="h-[34px] w-[180px] rounded-full border border-[#d2d2d7] bg-[#f5f5f7] pl-[30px] pr-[30px] text-[12px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition-all focus:w-[220px] focus:border-[var(--primary)] focus:bg-white focus:ring-2 focus:ring-[var(--primary)]/10"
                 />
                 {showDebounceSpinner ? (
                   <Loader2
                     size={12}
                     strokeWidth={2}
-                    className="pointer-events-none absolute right-[10px] top-1/2 -translate-y-1/2 animate-spin text-[#0071e3]"
+                    className="pointer-events-none absolute right-[10px] top-1/2 -translate-y-1/2 animate-spin text-[var(--primary)]"
                   />
                 ) : null}
               </div>
@@ -302,7 +302,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
       {/* Bulk action bar */}
       {isSelectable && selected.size > 0 && bulkActions && (
         <div className="flex items-center justify-between border-b border-[#e5e5e7] bg-[#f0f7ff] px-[21px] py-[10px]">
-          <span className="text-[13px] font-medium text-[#0071e3]">
+          <span className="text-[13px] font-medium text-[var(--primary)]">
             {selected.size} selected
           </span>
           <div className="flex items-center gap-[8px]">
@@ -323,12 +323,12 @@ export function DataTableV2<T extends Record<string, unknown>>({
                     onClick={toggleAll}
                     className="flex h-4 w-4 items-center justify-center rounded border-2 transition-colors"
                     style={{
-                      borderColor: allPageSelected || somePageSelected ? "#0071e3" : "#d2d2d7",
-                      background: allPageSelected ? "#0071e3" : "white",
+                      borderColor: allPageSelected || somePageSelected ? "var(--primary)" : "#d2d2d7",
+                      background: allPageSelected ? "var(--primary)" : "white",
                     }}
                   >
                     {allPageSelected && <Check size={9} strokeWidth={3} className="text-white" />}
-                    {somePageSelected && <div className="h-1.5 w-1.5 rounded-sm bg-[#0071e3]" />}
+                    {somePageSelected && <div className="h-1.5 w-1.5 rounded-sm bg-[var(--primary)]" />}
                   </button>
                 </th>
               )}
@@ -400,8 +400,8 @@ export function DataTableV2<T extends Record<string, unknown>>({
                         onClick={(e) => { e.stopPropagation(); toggleRow(rid); }}
                         className="flex h-4 w-4 items-center justify-center rounded border-2 transition-colors"
                         style={{
-                          borderColor: isRowSelected ? "#0071e3" : "#d2d2d7",
-                          background: isRowSelected ? "#0071e3" : "white",
+                          borderColor: isRowSelected ? "var(--primary)" : "#d2d2d7",
+                          background: isRowSelected ? "var(--primary)" : "white",
                         }}
                       >
                         {isRowSelected && <Check size={9} strokeWidth={3} className="text-white" />}
@@ -490,7 +490,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                 onClick={() => onPageChange?.(page)}
                 className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[11px] font-medium transition-colors ${
                   currentPage === page
-                    ? "border-[#0071e3] bg-[#0071e3] text-white"
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
                     : "border-[#d2d2d7] text-[#6e6e73] hover:bg-[#f5f5f7]"
                 }`}
               >

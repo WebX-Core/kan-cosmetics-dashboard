@@ -137,7 +137,7 @@ export const GlobalSearch: React.FC = () => {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Search products, orders…"
-          className="h-[34px] w-[320px] rounded-full border border-[#d2d2d7] bg-[#f5f5f7] pl-[34px] pr-[13px] text-[13px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition-all focus:border-[#0071e3] focus:bg-white focus:ring-2 focus:ring-[#0071e3]/10"
+          className="h-[34px] w-[320px] rounded-full border border-[#d2d2d7] bg-[#f5f5f7] pl-[34px] pr-[13px] text-[13px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition-all focus:border-[var(--primary)] focus:bg-white focus:ring-2 focus:ring-[var(--primary)]/10"
           autoComplete="off"
           spellCheck={false}
         />
@@ -165,7 +165,7 @@ export const GlobalSearch: React.FC = () => {
                       onMouseEnter={() => setActiveIndex(i)}
                       className={`flex w-full items-center gap-[13px] px-[16px] py-[10px] text-left transition-colors ${isActive ? "bg-[#f5f5f7]" : "hover:bg-[#fafafa]"}`}
                     >
-                      <span className={`flex h-[32px] w-[32px] shrink-0 items-center justify-center overflow-hidden rounded-lg transition-colors ${item.imageUrl ? "bg-[#f5f5f7]" : isActive ? "bg-[#0071e3] text-white" : "bg-[#f5f5f7] text-[#6e6e73]"}`}>
+                      <span className={`flex h-[32px] w-[32px] shrink-0 items-center justify-center overflow-hidden rounded-lg transition-colors ${item.imageUrl ? "bg-[#f5f5f7]" : isActive ? "bg-[var(--primary)] text-white" : "bg-[#f5f5f7] text-[#6e6e73]"}`}>
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.label} className="h-full w-full object-cover" />
                         ) : (

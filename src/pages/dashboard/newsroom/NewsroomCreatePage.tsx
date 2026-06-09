@@ -15,7 +15,7 @@ import { parseApiError } from "@/shared/utils/apiError";
 import { slugify } from "@/shared/utils/slug";
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -195,7 +195,7 @@ export const NewsroomCreatePage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[#0071e3] hover:bg-[#f5f5f7]">
+              <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[var(--primary)] hover:bg-[#f5f5f7]">
                 <ImagePlus size={22} className="text-[#86868b]" />
                 <span className="text-[12px] text-[#86868b]">Click to upload cover image</span>
                 <input
@@ -233,7 +233,7 @@ export const NewsroomCreatePage: React.FC = () => {
                   ))}
                 </div>
               )}
-              <label className="flex h-20 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[#0071e3] hover:bg-[#f5f5f7]">
+              <label className="flex h-20 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[var(--primary)] hover:bg-[#f5f5f7]">
                 <FilePlus2 size={18} className="text-[#86868b]" />
                 <span className="text-[11px] text-[#86868b]">Add media files (multiple)</span>
                 <input

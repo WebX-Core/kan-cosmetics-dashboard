@@ -2,11 +2,11 @@ import React from "react";
 import type { LucideIcon } from "lucide-react";
 
 const iconStyles: Record<string, { iconBg: string; iconColor: string }> = {
-  blue:    { iconBg: "bg-[#0071e3]/10", iconColor: "text-[#0071e3]" },
+  blue:    { iconBg: "bg-[var(--primary)]/10", iconColor: "text-[var(--primary)]" },
   sky:     { iconBg: "bg-sky-50",       iconColor: "text-sky-600" },
   indigo:  { iconBg: "bg-indigo-50",    iconColor: "text-indigo-600" },
-  purple:  { iconBg: "bg-[#0071e3]/10", iconColor: "text-[#0071e3]" },
-  violet:  { iconBg: "bg-[#0071e3]/10", iconColor: "text-[#0071e3]" },
+  purple:  { iconBg: "bg-[var(--primary)]/10", iconColor: "text-[var(--primary)]" },
+  violet:  { iconBg: "bg-[var(--primary)]/10", iconColor: "text-[var(--primary)]" },
   cyan:    { iconBg: "bg-cyan-50",      iconColor: "text-cyan-600" },
   emerald: { iconBg: "bg-emerald-50",   iconColor: "text-emerald-600" },
   teal:    { iconBg: "bg-teal-50",      iconColor: "text-teal-600" },

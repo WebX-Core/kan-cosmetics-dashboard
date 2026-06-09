@@ -186,7 +186,7 @@ export const OrdersPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate("/dashboard/orders/create")}
-          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-semibold text-white transition-colors hover:bg-[#0066cc] active:scale-[0.982]"
+          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] active:scale-[0.982]"
         >
           <Plus size={14} /> New Order
         </button>

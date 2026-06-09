@@ -60,7 +60,7 @@ const str = (v: unknown, fb = ""): string => (typeof v === "string" && v ? v : f
 const num = (v: unknown): number => (typeof v === "number" ? v : parseFloat(String(v ?? "0")) || 0);
 
 const inputCls =
-  "h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
+  "h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
 
 const sectionCls = "rounded-2xl border border-[#d2d2d7] bg-white p-6 space-y-4";
 
@@ -68,7 +68,7 @@ const sectionCls = "rounded-2xl border border-[#d2d2d7] bg-white p-6 space-y-4";
 
 const SectionHeader: React.FC<{ icon: React.ReactNode; title: string; subtitle?: string }> = ({ icon, title, subtitle }) => (
   <div className="flex items-start gap-3 pb-1 border-b border-[#f5f5f7]">
-    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f5f5f7] text-[#0071e3]">
+    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f5f5f7] text-[var(--primary)]">
       {icon}
     </div>
     <div>
@@ -168,11 +168,11 @@ const CustomerPicker: React.FC<{
           onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Search customer by name or email…"
-          className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-9 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+          className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-9 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3]" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#d2d2d7] border-t-[var(--primary)]" />
           </div>
         )}
       </div>
@@ -279,7 +279,7 @@ const ProductPicker: React.FC<{
             onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             placeholder="Search products to add…"
-            className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+            className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
           />
         </div>
 
@@ -312,7 +312,7 @@ const ProductPicker: React.FC<{
                           NPR {p.price.toLocaleString()}
                         </span>
                       )}
-                      <Plus size={14} className="shrink-0 text-[#0071e3]" />
+                      <Plus size={14} className="shrink-0 text-[var(--primary)]" />
                     </button>
                   </li>
                 ))}
@@ -529,7 +529,7 @@ export const OrderCreatePage: React.FC = () => {
                 type="checkbox"
                 checked={sameAsBilling}
                 onChange={(e) => setSameAsBilling(e.target.checked)}
-                className="h-4 w-4 rounded border-[#d2d2d7] text-[#0071e3]"
+                className="h-4 w-4 rounded border-[#d2d2d7] text-[var(--primary)]"
               />
               <label htmlFor="sameAsBilling" className="text-sm text-[#1d1d1f] cursor-pointer select-none">
                 Billing address same as shipping
@@ -556,7 +556,7 @@ export const OrderCreatePage: React.FC = () => {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-10 w-full appearance-none rounded-xl border border-[#d2d2d7] bg-white px-4 pr-9 text-sm text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                  className="h-10 w-full appearance-none rounded-xl border border-[#d2d2d7] bg-white px-4 pr-9 text-sm text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
                 >
                   {PAYMENT_METHODS.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
@@ -595,7 +595,7 @@ export const OrderCreatePage: React.FC = () => {
                 type="checkbox"
                 checked={syncDelivery}
                 onChange={(e) => setSyncDelivery(e.target.checked)}
-                className="h-4 w-4 rounded border-[#d2d2d7] text-[#0071e3]"
+                className="h-4 w-4 rounded border-[#d2d2d7] text-[var(--primary)]"
               />
               <label htmlFor="syncDelivery" className="text-sm text-[#1d1d1f] cursor-pointer select-none">
                 Sync delivery now
@@ -651,7 +651,7 @@ export const OrderCreatePage: React.FC = () => {
               type="button"
               onClick={() => createOrder.mutate()}
               disabled={!canSubmit || createOrder.isPending}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0071e3] text-[14px] font-semibold text-white transition-colors hover:bg-[#0066cc] active:scale-[0.982] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] active:scale-[0.982] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {createOrder.isPending ? "Creating order…" : "Place Order"}
             </button>

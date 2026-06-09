@@ -15,7 +15,7 @@ import { parseApiError } from "@/shared/utils/apiError";
 import { slugify } from "@/shared/utils/slug";
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OID_RE = /^[0-9a-f]{24}$/i;
@@ -189,7 +189,7 @@ export const NewsroomEditPage: React.FC = () => {
   if (!isIdLike && listQuery.isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 size={22} className="animate-spin text-[#0071e3]" />
+        <Loader2 size={22} className="animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -197,7 +197,7 @@ export const NewsroomEditPage: React.FC = () => {
   if (q.isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 size={22} className="animate-spin text-[#0071e3]" />
+        <Loader2 size={22} className="animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -283,7 +283,7 @@ export const NewsroomEditPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[#0071e3] hover:bg-[#f5f5f7]">
+              <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[var(--primary)] hover:bg-[#f5f5f7]">
                 <ImagePlus size={22} className="text-[#86868b]" />
                 <span className="text-[12px] text-[#86868b]">Click to upload cover image</span>
                 <input
@@ -331,7 +331,7 @@ export const NewsroomEditPage: React.FC = () => {
                       <img
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        className="h-20 w-20 rounded-xl border border-[#d2d2d7] object-cover ring-2 ring-[#0071e3]/20"
+                        className="h-20 w-20 rounded-xl border border-[#d2d2d7] object-cover ring-2 ring-[var(--primary)]/20"
                       />
                       <button
                         type="button"
@@ -346,7 +346,7 @@ export const NewsroomEditPage: React.FC = () => {
                 </div>
               )}
 
-              <label className="flex h-20 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[#0071e3] hover:bg-[#f5f5f7]">
+              <label className="flex h-20 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d2d2d7] bg-white transition hover:border-[var(--primary)] hover:bg-[#f5f5f7]">
                 <FilePlus2 size={18} className="text-[#86868b]" />
                 <span className="text-[11px] text-[#86868b]">Add more media files</span>
                 <input

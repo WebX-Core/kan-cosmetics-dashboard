@@ -376,7 +376,7 @@ export const SubcategoryDetailPage: React.FC = () => {
                   `/dashboard/products/create?categoryId=${encodeURIComponent(categoryId ?? "")}&subcategoryId=${encodeURIComponent(subcategoryId ?? "")}&next=inventory`
                 )
               }
-              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc]"
+              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
             >
               <Plus size={13} strokeWidth={2} />
               Add Product

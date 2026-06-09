@@ -83,13 +83,13 @@ export const CustomerSearchPicker: React.FC<Props> = ({
               closeTimeoutRef.current = window.setTimeout(() => setIsOpen(false), 150);
             }}
             placeholder={placeholder}
-            className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+            className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
           />
           {isSearching ? (
             <Loader2
               size={12}
               strokeWidth={2}
-              className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[#0071e3]"
+              className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[var(--primary)]"
             />
           ) : null}
 
@@ -109,7 +109,7 @@ export const CustomerSearchPicker: React.FC<Props> = ({
                         <div className="text-[14px] font-medium text-[#1d1d1f]">{customer.name}</div>
                         <div className="text-[12px] text-[#6e6e73]">{customer.email}{customer.phone ? ` • ${customer.phone}` : ""}</div>
                       </div>
-                      <Check size={14} className="text-[#0071e3] opacity-0 transition group-hover:opacity-100" />
+                      <Check size={14} className="text-[var(--primary)] opacity-0 transition group-hover:opacity-100" />
                     </button>
                   ))
                 ) : (

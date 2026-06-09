@@ -16,6 +16,7 @@ export type BlogPostDto = Readonly<{
   mediaUrls?: ReadonlyArray<string>;
   removeUrls?: ReadonlyArray<string>;
   sortOrder?: number;
+  coverImage?: File | null;
 }>;
 
 export type AdvertisementDto = Readonly<{

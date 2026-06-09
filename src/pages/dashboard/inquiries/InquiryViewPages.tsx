@@ -243,14 +243,14 @@ const InquiryView: React.FC<Readonly<{ kind: InquiryKind }>> = ({ kind }) => {
               onChange={(event) => setReplyMessage(event.target.value)}
               placeholder="Write a reply for this inquiry..."
               rows={4}
-              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white p-3 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white p-3 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
             <div className="mt-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => void submitReply()}
                 disabled={createReply.isPending}
-                className="inline-flex h-[34px] items-center gap-2 rounded-full bg-[#0071e3] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc] disabled:opacity-50"
+                className="inline-flex h-[34px] items-center gap-2 rounded-full bg-[var(--primary)] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
               >
                 <Send size={13} />
                 {createReply.isPending ? "Sending..." : "Send Reply"}
@@ -302,7 +302,7 @@ const InquiryView: React.FC<Readonly<{ kind: InquiryKind }>> = ({ kind }) => {
                 key={item.id}
                 className={`rounded-xl border p-3 ${
                   isCurrent
-                    ? "border-[#0071e3]/40 bg-[#f0f7ff]"
+                    ? "border-[var(--primary)]/40 bg-[#f0f7ff]"
                     : "border-[#f0f0f2] bg-[#fafafa]"
                 }`}
               >
@@ -482,14 +482,14 @@ export const ContactConversationViewPage: React.FC = () => {
               onChange={(event) => setReplyMessage(event.target.value)}
               placeholder="Write a reply for this contact..."
               rows={4}
-              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white p-3 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white p-3 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
             <div className="mt-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => void submitReply()}
                 disabled={createReply.isPending}
-                className="inline-flex h-[34px] items-center gap-2 rounded-full bg-[#0071e3] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc] disabled:opacity-50"
+                className="inline-flex h-[34px] items-center gap-2 rounded-full bg-[var(--primary)] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
               >
                 <Send size={13} />
                 {createReply.isPending ? "Sending..." : "Send Reply"}

@@ -121,7 +121,7 @@ export const TeamPage: React.FC = () => {
       render: (r: TeamRow) => (
         <div className="flex gap-2 text-xs text-gray-500">
           {r.isLeader ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-600">Leader</span> : null}
-          {r.addToHome ? <span className="rounded-full bg-[#0071e3]/10 px-2 py-0.5 text-[#0071e3]">Home</span> : null}
+          {r.addToHome ? <span className="rounded-full bg-[var(--primary)]/10 px-2 py-0.5 text-[var(--primary)]">Home</span> : null}
         </div>
       ),
     },

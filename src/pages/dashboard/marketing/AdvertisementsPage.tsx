@@ -259,12 +259,12 @@ export const AdvertisementsPage: React.FC = () => {
                 onChange={(e) => setMatchQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") setSubmittedMatchQuery(matchQuery); }}
                 placeholder="Query to match ads (e.g. season, target type)…"
-                className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
               />
               <button
                 type="button"
                 onClick={() => setSubmittedMatchQuery(matchQuery)}
-                className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc]"
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
               >
                 <Search size={14} /> Match
               </button>

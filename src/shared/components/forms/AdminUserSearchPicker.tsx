@@ -59,7 +59,7 @@ export const AdminUserSearchPicker: React.FC<Props> = ({
               {selectedMeta ? <span>{selectedMeta}</span> : null}
               {selectedMeta ? <span>•</span> : null}
               <span className="inline-flex items-center gap-1">
-                <ShieldCheck size={11} className="text-[#0071e3]" />
+                <ShieldCheck size={11} className="text-[var(--primary)]" />
                 {value.role}
               </span>
             </div>
@@ -91,13 +91,13 @@ export const AdminUserSearchPicker: React.FC<Props> = ({
               closeTimeoutRef.current = window.setTimeout(() => setIsOpen(false), 150);
             }}
             placeholder={placeholder}
-            className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+            className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
           />
           {isSearching ? (
             <Loader2
               size={12}
               strokeWidth={2}
-              className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[#0071e3]"
+              className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[var(--primary)]"
             />
           ) : null}
 
@@ -121,7 +121,7 @@ export const AdminUserSearchPicker: React.FC<Props> = ({
                         <span className="rounded-full bg-[#f5f5f7] px-2 py-1 text-[11px] font-medium text-[#1d1d1f]">
                           {user.role}
                         </span>
-                        <Check size={14} className="text-[#0071e3] opacity-0 transition group-hover:opacity-100" />
+                        <Check size={14} className="text-[var(--primary)] opacity-0 transition group-hover:opacity-100" />
                       </div>
                     </button>
                   ))

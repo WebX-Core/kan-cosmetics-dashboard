@@ -9,7 +9,7 @@ import { api } from "@/shared/api/api";
 import { engagementApi } from "@/features/engagement";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const ImageCard: React.FC<{ src: string; onRemove: () => void }> = ({ src, onRemove }) => (
   <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-[#d2d2d7] bg-[#f5f5f7]">
@@ -240,7 +240,7 @@ export const TestimonialFormPage: React.FC = () => {
           <FormField label="Comment" required>
             <textarea
               rows={4}
-              className="w-full rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-none"
+              className="w-full rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 resize-none"
               placeholder="What did the customer say?"
               value={form.comment}
               onChange={(e) => set("comment", e.target.value)}

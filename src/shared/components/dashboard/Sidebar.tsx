@@ -83,7 +83,7 @@ export const Sidebar: React.FC<Props> = ({
                     className={({ isActive }) =>
                       `sidebar-item-enter group flex h-[34px] items-center gap-[8px] rounded-lg px-[8px] text-[13px] font-medium transition-colors ${
                         isActive
-                          ? "bg-[#0071e3]/10 text-[#0071e3]"
+                          ? "bg-[var(--primary)]/10 text-[var(--primary)]"
                           : "text-[#1d1d1f] hover:bg-[#f5f5f7]"
                       }`
                     }
@@ -91,7 +91,7 @@ export const Sidebar: React.FC<Props> = ({
                     <Icon
                       size={15}
                       strokeWidth={module.key === "contacts" ? 2 : 1.75}
-                      className="shrink-0 opacity-70 group-[.bg-\\[\\#0071e3\\]\\/10]:opacity-100"
+                      className="shrink-0 opacity-70 group-[.bg-\\[\\var(--primary)\\]\\/10]:opacity-100"
                     />
                     <span className="min-w-0 flex-1 truncate">
                       {module.label}

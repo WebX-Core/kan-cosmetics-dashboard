@@ -9,7 +9,7 @@ import { validateOrToast } from "@/shared/utils/validation";
 import { engagementApi } from "@/features/engagement";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const schema = z
   .object({
@@ -116,7 +116,7 @@ export const FaqFormPage: React.FC = () => {
               placeholder="Write the FAQ answer..."
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
               rows={5}
-              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
           </FormField>
         </FormSection>

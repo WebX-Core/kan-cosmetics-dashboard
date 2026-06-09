@@ -85,8 +85,8 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
       >
         <defs>
           <linearGradient id="salesLineGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#0071e3" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#0071e3" stopOpacity="0.01" />
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.01" />
           </linearGradient>
         </defs>
 
@@ -97,7 +97,7 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
             y1={pT}
             x2={pts[hovered].x}
             y2={pT + cH}
-            stroke="#0071e3"
+            stroke="var(--primary)"
             strokeWidth={1}
             strokeDasharray="3 3"
             opacity={0.4}
@@ -138,7 +138,7 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
           <path
             d={pathD}
             fill="none"
-            stroke="#0071e3"
+            stroke="var(--primary)"
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -178,8 +178,8 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
                 cx={pt.x}
                 cy={pt.y}
                 r={isHovered ? 5.5 : 3}
-                fill={isHovered ? "#0071e3" : "white"}
-                stroke="#0071e3"
+                fill={isHovered ? "var(--primary)" : "white"}
+                stroke="var(--primary)"
                 strokeWidth={2}
                 style={{ transition: "r 100ms ease, fill 100ms ease" }}
                 pointerEvents="none"
@@ -287,7 +287,7 @@ const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
 };
 
 const viewAllButtonClassName =
-  "inline-flex h-[24px] items-center  rounded-full  px-2 py-2 bg-white border border-zinc-200 text-[13px] font-medium text-[#0071e3] transition-colors hover:bg-[#f5f5f7] hover:border-[#0071e3]/25 hover:text-[#0066cc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]/25 active:scale-[0.98]";
+  "inline-flex h-[24px] items-center  rounded-full  px-2 py-2 bg-white border border-zinc-200 text-[13px] font-medium text-[var(--primary)] transition-colors hover:bg-[#f5f5f7] hover:border-[var(--primary)]/25 hover:text-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25 active:scale-[0.98]";
 
 const orderStatusStyle: Record<
   "Processing" | "Shipped" | "Pending" | "Delivered" | "Cancelled",
@@ -848,8 +848,8 @@ export const DashboardOverviewPage: React.FC = () => {
         {/* Total Orders */}
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
-              <RotateCcw size={15} className="text-blue-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10">
+              <RotateCcw size={15} className="text-brand" />
             </div>
             <span className="text-xs font-medium text-(--text-tertiary)">
               Total Orders
@@ -1270,15 +1270,15 @@ export const DashboardOverviewPage: React.FC = () => {
                   <rect x={0} y={94} width={540} height={6} fill="#bfdbfe" />
                 ) : (
                   categoryBandPaths.map((band, index) => {
-                    const blueBands = [
-                      "#1d4ed8",
-                      "#2563eb",
-                      "#3b82f6",
-                      "#60a5fa",
-                      "#93c5fd",
-                      "#1e40af",
-                      "#0ea5e9",
-                      "#38bdf8",
+                    const brandBands = [
+                      "#161a4d",
+                      "#1d225f",
+                      "#283177",
+                      "#34409a",
+                      "#4b5ab8",
+                      "#5f6bd0",
+                      "#7380df",
+                      "#97a2ea",
                     ];
                     const isActive =
                       activeCategoryBand === null ||
@@ -1287,7 +1287,7 @@ export const DashboardOverviewPage: React.FC = () => {
                       <path
                         key={`band-${index}`}
                         d={band.d}
-                        fill={blueBands[index % blueBands.length]}
+                        fill={brandBands[index % brandBands.length]}
                         fillOpacity={isActive ? 0.95 : 0.35}
                         className="cursor-pointer transition-opacity duration-200"
                         onMouseEnter={() => setActiveCategoryBand(index)}

@@ -1,6 +1,7 @@
 import { api, unwrap } from "@/shared/api/api";
 import type { ApiListQuery } from "@/shared/types/common.types";
 import { makeStandardCrud } from "@/shared/api/standardCrud";
+import type { FormFieldValue, FormFileValue } from "@/shared/api/api";
 import type {
   NewsletterDto,
   BlogPostDto,
@@ -20,7 +21,25 @@ import type {
 
 export const marketingApi = {
   newsletters: makeStandardCrud<Record<string, unknown>, NewsletterDto, NewsletterDto>({ key: "newsletters", basePath: "/newsletter", getOne: false, update: false }),
-  blogs: makeStandardCrud<Record<string, unknown>, BlogPostDto, BlogPostDto>({ key: "blogs", basePath: "/blog" }),
+  blogs: makeStandardCrud<Record<string, unknown>, BlogPostDto, BlogPostDto>(
+    { key: "blogs", basePath: "/blog" },
+    {
+      create: (dto) => {
+        const { coverImage, ...rest } = dto;
+        return {
+          fields: rest as Readonly<Record<string, FormFieldValue>>,
+          files: { coverImage: (coverImage ?? undefined) as FormFileValue },
+        };
+      },
+      update: (dto) => {
+        const { coverImage, ...rest } = dto;
+        return {
+          fields: rest as Readonly<Record<string, FormFieldValue>>,
+          files: { coverImage: (coverImage ?? undefined) as FormFileValue },
+        };
+      },
+    }
+  ),
   advertisements: makeStandardCrud<Record<string, unknown>, AdvertisementDto, AdvertisementDto>({ key: "advertisements", basePath: "/advertisement" }),
   advertisementsMatch: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/advertisement/match", { params: q })),
   emailCampaigns: makeStandardCrud<Record<string, unknown>, EmailCampaignDto, EmailCampaignDto>({ key: "emailCampaigns", basePath: "/email-campaign" }),

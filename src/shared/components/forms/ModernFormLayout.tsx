@@ -139,7 +139,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="flex min-h-[30px] items-center gap-[6px] rounded-full bg-[#0071e3] px-[14px] py-[7px] text-[11px] font-medium text-white transition-colors hover:bg-[#0066cc] disabled:opacity-50 active:scale-[0.982]"
+        className="flex min-h-[30px] items-center gap-[6px] rounded-full bg-[var(--primary)] px-[14px] py-[7px] text-[11px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50 active:scale-[0.982]"
       >
         {isSubmitting ? <Loader2 size={11} className="animate-spin" /> : submitIcon}
         {isSubmitting ? "Saving…" : submitLabel}

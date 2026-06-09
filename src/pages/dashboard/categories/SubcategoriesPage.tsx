@@ -258,7 +258,7 @@ export const SubcategoriesPage: React.FC = () => {
             {row.coverImage ? (
               <img src={row.coverImage} alt={row.name} className="max-h-8 w-auto object-contain" />
             ) : (
-              <ShoppingBag size={14} className="text-blue-500" />
+              <ShoppingBag size={14} className="text-brand" />
             )}
           </div>
           <div>

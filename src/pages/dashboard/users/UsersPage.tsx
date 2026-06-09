@@ -197,8 +197,8 @@ export const UsersPage: React.FC = () => {
       render: (u: CombinedRow) => (
         (() => { const role = resolveRole(u); return (
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-          role === "SUDOADMIN" ? "bg-[#0071e3]/10 text-[#0071e3]" :
-          role === "ADMIN" ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-600"
+          role === "SUDOADMIN" ? "bg-[var(--primary)]/10 text-[var(--primary)]" :
+          role === "ADMIN" ? "bg-brand/10 text-brand" : "bg-gray-50 text-gray-600"
         }`}>
           {role}
         </span>

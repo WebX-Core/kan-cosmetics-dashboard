@@ -137,7 +137,7 @@ export const ProductFaqsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate(`/dashboard/products/${productId}/faqs/create`)}
-          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc]"
+          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           <Plus size={13} />
           New Product FAQ

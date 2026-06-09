@@ -70,7 +70,7 @@ export const ReportsPage: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search reports..."
-          className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+          className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
         />
       </div>
       {loading ? (
@@ -81,7 +81,7 @@ export const ReportsPage: React.FC = () => {
             <Link
               key={report.id}
               to={`/dashboard/reports/${report.id}`}
-              className="rounded-xl border border-gray-100 bg-white p-5 transition-colors hover:border-[#0071e3]/20 hover:bg-[#0071e3]/5"
+              className="rounded-xl border border-gray-100 bg-white p-5 transition-colors hover:border-[var(--primary)]/20 hover:bg-[var(--primary)]/5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -96,7 +96,7 @@ export const ReportsPage: React.FC = () => {
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Primary Metric</p>
                   <p className="mt-1 text-2xl font-semibold text-gray-900">{report.value}</p>
                 </div>
-                <p className="text-sm font-medium text-[#0071e3]">{report.trend}</p>
+                <p className="text-sm font-medium text-[var(--primary)]">{report.trend}</p>
               </div>
             </Link>
           ))}

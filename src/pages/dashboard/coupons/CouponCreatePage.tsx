@@ -8,7 +8,7 @@ import { parseApiError } from "@/shared/utils/apiError";
 import { validateOrToast } from "@/shared/utils/validation";
 import { commerceApi } from "@/features/commerce";
 
-const inputClass = "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+const inputClass = "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const schema = z.object({
   code: z.string().trim().min(1, "Code is required"),
@@ -159,7 +159,7 @@ export const CouponCreatePage: React.FC = () => {
               placeholder="Describe this coupon..."
               onChange={(e) => up("description", e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
           </FormField>
         </FormSection>
@@ -193,7 +193,7 @@ export const CouponCreatePage: React.FC = () => {
                     type="checkbox"
                     checked={form[key]}
                     onChange={(e) => up(key, e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-[#0071e3]"
+                    className="h-4 w-4 rounded border-gray-300 text-[var(--primary)]"
                   />
                   <span className="text-sm font-medium text-gray-700">{labels[key]}</span>
                 </label>

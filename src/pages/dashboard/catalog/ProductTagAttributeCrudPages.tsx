@@ -11,7 +11,7 @@ import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 
-const input = "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+const input = "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const toRows = (value: unknown): ReadonlyArray<Readonly<Record<string, unknown>>> => {
   if (Array.isArray(value)) return value as ReadonlyArray<Readonly<Record<string, unknown>>>;
@@ -35,12 +35,12 @@ const attributeSchema = z.object({
 
 export const ProductAttributesTagsHubPage: React.FC = () => (
   <div className="grid gap-4 md:grid-cols-2">
-    <Link to="/dashboard/product-tags" className="rounded-xl border border-gray-200 bg-white p-5 text-sm font-medium text-gray-700 transition hover:border-[#0071e3]/40 hover:text-[#0066cc]">
-      <Tag size={20} className="mb-2 text-[#0071e3]" />
+    <Link to="/dashboard/product-tags" className="rounded-xl border border-gray-200 bg-white p-5 text-sm font-medium text-gray-700 transition hover:border-[var(--primary)]/40 hover:text-[var(--primary-hover)]">
+      <Tag size={20} className="mb-2 text-[var(--primary)]" />
       Manage Product Tags
     </Link>
-    <Link to="/dashboard/product-attributes" className="rounded-xl border border-gray-200 bg-white p-5 text-sm font-medium text-gray-700 transition hover:border-[#0071e3]/40 hover:text-[#0066cc]">
-      <SlidersHorizontal size={20} className="mb-2 text-[#0071e3]" />
+    <Link to="/dashboard/product-attributes" className="rounded-xl border border-gray-200 bg-white p-5 text-sm font-medium text-gray-700 transition hover:border-[var(--primary)]/40 hover:text-[var(--primary-hover)]">
+      <SlidersHorizontal size={20} className="mb-2 text-[var(--primary)]" />
       Manage Product Attributes
     </Link>
   </div>
@@ -125,7 +125,7 @@ export const ProductTagCreatePage: React.FC = () => {
       <div className="grid max-w-lg gap-3">
         <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
         <input className={input} placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
-        <button className="rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0066cc]" onClick={() => void submit()}>Create Tag</button>
+        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Create Tag</button>
       </div>
     </PageLayout>
   );
@@ -159,7 +159,7 @@ export const ProductTagEditPage: React.FC = () => {
       <div className="grid max-w-lg gap-3">
         <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
         <input className={input} placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
-        <button className="rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0066cc]" onClick={() => void submit()}>Update Tag</button>
+        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Update Tag</button>
       </div>
     </PageLayout>
   );
@@ -253,7 +253,7 @@ export const ProductAttributeCreatePage: React.FC = () => {
         <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
         <input className={input} placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
         <input className={input} placeholder="value" value={value} onChange={(e) => setValue(e.target.value)} />
-        <button className="rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0066cc]" onClick={() => void submit()}>Create Attribute</button>
+        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Create Attribute</button>
       </div>
     </PageLayout>
   );
@@ -290,7 +290,7 @@ export const ProductAttributeEditPage: React.FC = () => {
         <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
         <input className={input} placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
         <input className={input} placeholder="value" value={value} onChange={(e) => setValue(e.target.value)} />
-        <button className="rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0066cc]" onClick={() => void submit()}>Update Attribute</button>
+        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Update Attribute</button>
       </div>
     </PageLayout>
   );

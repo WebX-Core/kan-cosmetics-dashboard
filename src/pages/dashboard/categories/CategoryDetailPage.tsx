@@ -268,7 +268,7 @@ export const CategoryDetailPage: React.FC = () => {
             {row.coverImage ? (
               <img src={row.coverImage} alt={row.name} className="max-h-8 w-auto object-contain" />
             ) : (
-              <FolderOpen size={14} className="text-blue-500" />
+              <FolderOpen size={14} className="text-brand" />
             )}
           </div>
           <div>
@@ -362,7 +362,7 @@ export const CategoryDetailPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/dashboard/categories/${id}/subcategories/create`)}
-              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc]"
+              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
             >
               <Plus size={13} strokeWidth={2} />
               New Subcategory

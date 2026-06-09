@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
-import { CheckCircle, Clock, FileText, Layers, Loader2, X } from "lucide-react";
+import { CheckCircle, Clock, FileText, Layers, Loader2, UploadCloud, X } from "lucide-react";
 import RichTextEditor from "@/shared/components/RichTextEditor";
 import { marketingApi } from "@/features/marketing";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
@@ -18,6 +18,7 @@ import { confirmAction } from "@/shared/utils/confirm";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 const num = (value: unknown): number => (typeof value === "number" ? value : 0);
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 type Row = Readonly<{
   id: string;
@@ -26,6 +27,7 @@ type Row = Readonly<{
   author: string;
   status: "Published" | "Draft" | "Scheduled";
   views: number;
+  coverImage: string;
 }>;
 
 type BlogForm = Readonly<{
@@ -66,9 +68,69 @@ const rowsFrom = (payload: unknown): ReadonlyArray<Row> => {
       author: text(item.author ?? item.createdBy, "—"),
       status: toStatus(text(item.status, "Draft")),
       views: num(item.views),
+      coverImage: text(item.coverImage),
     };
   });
 };
+
+const isValidImageFile = (file: File): boolean =>
+  file.type.startsWith("image/") && file.size <= MAX_IMAGE_SIZE_BYTES;
+
+const DropArea: React.FC<{
+  onFile: (file: File | null) => void;
+}> = ({ onFile }) => {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  return (
+    <div
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        onFile(event.dataTransfer.files?.[0] ?? null);
+      }}
+      className="rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-4 py-6 text-center"
+    >
+      <UploadCloud size={26} className="mx-auto text-[#86868b]" />
+      <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">
+        Choose a cover image or drag and drop it here.
+      </p>
+      <p className="mt-1 text-[12px] text-[#86868b]">Only images, up to 5MB</p>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
+      >
+        Browse files
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          onFile(event.target.files?.[0] ?? null);
+          event.currentTarget.value = "";
+        }}
+      />
+    </div>
+  );
+};
+
+const ImageCard: React.FC<{ src: string; onRemove?: () => void }> = ({ src, onRemove }) => (
+  <div className="relative h-40 w-full overflow-hidden rounded-xl border border-[#d2d2d7] bg-[#f5f5f7]">
+    <img src={src} alt="Blog cover" className="h-full w-full object-cover" />
+    {onRemove ? (
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f]/80 text-white hover:bg-[#1d1d1f]"
+        aria-label="Remove cover image"
+      >
+        <X size={14} />
+      </button>
+    ) : null}
+  </div>
+);
 
 export const BlogPostsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -196,7 +258,7 @@ export const BlogPostsPage: React.FC = () => {
 };
 
 const blogInputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode }) => {
   const navigate = useNavigate();
@@ -209,6 +271,9 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
   const updateMutation = marketingApi.blogs.hooks.useUpdate();
 
   const [manualSlug, setManualSlug] = React.useState(false);
+  const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
+  const [existingCoverImage, setExistingCoverImage] = React.useState("");
+  const [removedCoverUrls, setRemovedCoverUrls] = React.useState<ReadonlyArray<string>>([]);
   const [form, setForm] = React.useState<BlogForm>({
     title: "",
     slug: "",
@@ -229,6 +294,9 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
       isPublished: Boolean(row.isPublished),
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
     });
+    setExistingCoverImage(text(row.coverImage));
+    setCoverImageFile(null);
+    setRemovedCoverUrls([]);
     setManualSlug(false);
   }, [getQuery.data, isEdit]);
 
@@ -240,6 +308,26 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
   }, [form.title, form.slug, manualSlug]);
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const previewCover = React.useMemo(
+    () => (coverImageFile ? URL.createObjectURL(coverImageFile) : ""),
+    [coverImageFile]
+  );
+
+  React.useEffect(
+    () => () => {
+      if (previewCover) URL.revokeObjectURL(previewCover);
+    },
+    [previewCover]
+  );
+
+  const onPickCover = (file: File | null) => {
+    if (!file) return;
+    if (!isValidImageFile(file)) {
+      toast.error("Only image files up to 5MB are allowed.");
+      return;
+    }
+    setCoverImageFile(file);
+  };
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
@@ -252,6 +340,8 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
       description: parsed.description?.trim() || undefined,
       isPublished: parsed.isPublished,
       sortOrder: parsed.sortOrder ?? 0,
+      removeUrls: removedCoverUrls.length > 0 ? removedCoverUrls : undefined,
+      coverImage: coverImageFile ?? undefined,
     };
     try {
       if (isEdit && id) {
@@ -315,7 +405,7 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
               value={form.excerpt}
               onChange={(e) => setForm((p) => ({ ...p, excerpt: e.target.value }))}
               rows={3}
-              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="w-full resize-none rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
           </FormField>
           <FormField label="Description">
@@ -325,6 +415,41 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
               placeholder="Write the blog post content…"
             />
           </FormField>
+        </FormSection>
+
+        <FormSection title="Cover Image" description="Only image files are allowed. Max size: 5MB.">
+          <div className="space-y-3">
+            {coverImageFile ? (
+              <ImageCard
+                src={previewCover}
+                onRemove={() => {
+                  setCoverImageFile(null);
+                }}
+              />
+            ) : null}
+            {!coverImageFile && existingCoverImage ? (
+              <ImageCard
+                src={existingCoverImage}
+                onRemove={() => {
+                  setRemovedCoverUrls((prev) =>
+                    prev.includes(existingCoverImage) ? prev : [...prev, existingCoverImage],
+                  );
+                  setExistingCoverImage("");
+                }}
+              />
+            ) : null}
+            {!coverImageFile || !existingCoverImage ? <DropArea onFile={onPickCover} /> : null}
+            {existingCoverImage && !coverImageFile ? (
+              <p className="text-[12px] text-[#86868b]">
+                Upload a new image to replace the current cover image.
+              </p>
+            ) : null}
+            {coverImageFile && existingCoverImage ? (
+              <p className="text-[12px] text-[#86868b]">
+                The new image will replace the current cover image when you save.
+              </p>
+            ) : null}
+          </div>
         </FormSection>
 
         <FormActions
@@ -340,4 +465,3 @@ const BlogFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode })
 
 export const BlogPostCreatePage: React.FC = () => <BlogFormPage mode="create" />;
 export const BlogPostEditPage: React.FC = () => <BlogFormPage mode="edit" />;
-

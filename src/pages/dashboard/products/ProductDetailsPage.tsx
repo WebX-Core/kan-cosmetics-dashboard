@@ -153,7 +153,7 @@ const extractProductRecord = (
 };
 
 // ── detail-section accent palette ────────────────────────────────────────────
-const SECTION_ACCENTS = ["#0071e3", "#1a9e6b", "#c07d0a", "#86868b"] as const;
+const SECTION_ACCENTS = ["var(--primary)", "#1a9e6b", "#c07d0a", "#86868b"] as const;
 
 // ── component ────────────────────────────────────────────────────────────────
 
@@ -369,7 +369,7 @@ export const ProductDetailsPage: React.FC = () => {
   if (query.isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#0071e3] border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
       </div>
     );
   }
@@ -430,7 +430,7 @@ export const ProductDetailsPage: React.FC = () => {
                   {formatCurrency(price)}
                 </span>
                 {salePrice !== price && (
-                  <span className="text-[14px] font-medium text-[#0071e3]">
+                  <span className="text-[14px] font-medium text-[var(--primary)]">
                     {formatCurrency(salePrice)} sale
                   </span>
                 )}

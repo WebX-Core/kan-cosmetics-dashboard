@@ -128,7 +128,7 @@ export const TopNav: React.FC<Props> = ({
                     <Link
                       to="/dashboard/support/contacts"
                       onClick={() => setNotificationsOpen(false)}
-                      className="block rounded-full bg-blue-500 px-[21px] py-[8px] text-center text-[13px] font-medium text-white! hover:bg-blue-600"
+                      className="block rounded-full bg-brand px-[21px] py-[8px] text-center text-[13px] font-medium text-white! hover:bg-brand-hover"
                     >
                       View All Contacts
                     </Link>
@@ -153,7 +153,7 @@ export const TopNav: React.FC<Props> = ({
                   onError={() => setAvatarBroken(true)}
                 />
               ) : (
-                <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#0071e3] text-[11px] font-semibold text-white">
+                <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white">
                   {(displayName[0] ?? "K").toUpperCase()}
                 </span>
               )}

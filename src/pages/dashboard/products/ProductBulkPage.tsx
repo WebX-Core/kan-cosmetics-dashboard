@@ -64,7 +64,7 @@ export const ProductBulkPage: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-[#d2d2d7] bg-white p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <FileJson size={18} className="text-[#0071e3]" />
+            <FileJson size={18} className="text-[var(--primary)]" />
             <p className="text-sm font-semibold text-[#1d1d1f]">Bulk Create Products</p>
           </div>
           <p className="text-xs text-[#86868b]">
@@ -75,7 +75,7 @@ export const ProductBulkPage: React.FC = () => {
             onChange={(e) => { setJsonText(e.target.value); setJsonError(null); }}
             placeholder={'[\n  {\n    "title": "Product 1",\n    "price": 999\n  }\n]'}
             rows={10}
-            className="w-full rounded-xl border border-[#d2d2d7] bg-[#f5f5f7] px-4 py-3 font-mono text-xs text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-y"
+            className="w-full rounded-xl border border-[#d2d2d7] bg-[#f5f5f7] px-4 py-3 font-mono text-xs text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 resize-y"
           />
           {jsonError && (
             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -86,7 +86,7 @@ export const ProductBulkPage: React.FC = () => {
             type="button"
             onClick={handleBulkCreate}
             disabled={!jsonText.trim() || bulkCreate.isPending}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0071e3] text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             <FileJson size={15} /> {bulkCreate.isPending ? "Creating…" : "Bulk Create"}
           </button>
@@ -104,7 +104,7 @@ export const ProductBulkPage: React.FC = () => {
 
         <div className="rounded-2xl border border-[#d2d2d7] bg-white p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <Upload size={18} className="text-[#0071e3]" />
+            <Upload size={18} className="text-[var(--primary)]" />
             <p className="text-sm font-semibold text-[#1d1d1f]">Bulk Upload Images</p>
           </div>
           <p className="text-xs text-[#86868b]">
@@ -112,7 +112,7 @@ export const ProductBulkPage: React.FC = () => {
           </p>
 
           <div
-            className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-6 py-10 cursor-pointer hover:border-[#0071e3] hover:bg-[#f0f7ff] transition-colors"
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-6 py-10 cursor-pointer hover:border-[var(--primary)] hover:bg-[#f0f7ff] transition-colors"
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload size={24} className="text-[#86868b]" />
@@ -146,7 +146,7 @@ export const ProductBulkPage: React.FC = () => {
             type="button"
             onClick={handleBulkUpload}
             disabled={!imageFiles || imageFiles.length === 0 || bulkUpload.isPending}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0071e3] text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             <Upload size={15} /> {bulkUpload.isPending ? "Uploading…" : "Upload Images"}
           </button>

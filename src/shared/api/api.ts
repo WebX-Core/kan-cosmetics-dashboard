@@ -92,19 +92,15 @@ function appendFormValue(
   key: string,
   value: Exclude<FormFieldValue, null | undefined>
 ): void {
-  // Arrays: append each item under same key
   if (Array.isArray(value)) {
-    for (const item of value) {
-      if (item instanceof Blob) {
+    if (value.length > 0 && value.every((item) => item instanceof Blob)) {
+      for (const item of value) {
         fd.append(key, item);
-      } else if (item instanceof Date) {
-        fd.append(key, item.toISOString());
-      } else if (typeof item === "object") {
-        fd.append(key, JSON.stringify(item));
-      } else {
-        fd.append(key, String(item));
       }
+      return;
     }
+
+    fd.append(key, JSON.stringify(value));
     return;
   }
 

@@ -102,7 +102,7 @@ export const PermissionsUsersPage: React.FC = () => {
       <DataTableV2
         title="Users"
       subtitle="Manage user permission assignments"
-      icon={<ShieldCheck size={16} className="text-[#0071e3]" />}
+      icon={<ShieldCheck size={16} className="text-[var(--primary)]" />}
       columns={columns}
       data={rows}
       emptyMessage={listQuery.isLoading ? "Loading users..." : "No users found."}

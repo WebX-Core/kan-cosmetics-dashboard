@@ -15,7 +15,7 @@ import RichTextEditor from "@/shared/components/RichTextEditor";
 import { slugify } from "@/shared/utils/slug";
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const schema = z.object({
   fullname: z.string().min(1, "Full name is required"),
@@ -309,7 +309,7 @@ export const TeamEditPage: React.FC = () => {
                 setFile(picked);
                 if (picked) setHideExistingImage(true);
               }}
-              className="block w-full cursor-pointer rounded-xl border border-[#d2d2d7] bg-white px-4 py-2.5 text-[13px] text-[#1d1d1f] file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#f5f5f7] file:px-3 file:py-1 file:text-[12px] file:font-medium file:text-[#1d1d1f] hover:border-[#0071e3]"
+              className="block w-full cursor-pointer rounded-xl border border-[#d2d2d7] bg-white px-4 py-2.5 text-[13px] text-[#1d1d1f] file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#f5f5f7] file:px-3 file:py-1 file:text-[12px] file:font-medium file:text-[#1d1d1f] hover:border-[var(--primary)]"
             />
             {newImagePreview ? (
               <div className="mt-3 flex items-start gap-3">
@@ -362,7 +362,7 @@ export const TeamEditPage: React.FC = () => {
             <FormField label="Leader">
               <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 hover:bg-[#f9f9f9]">
                 <div
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isLeader ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isLeader ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}
                 >
                   {form.isLeader && <Check size={11} strokeWidth={3} className="text-white" />}
                 </div>
@@ -378,7 +378,7 @@ export const TeamEditPage: React.FC = () => {
             <FormField label="Home Page">
               <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 hover:bg-[#f9f9f9]">
                 <div
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.addToHome ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.addToHome ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}
                 >
                   {form.addToHome && <Check size={11} strokeWidth={3} className="text-white" />}
                 </div>

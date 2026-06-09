@@ -30,7 +30,7 @@ const createSchema = z.object({
 const editSchema = createSchema.omit({ password: true });
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
 
 const selectCls = `${inputCls} appearance-none pr-9 cursor-pointer`;
 
@@ -57,7 +57,7 @@ const RolePicker: React.FC<{
       <select
         value={selectedId}
         onChange={(e) => onChange(e.target.value ? [e.target.value] : [])}
-        className="h-11 w-full appearance-none rounded-xl border border-[#d2d2d7] bg-white px-4 pr-9 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 disabled:bg-[#f5f5f7]"
+        className="h-11 w-full appearance-none rounded-xl border border-[#d2d2d7] bg-white px-4 pr-9 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:bg-[#f5f5f7]"
         disabled={q.isLoading}
       >
         <option value="">— No role —</option>
@@ -182,7 +182,7 @@ const PermissionMatrix: React.FC<{
                       <div
                         className={`flex h-4.5 w-4.5 items-center justify-center rounded-md border-2 transition-colors ${
                           cols[col].every((id) => selected.has(id))
-                            ? "border-[#0071e3] bg-[#0071e3]"
+                            ? "border-[var(--primary)] bg-[var(--primary)]"
                             : "border-[#d2d2d7] bg-white"
                         }`}
                       >
@@ -225,7 +225,7 @@ const ProfileUpload: React.FC<{
     <div className="flex items-center gap-4">
       <div
         onClick={() => ref.current?.click()}
-        className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] transition-colors hover:border-[#0071e3] hover:bg-[#f0f7ff]"
+        className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] transition-colors hover:border-[var(--primary)] hover:bg-[#f0f7ff]"
       >
         {preview ? (
           <>
@@ -554,7 +554,7 @@ export const UserFormPage: React.FC = () => {
         <FormSection title="Account Settings">
           <FormField label="Verification">
             <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 transition-colors hover:bg-[#f9f9f9]">
-              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isVerified ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}>
+              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isVerified ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}>
                 {form.isVerified && <Check size={11} strokeWidth={3} className="text-white" />}
               </div>
               <span className="text-sm text-[#1d1d1f]">Mark as verified</span>
@@ -595,7 +595,7 @@ export const UserFormPage: React.FC = () => {
                     if (rolePermsQuery.data)
                       setSelectedPermIds(new Set(extractPermIdsFromRolePerms(rolePermsQuery.data)));
                   }}
-                  className="text-[11px] font-medium text-[#0071e3] transition-colors hover:text-[#0077ed]"
+                  className="text-[11px] font-medium text-[var(--primary)] transition-colors hover:text-[var(--primary-hover)]"
                 >
                   Select all
                 </button>

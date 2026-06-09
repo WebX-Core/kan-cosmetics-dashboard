@@ -19,7 +19,7 @@
 
 .ckeditor-wrapper .ck.ck-toolbar .ck-button.ck-on {
   background: #e9f3ff;
-  color: #0071e3;
+  color: var(--primary);
 }
 
 .ckeditor-wrapper .ck.ck-editor__main > .ck-editor__editable,
@@ -54,7 +54,7 @@
 }
 
 .ckeditor-wrapper .ck-content blockquote {
-  border-left: 3px solid #0071e3;
+  border-left: 3px solid var(--primary);
   color: #6e6e73;
 }
 

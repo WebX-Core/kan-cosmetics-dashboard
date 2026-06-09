@@ -77,10 +77,10 @@ export async function confirmAction(message: string): Promise<boolean> {
       confirm.onmouseleave = () => { confirm.style.background = "#dc2626"; };
     } else {
       confirm.style.border = "none";
-      confirm.style.background = "#0071e3";
+      confirm.style.background = "var(--primary)";
       confirm.style.color = "#fff";
-      confirm.onmouseenter = () => { confirm.style.background = "#0066cc"; };
-      confirm.onmouseleave = () => { confirm.style.background = "#0071e3"; };
+      confirm.onmouseenter = () => { confirm.style.background = "var(--primary-hover)"; };
+      confirm.onmouseleave = () => { confirm.style.background = "var(--primary)"; };
     }
 
     const cleanup = () => {

@@ -84,13 +84,13 @@ export const PageLayout: React.FC<Props> = ({
                 value={searchValue ?? ""}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-[34px] w-[220px] rounded-full border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[13px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                className="h-[34px] w-[220px] rounded-full border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[13px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
               />
               {showSpinner && (
                 <Loader2
                   size={12}
                   strokeWidth={2}
-                  className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[#0071e3]"
+                  className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[var(--primary)]"
                 />
               )}
             </div>
@@ -104,7 +104,7 @@ export const PageLayout: React.FC<Props> = ({
           {onNew && (
             <button
               onClick={onNew}
-              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc] active:scale-[0.982]"
+              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] active:scale-[0.982]"
             >
               <Plus size={13} strokeWidth={2.5} />
               {newButtonLabel}

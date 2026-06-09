@@ -141,7 +141,7 @@ export const ReportDetailsPage: React.FC = () => {
           <div className="mt-4 rounded-[14px] bg-[#f5f5f7] p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-(--muted)">Primary Value</p>
             <p className="mt-2 text-[30px] font-semibold text-(--text)">{detail.value}</p>
-            <p className="mt-2 text-sm font-medium text-[#0066cc]">{detail.trend}</p>
+            <p className="mt-2 text-sm font-medium text-[var(--primary-hover)]">{detail.trend}</p>
           </div>
         </div>
 

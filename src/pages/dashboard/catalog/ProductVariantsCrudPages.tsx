@@ -74,7 +74,7 @@ const variantSchema = z.object({
 });
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const toRows = (value: unknown): ReadonlyArray<Readonly<Record<string, unknown>>> => {
   if (Array.isArray(value)) return value as ReadonlyArray<Readonly<Record<string, unknown>>>;
@@ -604,7 +604,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
     z.string().uuid().safeParse(form.productId).success,
   );
   const selectedProductType = readString((productQuery.data as Record<string, unknown> | undefined)?.productType);
-  const canEnableTryOn = selectedProductType === "LIPSTICK";
+  const isLipstickProduct = selectedProductType === "LIPSTICK";
   const previewImage = React.useMemo(
     () => (imageFile ? URL.createObjectURL(imageFile) : ""),
     [imageFile],
@@ -635,9 +635,14 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
   }, [getQuery.data, isEdit, productFilter]);
 
   React.useEffect(() => {
-    if (canEnableTryOn || !form.isTryOn) return;
-    setForm((prev) => ({ ...prev, isTryOn: false }));
-  }, [canEnableTryOn, form.isTryOn]);
+    if (isLipstickProduct) return;
+    if (!form.colorHex && !form.isTryOn) return;
+    setForm((prev) => ({
+      ...prev,
+      colorHex: "",
+      isTryOn: false,
+    }));
+  }, [form.colorHex, form.isTryOn, isLipstickProduct]);
 
   React.useEffect(() => {
     return () => {
@@ -657,6 +662,8 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
         ...parsed,
         image: imageFile ?? undefined,
         removeUrls: removedUrls.length ? removedUrls : undefined,
+        colorHex: isLipstickProduct && parsed.colorHex ? parsed.colorHex : undefined,
+        isTryOn: isLipstickProduct ? parsed.isTryOn : undefined,
       };
 
       if (isEdit && id) {
@@ -763,15 +770,17 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                 className={inputClass}
               />
             </FormField>
-            <FormField label="Color HEX">
-              <input
-                type="text"
-                value={form.colorHex}
-                placeholder="#FF3366"
-                onChange={(e) => setForm((prev) => ({ ...prev, colorHex: e.target.value }))}
-                className={inputClass}
-              />
-            </FormField>
+            {isLipstickProduct ? (
+              <FormField label="Color HEX">
+                <input
+                  type="text"
+                  value={form.colorHex}
+                  placeholder="#FF3366"
+                  onChange={(e) => setForm((prev) => ({ ...prev, colorHex: e.target.value }))}
+                  className={inputClass}
+                />
+              </FormField>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-6">
@@ -791,15 +800,16 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               />
               Active
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.isTryOn}
-                disabled={!canEnableTryOn}
-                onChange={(e) => setForm((prev) => ({ ...prev, isTryOn: e.target.checked }))}
-              />
-              Try On
-            </label>
+            {isLipstickProduct ? (
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.isTryOn}
+                  onChange={(e) => setForm((prev) => ({ ...prev, isTryOn: e.target.checked }))}
+                />
+                Try On
+              </label>
+            ) : null}
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-[1fr_220px]">
@@ -857,11 +867,11 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                 </div>
               )}
               <p className="mt-2 text-xs text-[#6e6e73]">
-                {canEnableTryOn
-                  ? "Try-on is allowed for lipstick products."
+                {isLipstickProduct
+                  ? "Lipstick-specific fields are enabled."
                   : selectedProductType
-                    ? "Try-on is only allowed when the parent product is LIPSTICK."
-                    : "Enter a valid product UUID to validate lipstick-only fields."}
+                    ? "Lipstick-specific fields are hidden for this product type."
+                    : "Enter a valid product UUID to validate lipstick-specific fields."}
               </p>
             </div>
           </div>

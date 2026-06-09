@@ -118,7 +118,7 @@ export const ProductReviewDetailPage: React.FC = () => {
   if (query.isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#0071e3] border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
       </div>
     );
   }
@@ -144,7 +144,7 @@ export const ProductReviewDetailPage: React.FC = () => {
             type="button"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-medium text-white hover:bg-[#0066cc] disabled:opacity-40"
+            className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-40"
           >
             {mutation.isPending ? "Saving…" : "Save Changes"}
           </button>

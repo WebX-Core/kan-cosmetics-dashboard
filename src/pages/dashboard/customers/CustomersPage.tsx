@@ -83,7 +83,7 @@ export const CustomersPage: React.FC = () => {
           {row.profilePicture ? (
             <img src={row.profilePicture} alt={row.name} className="h-8 w-8 rounded-full object-cover" />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f0f7ff] text-[12px] font-semibold text-[#0071e3]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f0f7ff] text-[12px] font-semibold text-[var(--primary)]">
               {row.name.charAt(0).toUpperCase()}
             </div>
           )}

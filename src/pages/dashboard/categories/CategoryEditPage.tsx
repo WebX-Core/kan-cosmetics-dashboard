@@ -59,7 +59,7 @@ const DropArea: React.FC<{
         onClick={() => inputRef.current?.click()}
         className={
           compact
-            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-[16px] font-semibold leading-none text-white hover:bg-blue-600"
+            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[16px] font-semibold leading-none text-white hover:bg-brand-hover"
             : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
         }
       >

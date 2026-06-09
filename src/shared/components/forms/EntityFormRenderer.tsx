@@ -27,7 +27,7 @@ type Props = Readonly<{
   onRemoveExistingPreview?: (name: string, index: number) => void;
 }>;
 
-const inputClass = "h-7 w-full rounded-md border border-gray-200 bg-white px-2.5 text-[12px] text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+const inputClass = "h-7 w-full rounded-md border border-gray-200 bg-white px-2.5 text-[12px] text-gray-800 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 const labelClass = "block text-[12px] font-medium text-gray-700";
 const errorClass = "text-[11px] text-red-500";
 
@@ -102,7 +102,7 @@ const FileInputField: React.FC<Readonly<{
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-8 transition-colors hover:border-[#0071e3]/40 hover:bg-[#0071e3]/5"
+        className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-8 transition-colors hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/5"
       >
         <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white">
           <UploadCloud size={16} className="text-gray-400" />
@@ -235,7 +235,7 @@ export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, on
                 type="checkbox"
                 checked={Boolean(values[f.name])}
                 onChange={(e) => onFieldChange(f.name, e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-[#0071e3]"
+                className="h-3.5 w-3.5 rounded border-gray-300 text-[var(--primary)]"
               />
               <span className="text-[12px] font-medium text-gray-700">{f.label}</span>
             </label>
@@ -251,7 +251,7 @@ export const EntityFormRenderer: React.FC<Props> = ({ fields, values, errors, on
                 value={String(values[f.name] ?? "")}
                 placeholder={f.placeholder}
                 onChange={(e) => onFieldChange(f.name, e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-2 text-[12px] text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-2 text-[12px] text-gray-800 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
               />
               {errors?.[f.name] && <p className={errorClass}>{errors[f.name]}</p>}
             </div>

@@ -30,7 +30,7 @@ const SEO_ENTITY_TYPES = [
 ] as const;
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const schema = z.object({
   entityType: z.string().min(1, "Entity type is required"),
@@ -118,7 +118,7 @@ const SiteWideSeoCard: React.FC = () => {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f0f7ff]">
-            <Globe size={18} className="text-[#0071e3]" />
+            <Globe size={18} className="text-[var(--primary)]" />
           </div>
           <div>
             <div className="font-semibold text-[15px] text-[#1d1d1f]">Site Wide SEO</div>
@@ -138,7 +138,7 @@ const SiteWideSeoCard: React.FC = () => {
               navigate(`/dashboard/seo-metadata/create?entityType=PAGE&slug=global`);
             }
           }}
-          className="shrink-0 flex h-9 items-center gap-2 rounded-full bg-[#0071e3] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[#0077ed]"
+          className="shrink-0 flex h-9 items-center gap-2 rounded-full bg-[var(--primary)] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           <Pencil size={13} />
           {exists ? "Edit" : "Set Up"}
@@ -186,7 +186,7 @@ export const SeoListPage: React.FC = () => {
       key: "entityType",
       label: "Entity Type",
       render: (row: (typeof rows)[number]) => (
-        <span className="inline-flex items-center rounded-full bg-[#f0f7ff] px-2 py-0.5 text-[11px] font-medium text-[#0071e3]">
+        <span className="inline-flex items-center rounded-full bg-[#f0f7ff] px-2 py-0.5 text-[11px] font-medium text-[var(--primary)]">
           {row.entityType}
         </span>
       ),
@@ -511,7 +511,7 @@ export const SeoFormPage: React.FC = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Indexable">
               <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 hover:bg-[#f9f9f9]">
-                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isIndexable ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}>
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isIndexable ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}>
                   {form.isIndexable && <Globe size={10} strokeWidth={3} className="text-white" />}
                 </div>
                 <span className="text-sm text-[#1d1d1f]">Allow search engine indexing</span>
@@ -520,7 +520,7 @@ export const SeoFormPage: React.FC = () => {
             </FormField>
             <FormField label="Optimized">
               <label className="flex h-11 cursor-pointer items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 hover:bg-[#f9f9f9]">
-                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isOptimized ? "border-[#0071e3] bg-[#0071e3]" : "border-[#d2d2d7] bg-white"}`}>
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isOptimized ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}>
                   {form.isOptimized && <Globe size={10} strokeWidth={3} className="text-white" />}
                 </div>
                 <span className="text-sm text-[#1d1d1f]">Mark as fully optimized</span>

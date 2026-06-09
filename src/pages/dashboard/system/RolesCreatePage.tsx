@@ -18,7 +18,7 @@ import { queryClient } from "@/shared/api/queryClient";
 // ── styles ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 // ── validation ─────────────────────────────────────────────────────────────
 
@@ -191,7 +191,7 @@ const PermissionPicker: React.FC<{
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search permissions…"
-          className="h-9 w-full rounded-xl border border-[#d2d2d7] bg-[#f9f9f9] pl-9 pr-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+          className="h-9 w-full rounded-xl border border-[#d2d2d7] bg-[#f9f9f9] pl-9 pr-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
         />
       </div>
 
@@ -215,9 +215,9 @@ const PermissionPicker: React.FC<{
                   <div
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                       allChecked
-                        ? "border-[#0071e3] bg-[#0071e3]"
+                        ? "border-[var(--primary)] bg-[var(--primary)]"
                         : someChecked
-                          ? "border-[#0071e3] bg-white"
+                          ? "border-[var(--primary)] bg-white"
                           : "border-[#d2d2d7] bg-white"
                     }`}
                   >
@@ -225,7 +225,7 @@ const PermissionPicker: React.FC<{
                       <Check size={10} strokeWidth={3} className="text-white" />
                     )}
                     {someChecked && (
-                      <div className="h-1.5 w-1.5 rounded-sm bg-[#0071e3]" />
+                      <div className="h-1.5 w-1.5 rounded-sm bg-[var(--primary)]" />
                     )}
                   </div>
                   <span className="text-xs font-semibold uppercase tracking-wide text-[#6e6e73]">
@@ -244,14 +244,14 @@ const PermissionPicker: React.FC<{
                         key={perm.id}
                         className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition-colors ${
                           checked
-                            ? "border-[#0071e3]/30 bg-[#f0f7ff]"
+                            ? "border-[var(--primary)]/30 bg-[#f0f7ff]"
                             : "border-[#e8e8ed] bg-white hover:bg-[#f9f9f9]"
                         }`}
                       >
                         <div
                           className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
                             checked
-                              ? "border-[#0071e3] bg-[#0071e3]"
+                              ? "border-[var(--primary)] bg-[var(--primary)]"
                               : "border-[#d2d2d7] bg-white"
                           }`}
                         >
@@ -285,7 +285,7 @@ const PermissionPicker: React.FC<{
       )}
 
       {selectedIds.length > 0 && (
-        <p className="text-xs font-medium text-[#0071e3]">
+        <p className="text-xs font-medium text-[var(--primary)]">
           {selectedIds.length} permission{selectedIds.length > 1 ? "s" : ""}{" "}
           selected
         </p>
@@ -555,7 +555,7 @@ export const RolesCreatePage: React.FC = () => {
                   <div
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
                       form.isActive
-                        ? "border-[#0071e3] bg-[#0071e3]"
+                        ? "border-[var(--primary)] bg-[var(--primary)]"
                         : "border-[#d2d2d7] bg-white"
                     }`}
                   >
@@ -598,7 +598,7 @@ export const RolesCreatePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedPermissionIds(allPermissionIds)}
-                    className="text-[11px] font-medium text-[#0071e3] transition-colors hover:text-[#0077ed] disabled:opacity-40"
+                    className="text-[11px] font-medium text-[var(--primary)] transition-colors hover:text-[var(--primary-hover)] disabled:opacity-40"
                     disabled={allPermissionIds.length === 0}
                   >
                     Select all

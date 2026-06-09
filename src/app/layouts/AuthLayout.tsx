@@ -127,7 +127,7 @@ export const AuthLayout: React.FC = () => {
         <img
           src="/login/Artboard1.png"
           alt="KAN Cosmetics visual"
-          className="pointer-events-none  absolute left-100 top-1/2 z-0 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 object-contain"
+          className="pointer-events-none  absolute left-100 top-1/2 -z-10 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 object-contain"
         />
         {/* Subtle ambient orb */}
         <div
@@ -151,7 +151,7 @@ export const AuthLayout: React.FC = () => {
             ref={logoRef}
             src="/logo/kan-blue.png"
             alt="KAN Cosmetics"
-            className="relative z-10 h-9 w-auto self-start object-contain"
+            className="relative z-40 h-9 w-auto self-start object-contain"
             style={{ opacity: 0.9 }}
           />
           <h3 className="text-4xl font-medium text-zinc-950 py-4">
@@ -184,7 +184,7 @@ export const AuthLayout: React.FC = () => {
           />
         </div>
 
-        <div ref={formRef} className="w-full max-w-[360px]">
+        <div ref={formRef} className="w-full max-w-90">
           <Outlet />
         </div>
 

@@ -26,7 +26,7 @@ function toFieldErrors(err: z.ZodError<LoginValues>): FieldErrors {
 }
 
 const inputCls =
-  "h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 text-[14px] text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10";
+  "h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 text-[14px] text-gray-900 placeholder-gray-400 outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 
 export const LoginPage: React.FC = () => {
   const [values, setValues] = useState<LoginValues>({
@@ -165,7 +165,7 @@ export const LoginPage: React.FC = () => {
             </label>
             <Link
               to="/forgot-password"
-              className="text-[12px] text-blue-600 transition-colors hover:text-blue-700"
+              className="text-[12px] text-brand transition-colors hover:text-brand-hover"
             >
               Forgot password?
             </Link>
@@ -207,7 +207,7 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="h-11 w-full rounded-lg bg-[#161a4d] text-[14px] font-semibold text-white transition-colors hover:bg-[#161a4d]/50 disabled:opacity-50"
+            className="h-11 w-full rounded-lg bg-brand text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>

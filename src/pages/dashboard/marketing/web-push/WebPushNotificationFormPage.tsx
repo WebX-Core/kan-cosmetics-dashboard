@@ -15,11 +15,11 @@ import type { WebPushSubscriptionSearchOption } from "@/shared/hooks/useWebPushS
 import type { AdminUserSearchOption } from "@/shared/hooks/useAdminUserSearch";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 const textareaClass =
-  "w-full resize-none rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "w-full resize-none rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 const selectClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200, "Title must be 200 characters or less"),
@@ -535,11 +535,11 @@ export const WebPushNotificationFormPage: React.FC = () => {
                   onClick={() => handleTargetTypeChange(option.key as TargetType)}
                   className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-left transition ${
                     active
-                      ? "border-[#0071e3] bg-[#0071e3]/5 text-[#1d1d1f]"
+                      ? "border-[var(--primary)] bg-[var(--primary)]/5 text-[#1d1d1f]"
                       : "border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7]"
                   }`}
                 >
-                  <Icon size={16} className={active ? "text-[#0071e3]" : "text-[#86868b]"} />
+                  <Icon size={16} className={active ? "text-[var(--primary)]" : "text-[#86868b]"} />
                   <span className="text-[13px] font-medium">{option.label}</span>
                 </button>
               );

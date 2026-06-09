@@ -8,8 +8,8 @@ import { parseApiError } from "@/shared/utils/apiError";
 import { marketingApi } from "@/features/marketing";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
-const checkboxClass = "h-4 w-4 rounded border-gray-300 text-[#0071e3] focus:ring-[#0071e3]";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+const checkboxClass = "h-4 w-4 rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]";
 
 type CustomerOption = Readonly<{
   id: string;
@@ -134,7 +134,7 @@ export const EmailRecipientSelectAudiencePage: React.FC = () => {
                 onClick={() => setMode(item)}
                 className={`rounded-full border px-4 py-2 text-[13px] font-medium transition ${
                   mode === item
-                    ? "border-[#0071e3] bg-[#0071e3] text-white"
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
                     : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:bg-[#f5f5f7]"
                 }`}
               >

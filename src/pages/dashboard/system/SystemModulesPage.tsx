@@ -110,7 +110,7 @@ const renderPage = ({
 );
 
 const inputClass =
-  "h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 export const ProductVariantsPage: React.FC = () => {
   const q = catalogApi.productVariants.hooks.useList();
@@ -258,7 +258,7 @@ export const CouponUsagePage: React.FC = () => {
             type="button"
             onClick={() => setSubmittedId(lookupId)}
             disabled={!lookupId.trim()}
-            className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
+            className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             Look up
           </button>
@@ -536,7 +536,7 @@ export const RolesPage: React.FC = () => {
       actions={
         <Link
           to="/dashboard/rbac/roles/create"
-          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[#0071e3] px-[21px] text-[13px] font-semibold text-white! transition-colors hover:bg-[#0066cc] hover:text-white active:scale-[0.982]"
+          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-semibold text-white! transition-colors hover:bg-[var(--primary-hover)] hover:text-white active:scale-[0.982]"
         >
           <Plus size={14} /> New Role
         </Link>
@@ -743,7 +743,7 @@ export const UserRolesPage: React.FC = () => {
           onClick={() =>
             setSearchParams(userIdInput ? { userId: userIdInput } : {})
           }
-          className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc]"
+          className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
         >
           Look up
         </button>
@@ -921,7 +921,7 @@ export const RolePermissionsPage: React.FC = () => {
       key: "permModule",
       label: "Module",
       render: (r: (typeof rows)[number]) => (
-        <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+        <span className="inline-flex rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
           {r.permModule}
         </span>
       ),
@@ -982,7 +982,7 @@ export const RolePermissionsPage: React.FC = () => {
           onClick={() =>
             setSearchParams(roleIdInput ? { roleId: roleIdInput } : {})
           }
-          className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc]"
+          className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
         >
           Look up
         </button>
@@ -1160,7 +1160,7 @@ export const UserPermissionsPage: React.FC = () => {
       key: "permModule",
       label: "Module",
       render: (r: (typeof rows)[number]) => (
-        <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+        <span className="inline-flex rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
           {r.permModule}
         </span>
       ),
@@ -1221,7 +1221,7 @@ export const UserPermissionsPage: React.FC = () => {
           onClick={() =>
             setSearchParams(userIdInput ? { userId: userIdInput } : {})
           }
-          className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc]"
+          className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
         >
           Look up
         </button>
@@ -1882,7 +1882,7 @@ export const PurchaseHistoryPage: React.FC = () => {
             type="button"
             onClick={() => setSubmittedLookupId(lookupId)}
             disabled={!lookupId.trim()}
-            className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
+            className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             Look up
           </button>
@@ -2063,7 +2063,7 @@ export const SeoMetadataPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSubmitted(true)}
-            className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc]"
+            className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
           >
             Look up
           </button>
@@ -2096,7 +2096,7 @@ export const SeoMetadataPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSubmitted(true)}
-            className="flex h-10 shrink-0 items-center rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white hover:bg-[#0066cc]"
+            className="flex h-10 shrink-0 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
           >
             Look up
           </button>

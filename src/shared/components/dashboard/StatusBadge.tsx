@@ -25,9 +25,9 @@ const statusMap: Record<string, { dot: string; text: string; bg: string }> = {
   lowstock:       { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   "low stock":    { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   /* info */
-  confirmed:      { dot: "bg-[#0071e3]",   text: "text-[#0071e3]",   bg: "bg-[#0071e3]/10" },
-  open:           { dot: "bg-[#0071e3]",   text: "text-[#0071e3]",   bg: "bg-[#0071e3]/10" },
-  packed:         { dot: "bg-[#0071e3]",   text: "text-[#0071e3]",   bg: "bg-[#0071e3]/10" },
+  confirmed:      { dot: "bg-[var(--primary)]",   text: "text-[var(--primary)]",   bg: "bg-[var(--primary)]/10" },
+  open:           { dot: "bg-[var(--primary)]",   text: "text-[var(--primary)]",   bg: "bg-[var(--primary)]/10" },
+  packed:         { dot: "bg-[var(--primary)]",   text: "text-[var(--primary)]",   bg: "bg-[var(--primary)]/10" },
   /* negative */
   cancelled:      { dot: "bg-red-400",     text: "text-red-700",     bg: "bg-red-50"     },
   failed:         { dot: "bg-red-400",     text: "text-red-700",     bg: "bg-red-50"     },

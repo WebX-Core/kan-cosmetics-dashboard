@@ -103,7 +103,7 @@ export const WebPushSubscriptionDetailPage: React.FC = () => {
   if (query.isLoading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center">
-        <Loader2 size={18} className="animate-spin text-[#0071e3]" />
+        <Loader2 size={18} className="animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -138,7 +138,7 @@ export const WebPushSubscriptionDetailPage: React.FC = () => {
             type="button"
             onClick={() => void onSave()}
             disabled={!changed || updateMutation.isPending}
-            className="flex h-[34px] items-center gap-2 rounded-full bg-[#0071e3] px-[18px] text-[13px] font-medium text-white transition-colors hover:bg-[#0066cc] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[34px] items-center gap-2 rounded-full bg-[var(--primary)] px-[18px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {updateMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
             {changed ? "Save Changes" : "Saved"}
@@ -190,7 +190,7 @@ export const WebPushSubscriptionDetailPage: React.FC = () => {
                 value={failureReason}
                 onChange={(e) => setFailureReason(e.target.value)}
                 rows={4}
-                className="mt-2 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[13px] text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                className="mt-2 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 py-3 text-[13px] text-[#1d1d1f] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
                 placeholder="Optional admin note or failure message"
               />
             </div>

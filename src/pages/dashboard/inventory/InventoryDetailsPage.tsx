@@ -30,7 +30,7 @@ const toRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 export const InventoryDetailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -181,7 +181,7 @@ export const InventoryDetailsPage: React.FC = () => {
   if (!isCreate && getQuery.isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[#0071e3] border-t-transparent" />
+        <div className="h-[20px] w-[20px] animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
       </div>
     );
   }
@@ -272,7 +272,7 @@ export const InventoryDetailsPage: React.FC = () => {
               onClick={() => setForm((p) => ({ ...p, isInStock: !p.isInStock }))}
               onKeyDown={(e) => e.key === " " && setForm((p) => ({ ...p, isInStock: !p.isInStock }))}
               className={`relative h-[22px] w-[40px] shrink-0 rounded-full transition-colors ${
-                form.isInStock ? "bg-[#0071e3]" : "bg-[#d2d2d7]"
+                form.isInStock ? "bg-[var(--primary)]" : "bg-[#d2d2d7]"
               }`}
             >
               <span

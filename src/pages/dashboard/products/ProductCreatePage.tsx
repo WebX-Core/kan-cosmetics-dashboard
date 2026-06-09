@@ -35,16 +35,6 @@ const schema = z.object({
   productType: z.enum(["LIPSTICK", "OTHERS"]).optional(),
   sortOrder: z.coerce.number().optional(),
   description: z.string().trim().optional(),
-  stockQuantity: z.coerce.number().min(0, "Stock must be >= 0").optional(),
-  reservedQuantity: z.coerce
-    .number()
-    .min(0, "Reserved must be >= 0")
-    .optional(),
-  lowStockThreshold: z.coerce
-    .number()
-    .min(0, "Threshold must be >= 0")
-    .optional(),
-  inventoryInStock: z.boolean().optional(),
 });
 
 type Form = Readonly<{
@@ -57,10 +47,6 @@ type Form = Readonly<{
   productType: "" | "LIPSTICK" | "OTHERS";
   sortOrder: string;
   description: string;
-  stockQuantity: string;
-  reservedQuantity: string;
-  lowStockThreshold: string;
-  inventoryInStock: boolean;
 }>;
 
 const initial: Form = {
@@ -73,10 +59,6 @@ const initial: Form = {
   productType: "",
   sortOrder: "0",
   description: "",
-  stockQuantity: "0",
-  reservedQuantity: "0",
-  lowStockThreshold: "0",
-  inventoryInStock: true,
 };
 
 const read = (value: unknown): string =>
@@ -227,7 +209,7 @@ const StringListInput: React.FC<{
               onChange={(e) => update(index, e.target.value)}
               onKeyDown={(e) => onKeyDown(e, index)}
               placeholder={placeholder}
-              className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
             <button
               type="button"
@@ -241,7 +223,7 @@ const StringListInput: React.FC<{
         <button
           type="button"
           onClick={add}
-          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[#0071e3] hover:text-[#0071e3]"
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
         >
           <Plus size={12} />
           Add item
@@ -280,10 +262,10 @@ const readMedia = (value: unknown): ExistingMedia | null => {
 };
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const selectClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const ImageCard: React.FC<{
   src: string;
@@ -385,7 +367,7 @@ const DropArea: React.FC<{
         onClick={() => inputRef.current?.click()}
         className={
           compact
-            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-[16px] font-semibold leading-none text-white hover:bg-blue-600"
+            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[16px] font-semibold leading-none text-white hover:bg-brand-hover"
             : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
         }
       >
@@ -417,11 +399,11 @@ export const ProductCreatePage: React.FC = () => {
   const prefillSubcategoryId = searchParams.get("subcategoryId") ?? "";
   const prefillCategoryId = searchParams.get("categoryId") ?? "";
   const explicitReturnPath = searchParams.get("returnPath") ?? "";
+  const nextStep = searchParams.get("next") ?? "";
 
   const getQuery = catalogApi.products.hooks.useGet(id, isEdit);
   const createMutation = catalogApi.products.hooks.useCreate();
   const updateMutation = catalogApi.products.hooks.useUpdate();
-  const createInventoryMutation = catalogApi.inventory.hooks.useCreate();
 
   const [form, setForm] = React.useState<Form>(initial);
   const [manualSlug, setManualSlug] = React.useState(false);
@@ -545,10 +527,6 @@ export const ProductCreatePage: React.FC = () => {
       productType: (read(row.productType) as Form["productType"]) || "",
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
       description: descriptionText,
-      stockQuantity: "0",
-      reservedQuantity: "0",
-      lowStockThreshold: "0",
-      inventoryInStock: true,
     });
 
     setFreeFrom(parseFreeFrom(row.keyFeatures));
@@ -574,8 +552,7 @@ export const ProductCreatePage: React.FC = () => {
 
   const saving =
     createMutation.isPending ||
-    updateMutation.isPending ||
-    createInventoryMutation.isPending;
+    updateMutation.isPending;
 
   const backPath = prefillCategoryId
     ? `/dashboard/categories/${prefillCategoryId}/subcategories/${prefillSubcategoryId}`
@@ -706,26 +683,15 @@ export const ProductCreatePage: React.FC = () => {
       }
 
       const createdResult = await createMutation.mutateAsync(payload);
-      let createdId = read((createdResult as Record<string, unknown>)?.id);
+      const createdId = read((createdResult as Record<string, unknown>)?.id);
+      const shouldCreateInventory = nextStep === "inventory" && createdId;
 
-      if (!createdId) {
-        const fetched = await catalogApi.products.service.list({
-          page: 1,
-          limit: 1,
-          search: slug,
-        });
-        const first = fetched.data[0] as Record<string, unknown> | undefined;
-        createdId = read(first?.id);
-      }
-
-      if (createdId) {
-        await createInventoryMutation.mutateAsync({
-          productId: createdId,
-          stockQuantity: Number(parsed.stockQuantity ?? 0),
-          reservedQuantity: Number(parsed.reservedQuantity ?? 0),
-          lowStockThreshold: Number(parsed.lowStockThreshold ?? 0),
-          isInStock: Boolean(parsed.inventoryInStock ?? true),
-        });
+      if (shouldCreateInventory) {
+        navigate(
+          `/dashboard/inventory/create?productId=${encodeURIComponent(createdId)}&productName=${encodeURIComponent(parsed.title)}&returnPath=${encodeURIComponent(backPath)}`,
+          { replace: true },
+        );
+        return;
       }
 
       navigate(
@@ -1017,7 +983,7 @@ export const ProductCreatePage: React.FC = () => {
             }
             placeholder="Describe this product…"
             rows={4}
-            className="w-full rounded-lg border border-[#d2d2d7] bg-white px-3 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#86868b] focus:border-[#0071e3] focus:outline-none resize-none"
+            className="w-full rounded-lg border border-[#d2d2d7] bg-white px-3 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#86868b] focus:border-[var(--primary)] focus:outline-none resize-none"
           />
         </FormSection>
 
@@ -1067,7 +1033,7 @@ export const ProductCreatePage: React.FC = () => {
                   setDescJson((p) => ({ ...p, howToUseProTip: e.target.value }))
                 }
                 placeholder="e.g. Use twice a week for visible smoothness"
-                className="h-[38px] w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                className="h-[38px] w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
               />
             </div>
           </div>
@@ -1094,7 +1060,7 @@ export const ProductCreatePage: React.FC = () => {
                     )
                   }
                   placeholder="e.g. Paraben Free"
-                  className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+                  className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
                 />
                 <button
                   type="button"
@@ -1111,92 +1077,12 @@ export const ProductCreatePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setFreeFrom((prev) => [...prev, { title: "" }])}
-              className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[#0071e3] hover:text-[#0071e3]"
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
             >
               <Plus size={12} /> Add item
             </button>
           </div>
         </FormSection>
-
-        {!isEdit ? (
-          <FormSection
-            title="Inventory Setup"
-            description="Inventory will be created after product creation succeeds."
-          >
-            <div className="grid gap-[13px] md:grid-cols-3">
-              <FormField label="Stock Quantity">
-                <input
-                  type="number"
-                  min={0}
-                  value={form.stockQuantity}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, stockQuantity: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Reserved Quantity">
-                <input
-                  type="number"
-                  min={0}
-                  value={form.reservedQuantity}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, reservedQuantity: e.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </FormField>
-              <FormField label="Low Stock Threshold">
-                <input
-                  type="number"
-                  min={0}
-                  value={form.lowStockThreshold}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      lowStockThreshold: e.target.value,
-                    }))
-                  }
-                  className={inputClass}
-                />
-              </FormField>
-            </div>
-            <label className="mt-[8px] flex cursor-pointer items-center gap-[10px]">
-              <div
-                role="checkbox"
-                aria-checked={form.inventoryInStock}
-                tabIndex={0}
-                onClick={() =>
-                  setForm((p) => ({
-                    ...p,
-                    inventoryInStock: !p.inventoryInStock,
-                  }))
-                }
-                onKeyDown={(e) =>
-                  e.key === " " &&
-                  setForm((p) => ({
-                    ...p,
-                    inventoryInStock: !p.inventoryInStock,
-                  }))
-                }
-                className={`relative h-[22px] w-[40px] shrink-0 rounded-full transition-colors ${
-                  form.inventoryInStock ? "bg-[#0071e3]" : "bg-[#d2d2d7]"
-                }`}
-              >
-                <span
-                  className={`absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white shadow transition-transform ${
-                    form.inventoryInStock
-                      ? "translate-x-[19px]"
-                      : "translate-x-[3px]"
-                  }`}
-                />
-              </div>
-              <span className="text-[14px] font-medium text-[#1d1d1f]">
-                {form.inventoryInStock ? "In Stock" : "Out of Stock"}
-              </span>
-            </label>
-          </FormSection>
-        ) : null}
 
         <FormActions
           submitLabel={
@@ -1204,7 +1090,7 @@ export const ProductCreatePage: React.FC = () => {
               ? "Saving…"
               : isEdit
                 ? "Update Product"
-                : "Create Product + Inventory"
+                : "Create Product"
           }
           submitIcon={
             saving ? <Loader2 size={14} className="animate-spin" /> : undefined

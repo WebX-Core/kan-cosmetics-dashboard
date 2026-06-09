@@ -88,10 +88,10 @@ const CustomerMultiPicker: React.FC<CustomerMultiPickerProps> = ({
   const filtered = customers.filter((c) => !selected.some((s) => s.id === c.id));
 
   const chipBg = chipColor === "red" ? "bg-red-50" : "bg-[#e8f0fe]";
-  const chipText = chipColor === "red" ? "text-red-600" : "text-[#0071e3]";
-  const chipHover = chipColor === "red" ? "hover:bg-red-100/60" : "hover:bg-[#0071e3]/20";
-  const ringColor = chipColor === "red" ? "focus-within:border-red-400 focus-within:ring-red-400/10" : "focus-within:border-[#0071e3] focus-within:ring-[#0071e3]/10";
-  const avatarBg = chipColor === "red" ? "bg-red-50 text-red-500" : "bg-[#e8f0fe] text-[#0071e3]";
+  const chipText = chipColor === "red" ? "text-red-600" : "text-[var(--primary)]";
+  const chipHover = chipColor === "red" ? "hover:bg-red-100/60" : "hover:bg-[var(--primary)]/20";
+  const ringColor = chipColor === "red" ? "focus-within:border-red-400 focus-within:ring-red-400/10" : "focus-within:border-[var(--primary)] focus-within:ring-[var(--primary)]/10";
+  const avatarBg = chipColor === "red" ? "bg-red-50 text-red-500" : "bg-[#e8f0fe] text-[var(--primary)]";
 
   return (
     <div ref={ref} className="flex flex-col gap-3">
@@ -135,7 +135,7 @@ const CustomerMultiPicker: React.FC<CustomerMultiPickerProps> = ({
             className="flex-1 bg-transparent text-sm text-[#1d1d1f] outline-none placeholder:text-[#86868b]"
           />
           {isLoading && (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3] shrink-0" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d2d2d7] border-t-[var(--primary)] shrink-0" />
           )}
         </div>
         {open && (
@@ -255,7 +255,7 @@ export const CouponDetailPage: React.FC = () => {
       <div className="flex justify-end">
         <button
           onClick={() => navigate(`/dashboard/coupons/${id}/edit`)}
-          className="flex items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2 text-sm font-medium text-white hover:bg-[#0066cc]"
+          className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
         >
           <Edit size={14} />
           Edit Coupon
@@ -332,7 +332,7 @@ export const CouponDetailPage: React.FC = () => {
         <button
           onClick={() => void handleIssue()}
           disabled={issuing || issueCustomers.length === 0}
-          className="flex items-center gap-2 rounded-full bg-[#0071e3] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
+          className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
         >
           {issuing ? <Loader2 size={13} className="animate-spin" /> : <Users size={13} />}
           Issue Coupon{issueCustomers.length > 0 ? ` (${issueCustomers.length})` : ""}

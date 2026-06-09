@@ -202,7 +202,7 @@ export const PaymentsPage: React.FC = () => {
 
       {/* Inline edit panel */}
       {editRow && (
-        <div className="rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-5">
+        <div className="rounded-xl border border-[var(--primary)]/20 bg-[var(--primary)]/5 p-5">
           <p className="mb-3 text-sm font-medium text-gray-700">
             Update payment <span className="font-mono text-gray-900">{editRow.transactionId}</span>
           </p>
@@ -210,7 +210,7 @@ export const PaymentsPage: React.FC = () => {
             <select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
-              className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[#0071e3]"
+              className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
             >
               {paymentStatusOptions.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -219,7 +219,7 @@ export const PaymentsPage: React.FC = () => {
             <button
               onClick={() => void handleUpdate()}
               disabled={updatePayment.isPending}
-              className="flex h-10 items-center gap-2 rounded-full bg-[#0071e3] px-5 text-sm font-medium text-white hover:bg-[#0066cc] disabled:opacity-50"
+              className="flex h-10 items-center gap-2 rounded-full bg-[var(--primary)] px-5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
             >
               {updatePayment.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
               Save

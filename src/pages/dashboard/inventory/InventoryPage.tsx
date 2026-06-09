@@ -408,13 +408,13 @@ export const InventoryPage: React.FC = () => {
                 setState((p) => ({ ...p, page: 1, search: e.target.value }))
               }
               placeholder="Search product by name or SKU…"
-              className="h-[34px] w-[260px] rounded-full border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[13px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10"
+              className="h-[34px] w-[260px] rounded-full border border-[#d2d2d7] bg-white pl-[34px] pr-[34px] text-[13px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
             {showDebounceSpinner ? (
               <Loader2
                 size={12}
                 strokeWidth={2}
-                className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[#0071e3]"
+                className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 animate-spin text-[var(--primary)]"
               />
             ) : null}
           </div>
@@ -473,7 +473,7 @@ export const InventoryPage: React.FC = () => {
                     aria-pressed={isActive}
                     className={`flex shrink-0 items-center rounded-full border px-[13px] py-[4px] text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "border-[#0071e3] bg-[#0071e3] text-white shadow-sm"
+                        ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm"
                         : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:border-[#b8bcc2] hover:bg-[#f5f5f7]"
                     }`}
                   >
@@ -743,7 +743,7 @@ export const InventoryPage: React.FC = () => {
                                 `/dashboard/inventory/create?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`,
                               )
                             }
-                            className="flex h-[28px] items-center gap-[5px] rounded-full bg-[#0071e3] px-[13px] text-[12px] font-medium text-white transition-colors hover:bg-[#0066cc]"
+                            className="flex h-[28px] items-center gap-[5px] rounded-full bg-[var(--primary)] px-[13px] text-[12px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
                           >
                             Set Inventory
                           </button>
@@ -793,7 +793,7 @@ export const InventoryPage: React.FC = () => {
                   onClick={() => setState((p) => ({ ...p, page }))}
                   className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[11px] font-medium transition-colors ${
                     state.page === page
-                      ? "border-[#0071e3] bg-[#0071e3] text-white"
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
                       : "border-[#d2d2d7] text-[#6e6e73] hover:bg-[#f5f5f7]"
                   }`}
                 >
