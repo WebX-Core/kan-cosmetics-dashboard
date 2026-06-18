@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { useOrders } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
-import { useAuditLogList, useUserActivityList } from "@/features/telemetry";
+import { useAuditLogList, useUserActivityList, useUserMetadataList } from "@/features/telemetry";
 
 type ReportCard = Readonly<{
   id: string;
@@ -37,6 +37,7 @@ export const ReportsPage: React.FC = () => {
   const inventoryQuery = catalogApi.inventory.hooks.useList();
   const auditQuery = useAuditLogList();
   const activityQuery = useUserActivityList();
+  const visitorQuery = useUserMetadataList();
 
   const reports = React.useMemo<ReadonlyArray<ReportCard>>(() => {
     const orders = readArray(ordersQuery.data);
@@ -44,15 +45,16 @@ export const ReportsPage: React.FC = () => {
     const products = readArray(productsQuery.data);
     const audits = readArray(auditQuery.data);
     const activities = readArray(activityQuery.data);
+    const visitors = readArray(visitorQuery.data);
     const revenue = orders.reduce((sum, row) => sum + toAmount(row.total ?? row.totalAmount), 0);
 
     return [
       { id: "sales", category: "Sales", title: "Sales Overview", description: "Order volume and gross revenue from live orders.", value: `Rs ${revenue.toLocaleString()}`, trend: `${orders.length} orders`, status: "Ready" },
       { id: "inventory", category: "Inventory", title: "Inventory Health", description: "Current inventory records and stock posture.", value: `${inventory.length}`, trend: "Live records", status: "Ready" },
       { id: "catalog", category: "Catalog", title: "Catalog Coverage", description: "Total product entries currently available.", value: `${products.length}`, trend: "Product count", status: "Ready" },
-      { id: "telemetry", category: "Telemetry", title: "Audit & Activity", description: "Admin audit and user activity stream volume.", value: `${audits.length + activities.length}`, trend: `${audits.length} audit + ${activities.length} activity`, status: "Ready" },
+      { id: "telemetry", category: "Telemetry", title: "Audit, activity, and visitors", description: "Admin audit trail, user activity stream, and visitor metadata volume.", value: `${audits.length + activities.length + visitors.length}`, trend: `${audits.length} audit + ${activities.length} activity + ${visitors.length} visitor records`, status: "Ready" },
     ];
-  }, [ordersQuery.data, inventoryQuery.data, productsQuery.data, auditQuery.data, activityQuery.data]);
+  }, [ordersQuery.data, inventoryQuery.data, productsQuery.data, auditQuery.data, activityQuery.data, visitorQuery.data]);
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -60,7 +62,7 @@ export const ReportsPage: React.FC = () => {
     return reports.filter((r) => [r.title, r.category, r.description].some((v) => v.toLowerCase().includes(q)));
   }, [reports, search]);
 
-  const loading = ordersQuery.isLoading || productsQuery.isLoading || inventoryQuery.isLoading || auditQuery.isLoading || activityQuery.isLoading;
+  const loading = ordersQuery.isLoading || productsQuery.isLoading || inventoryQuery.isLoading || auditQuery.isLoading || activityQuery.isLoading || visitorQuery.isLoading;
 
   return (
     <PageLayout title="Reports" subtitle="Live operational snapshots from integrated APIs.">

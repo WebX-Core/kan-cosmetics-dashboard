@@ -12,7 +12,6 @@ const schema = z.object({
   stockQuantity: z.coerce.number().min(0, "Must be >= 0"),
   reservedQuantity: z.coerce.number().min(0, "Must be >= 0"),
   lowStockThreshold: z.coerce.number().min(0, "Must be >= 0"),
-  isInStock: z.boolean(),
 });
 
 type Form = Readonly<{
@@ -21,7 +20,6 @@ type Form = Readonly<{
   stockQuantity: string;
   reservedQuantity: string;
   lowStockThreshold: string;
-  isInStock: boolean;
 }>;
 
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
@@ -51,7 +49,6 @@ export const InventoryDetailsPage: React.FC = () => {
     stockQuantity: "0",
     reservedQuantity: "0",
     lowStockThreshold: "0",
-    isInStock: true,
   });
 
   const getQuery = catalogApi.inventory.hooks.useGet(id, Boolean(id));
@@ -97,7 +94,6 @@ export const InventoryDetailsPage: React.FC = () => {
       stockQuantity: num(row.stockQuantity ?? row.stock ?? row.quantity),
       reservedQuantity: num(row.reservedQuantity ?? row.reserved),
       lowStockThreshold: num(row.lowStockThreshold),
-      isInStock: typeof row.isInStock === "boolean" ? row.isInStock : true,
     });
   }, [getQuery.data, isCreate]);
 
@@ -162,7 +158,6 @@ export const InventoryDetailsPage: React.FC = () => {
       stockQuantity: parsed.stockQuantity,
       reservedQuantity: parsed.reservedQuantity,
       lowStockThreshold: parsed.lowStockThreshold,
-      isInStock: parsed.isInStock,
     };
 
     try {
@@ -263,28 +258,6 @@ export const InventoryDetailsPage: React.FC = () => {
             </FormField>
           </div>
 
-          {/* In Stock toggle */}
-          <label className="mt-[8px] flex cursor-pointer items-center gap-[10px]">
-            <div
-              role="checkbox"
-              aria-checked={form.isInStock}
-              tabIndex={0}
-              onClick={() => setForm((p) => ({ ...p, isInStock: !p.isInStock }))}
-              onKeyDown={(e) => e.key === " " && setForm((p) => ({ ...p, isInStock: !p.isInStock }))}
-              className={`relative h-[22px] w-[40px] shrink-0 rounded-full transition-colors ${
-                form.isInStock ? "bg-[var(--primary)]" : "bg-[#d2d2d7]"
-              }`}
-            >
-              <span
-                className={`absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white shadow transition-transform ${
-                  form.isInStock ? "translate-x-[19px]" : "translate-x-[3px]"
-                }`}
-              />
-            </div>
-            <span className="text-[14px] font-medium text-[#1d1d1f]">
-              {form.isInStock ? "In Stock" : "Out of Stock"}
-            </span>
-          </label>
         </FormSection>
 
         <FormActions

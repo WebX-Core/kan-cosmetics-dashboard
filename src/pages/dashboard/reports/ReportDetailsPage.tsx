@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/button";
 import { useOrders, commerceApi } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
-import { useAuditLogList, useUserActivityList } from "@/features/telemetry";
+import { useAuditLogList, useUserActivityList, useUserMetadataList } from "@/features/telemetry";
 import { getListRows, getOrderRows } from "@/shared/utils/orderMapping";
 
 type Detail = Readonly<{
@@ -33,6 +33,7 @@ export const ReportDetailsPage: React.FC = () => {
   const inventoryQuery = catalogApi.inventory.hooks.useList();
   const auditQuery = useAuditLogList();
   const activityQuery = useUserActivityList();
+  const visitorQuery = useUserMetadataList();
   const salesAnalyticsQuery = useQuery({
     queryKey: ["commerce", "orders", "sales-analytics"],
     queryFn: () => commerceApi.orders.salesAnalytics(),
@@ -46,6 +47,7 @@ export const ReportDetailsPage: React.FC = () => {
     const inventory = getListRows(inventoryQuery.data);
     const audits = getListRows(auditQuery.data);
     const activities = getListRows(activityQuery.data);
+    const visitors = getListRows(visitorQuery.data);
     const revenue = orders.reduce((sum, row) => sum + amount(row.total ?? row.totalAmount), 0);
 
     const map: Readonly<Record<string, Detail>> = {
@@ -97,19 +99,20 @@ export const ReportDetailsPage: React.FC = () => {
       telemetry: {
         id: "telemetry",
         category: "Telemetry",
-        title: "Audit & Activity",
-        description: "Cross-cutting action and activity traces.",
-        value: String(audits.length + activities.length),
-        trend: `${audits.length} audit + ${activities.length} activity`,
+        title: "Audit, activity, and visitors",
+        description: "Cross-cutting action traces, visitor metadata, and activity records.",
+        value: String(audits.length + activities.length + visitors.length),
+        trend: `${audits.length} audit + ${activities.length} activity + ${visitors.length} visitor records`,
         metrics: [
           { label: "Audit Logs", value: String(audits.length), note: "From /audit-log/get-all" },
           { label: "User Activity", value: String(activities.length), note: "From /user-activity/get-all" },
+          { label: "Visitor Metadata", value: String(visitors.length), note: "From /user-metadata/get-all" },
         ],
       },
     };
 
     return id ? (map[id] ?? null) : null;
-  }, [id, ordersQuery.data, productsQuery.data, inventoryQuery.data, auditQuery.data, activityQuery.data, salesAnalyticsQuery.data]);
+  }, [id, ordersQuery.data, productsQuery.data, inventoryQuery.data, auditQuery.data, activityQuery.data, visitorQuery.data, salesAnalyticsQuery.data]);
 
   if (!detail) {
     return (

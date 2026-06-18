@@ -12,11 +12,21 @@ import {
   RotateCcw,
   BarChart2,
   ShoppingCart,
+  MessageSquare,
 } from "lucide-react";
 import { useOrders, usePaymentsAggregate } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
 import { useInquiryList, useSiteInquiryList } from "@/features/engagement";
 import { useAdminUsersList } from "@/features/adminUsers";
+import { useUserMetadataList } from "@/features/telemetry";
+import {
+  groupRowsByField,
+  readTimestamp,
+  toRecord,
+  toTelemetryRows,
+  toText,
+  uniqueTextCount,
+} from "@/features/telemetry/telemetry.utils";
 import { getListRows, getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
 
 // ──────────────────────────────────────────────
@@ -228,8 +238,6 @@ const CoinIcon = () => (
   />
 );
 
-const toText = (value: unknown, fallback = ""): string =>
-  typeof value === "string" ? value : fallback;
 const toNum = (value: unknown): number => {
   if (typeof value === "number") return value;
   if (typeof value === "string") return Number(value) || 0;
@@ -245,8 +253,6 @@ const formatDate = (value: unknown): string => {
     year: "numeric",
   });
 };
-const toRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 const readFirstText = (
   row: Record<string, unknown>,
   keys: string[],
@@ -303,17 +309,16 @@ const orderStatusStyle: Record<
   RETURNED: "bg-red-100 text-red-800",
 };
 
-const inquiryStatusStyle: Record<"New" | "In Progress" | "Resolved", string> = {
+const inquiryStatusStyle: Record<"New" | "Resolved", string> = {
   New: "bg-amber-100 text-amber-800",
-  "In Progress": "bg-sky-100 text-sky-800",
   Resolved: "bg-emerald-100 text-emerald-800",
 };
 
 const inquiryTypeStyle: Record<"Product" | "Site", string> = {
-  Product:
-    "bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[var(--badge-primary-text)]",
+  Product: "bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[var(--badge-primary-text)]",
   Site: "bg-slate-100 text-slate-700",
 };
+
 const formatOrderStatusLabel = (
   status: string,
 ): keyof typeof orderStatusStyle => {
@@ -325,6 +330,17 @@ type PaymentRow = Readonly<{
   amount: number;
   status: "Completed" | "Pending" | "Failed" | "Refunded";
   date: string;
+}>;
+type InquiryRow = Readonly<{
+  id: string;
+  customerName: string;
+  email: string;
+  subject: string;
+  message: string;
+  type: "Product" | "Site";
+  status: "New" | "Resolved";
+  date: string;
+  createdAt: number;
 }>;
 const normalizePaymentStatus = (value: unknown): PaymentRow["status"] => {
   const status = toText(value, "pending").toLowerCase();
@@ -349,6 +365,42 @@ const toPaymentRows = (payload: unknown): ReadonlyArray<PaymentRow> => {
     };
   });
 };
+
+const textOrFallback = (value: unknown, fallback: string): string =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+
+const isHandledValue = (row: Record<string, unknown>): boolean => {
+  if (row.isHandled === true) return true;
+  const status = textOrFallback(row.status, "New").toLowerCase();
+  return status.includes("resolve") || status.includes("handled") || status.includes("close");
+};
+
+const normalizeInquiryRow = (
+  entry: unknown,
+  type: InquiryRow["type"],
+): InquiryRow => {
+  const row = toRecord(entry);
+  return {
+    id: textOrFallback(row.id ?? row._id, crypto.randomUUID()),
+    customerName: textOrFallback(row.customerName ?? row.fullname ?? row.fullName ?? row.name, "Unknown"),
+    email: textOrFallback(row.email, "—"),
+    subject:
+      type === "Product"
+        ? textOrFallback(row.subject ?? row.targetName ?? row.targetType ?? row.inquiryType, "Inquiry")
+        : textOrFallback(row.subject ?? row.inquiryType, "Site Inquiry"),
+    message:
+      type === "Product"
+        ? textOrFallback(row.message, "—")
+        : textOrFallback(row.message ?? row.details, "—"),
+    type,
+    status: isHandledValue(row) ? "Resolved" : "New",
+    date: toText(row.createdAt, ""),
+    createdAt: new Date(toText(row.createdAt, "")).getTime(),
+  };
+};
+
+const toInquiryRows = (payload: unknown, type: InquiryRow["type"]): ReadonlyArray<InquiryRow> =>
+  getListRows(payload).map((entry) => normalizeInquiryRow(entry, type));
 const useCountUp = (value: number, durationMs = 900): number => {
   const [display, setDisplay] = React.useState(0);
 
@@ -408,6 +460,7 @@ export const DashboardOverviewPage: React.FC = () => {
   const usersQuery = useAdminUsersList({ page: 1, limit: 500 });
   const inquiryQuery = useInquiryList({ page: 1, limit: 100 });
   const siteInquiryQuery = useSiteInquiryList({ page: 1, limit: 100 });
+  const userMetadataQuery = useUserMetadataList({ page: 1, limit: 200 });
 
   const orders = React.useMemo(() => {
     return getOrderRows(ordersQuery.data);
@@ -428,41 +481,11 @@ export const DashboardOverviewPage: React.FC = () => {
       getListRows(usersQuery.data),
     [usersQuery.data],
   );
-
   const inquiries = React.useMemo(() => {
-    const productRows = getListRows(inquiryQuery.data);
-    const siteRows = getListRows(siteInquiryQuery.data);
-
-    const mapStatus = (value: string): "New" | "In Progress" | "Resolved" =>
-      value.toLowerCase().includes("progress")
-        ? "In Progress"
-        : value.toLowerCase().includes("resolved") ||
-            value.toLowerCase().includes("closed")
-          ? "Resolved"
-          : "New";
-
-    return [
-      ...productRows.map((row) => ({
-        id: toText(row.id, crypto.randomUUID()),
-        name: toText(row.fullname ?? row.name, "Customer"),
-        email: toText(row.email, "—"),
-        subject: toText(row.message ?? row.subject, "Inquiry"),
-        type: "Product" as const,
-        status: mapStatus(toText(row.status, "New")),
-        date: formatDate(row.createdAt),
-        createdAt: new Date(toText(row.createdAt)).getTime(),
-      })),
-      ...siteRows.map((row) => ({
-        id: toText(row.id, crypto.randomUUID()),
-        name: toText(row.fullname ?? row.name, "Customer"),
-        email: toText(row.email, "—"),
-        subject: toText(row.message ?? row.subject, "Inquiry"),
-        type: "Site" as const,
-        status: mapStatus(toText(row.status, "New")),
-        date: formatDate(row.createdAt),
-        createdAt: new Date(toText(row.createdAt)).getTime(),
-      })),
-    ]
+    const productRows = toInquiryRows(inquiryQuery.data, "Product");
+    const siteRows = toInquiryRows(siteInquiryQuery.data, "Site");
+    return [...productRows, ...siteRows]
+      .filter((row) => row.createdAt > 0 || row.id.length > 0)
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 6);
   }, [inquiryQuery.data, siteInquiryQuery.data]);
@@ -738,7 +761,15 @@ export const DashboardOverviewPage: React.FC = () => {
     }));
   }, [categories, products, orders, categoryRange]);
 
-  const visitorRows = React.useMemo(() => {
+  const visitorRecords = React.useMemo(
+    () => toTelemetryRows(userMetadataQuery.data),
+    [userMetadataQuery.data],
+  );
+
+  const visibleVisitorRecords = React.useMemo(() => {
+    const hasTimeData = visitorRecords.some((row) => readTimestamp(row) !== null);
+    if (!hasTimeData) return visitorRecords;
+
     const now = currentTime;
     const cutoff =
       visitorsRange === "today"
@@ -748,28 +779,25 @@ export const DashboardOverviewPage: React.FC = () => {
             new Date().getDate(),
           ).getTime()
         : now - (visitorsRange === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
-    const combined = [...getListRows(inquiryQuery.data), ...getListRows(siteInquiryQuery.data)];
-    const buckets = new Map<string, number>();
-    combined.forEach((row) => {
-      const created = new Date(toText(row.createdAt)).getTime();
-      if (Number.isNaN(created) || created < cutoff) return;
-      const countryRaw = toText(
-        row.country ?? row.address ?? row.location,
-        "Others",
-      );
-      const country = countryRaw.split(",").pop()?.trim() || "Others";
-      buckets.set(country, (buckets.get(country) ?? 0) + 1);
+
+    return visitorRecords.filter((row) => {
+      const timestamp = readTimestamp(row);
+      if (timestamp === null) return true;
+      return timestamp >= cutoff;
     });
-    const total = [...buckets.values()].reduce((sum, value) => sum + value, 0);
-    return [...buckets.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([country, count]) => ({
-        country,
-        count,
-        pct: total > 0 ? Math.round((count / total) * 100) : 0,
-      }));
-  }, [inquiryQuery.data, siteInquiryQuery.data, visitorsRange, currentTime]);
+  }, [currentTime, visitorRecords, visitorsRange]);
+
+  const visitorRows = React.useMemo(
+    () => groupRowsByField(visibleVisitorRecords, ["country", "region", "city"], "Unknown"),
+    [visibleVisitorRecords],
+  );
+
+  const visitorMetrics = React.useMemo(() => {
+    const sessions = uniqueTextCount(visibleVisitorRecords, ["sessionId"]);
+    const usersCount = uniqueTextCount(visibleVisitorRecords, ["userId", "customerId"]);
+    const locations = uniqueTextCount(visibleVisitorRecords, ["country", "region", "city"]);
+    return { sessions, usersCount, locations };
+  }, [visibleVisitorRecords]);
   const categoryBandPaths = React.useMemo(() => {
     const total = productSalesCategories.reduce(
       (sum, item) => sum + item.count,
@@ -993,10 +1021,14 @@ export const DashboardOverviewPage: React.FC = () => {
             </div>
           </div>
         </div>
-
         <div className="col-span-12 lg:col-span-5">
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
+            <div className="flex items-center gap-2">
+              <MessageSquare size={14} className="text-(--text-secondary)" />
+              <h2 className="text-sm font-semibold text-(--text)">
+                Inquiries
+              </h2>
+            </div>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                 {inquiries.filter((i) => i.status === "New").length} new
@@ -1034,7 +1066,7 @@ export const DashboardOverviewPage: React.FC = () => {
                     >
                       <td className="px-4 py-3">
                         <p className="truncate text-xs font-medium text-(--text)">
-                          {inq.name}
+                          {inq.customerName}
                         </p>
                         <p className="truncate text-[10px] text-(--text-tertiary)">
                           {inq.email}
@@ -1045,7 +1077,7 @@ export const DashboardOverviewPage: React.FC = () => {
                           {inq.subject}
                         </p>
                         <p className="truncate text-[10px] text-(--text-tertiary)">
-                          {inq.date}
+                          {inq.date || "—"}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -1439,36 +1471,52 @@ export const DashboardOverviewPage: React.FC = () => {
             </div>
             <div className="h-full w-full rounded-2xl border border-slate-200 bg-slate-50 p-5">
               {visitorRows.length > 0 ? (
-                <div className="space-y-3">
-                  {visitorRows.map(({ country, count, pct }) => (
-                    <div key={country}>
-                      <div className="mb-1 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base leading-none">🌐</span>
-                          <span className="text-sm font-medium text-(--text-secondary)">
-                            {country}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-(--text-secondary)">
-                            {count.toLocaleString()}
-                          </span>
-                          <span className="text-xs text-(--text-tertiary)">
-                            {pct}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-(--surface-soft)">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.max(4, pct)}%`,
-                            background: "var(--primary)",
-                          }}
-                        />
-                      </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-widest text-(--text-tertiary)">Sessions</p>
+                      <p className="mt-1 text-lg font-semibold text-(--text)">{visitorMetrics.sessions.toLocaleString()}</p>
                     </div>
-                  ))}
+                    <div className="rounded-2xl bg-white px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-widest text-(--text-tertiary)">Users</p>
+                      <p className="mt-1 text-lg font-semibold text-(--text)">{visitorMetrics.usersCount.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {visitorRows.map(({ label, count }) => {
+                      const total = visibleVisitorRecords.length;
+                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <div key={label}>
+                          <div className="mb-1 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base leading-none">🌐</span>
+                              <span className="text-sm font-medium text-(--text-secondary)">
+                                {label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-(--text-secondary)">
+                                {count.toLocaleString()}
+                              </span>
+                              <span className="text-xs text-(--text-tertiary)">
+                                {pct}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-(--surface-soft)">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${Math.max(4, pct)}%`,
+                                background: "var(--primary)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className="flex min-h-[260px] flex-col items-center justify-center px-2 text-center">
@@ -1476,8 +1524,8 @@ export const DashboardOverviewPage: React.FC = () => {
                     No visitor data yet
                   </p>
                   <p className="mt-1 text-xs text-(--text-tertiary)">
-                    Visitor sources will populate once customer activity
-                    arrives.
+                    Visitor metadata will appear here once the backend returns
+                    user-metadata records.
                   </p>
                 </div>
               )}
