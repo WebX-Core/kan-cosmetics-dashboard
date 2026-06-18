@@ -1,5 +1,13 @@
 import React from "react";
-import { ShoppingCart, Users, DollarSign, Clock, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  ShoppingCart,
+  Users,
+  DollarSign,
+  Clock,
+  X,
+  ArrowRight,
+} from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -7,57 +15,109 @@ import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useAbandonedCartAggregate, useCartAggregate } from "@/features/commerce";
 
 type CartRow = Readonly<{
-  id: string;
+  customerId: string;
   customerName: string;
   customerEmail: string;
-  items: number;
-  total: number;
-  status: "Active" | "Abandoned" | "Converted";
+  customerPhone: string;
+  itemCount: number;
+  totalAmount: number;
+  lastCartActivityAt: string;
+  status: "Active" | "Abandoned";
 }>;
 
-const toText = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
-const toNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
+const text = (value: unknown, fallback = ""): string =>
+  typeof value === "string" ? value.trim() : fallback;
 
-type SummaryPayload = Readonly<{
-  data?: Readonly<{
-    rows?: ReadonlyArray<Record<string, unknown>>;
-    total?: number;
-    page?: number;
-    limit?: number;
-    totalPages?: number;
-  }>;
-}>;
+const toNumber = (value: unknown): number => {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const formatDateTime = (value: unknown): string => {
+  const raw = text(value);
+  if (!raw) return "—";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-NP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const buildFullName = (
+  firstName: unknown,
+  middleName: unknown,
+  lastName: unknown,
+): string => {
+  const parts = [firstName, middleName, lastName]
+    .map((part) => text(part))
+    .filter(Boolean);
+  return parts.join(" ") || "Unknown Customer";
+};
 
 const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
-  if (!payload || typeof payload !== "object") return [];
-  const rows = (payload as SummaryPayload).data?.rows;
-  return Array.isArray(rows) ? rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null) : [];
+  const root = (typeof payload === "object" && payload !== null
+    ? payload
+    : {}) as Record<string, unknown>;
+
+  const candidates = [
+    payload,
+    root.data,
+    root.rows,
+    root.items,
+    (root.data as Record<string, unknown> | undefined)?.rows,
+    (root.data as Record<string, unknown> | undefined)?.items,
+  ];
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+    return candidate.filter(
+      (row): row is Record<string, unknown> =>
+        typeof row === "object" && row !== null,
+    );
+  }
+
+  return [];
 };
 
-const getFullName = (row: Record<string, unknown>): string => {
-  const first = toText(row.firstname);
-  const middle = toText(row.middlename);
-  const last = toText(row.lastname);
-  const parts = [first, middle, last].filter((part) => part.trim().length > 0);
-  return parts.length > 0 ? parts.join(" ") : toText(row.customerName ?? row.fullname, "Unknown");
-};
+const mapCartRows = (
+  payload: unknown,
+  status: CartRow["status"],
+): ReadonlyArray<CartRow> =>
+  getRows(payload).map((row) => {
+    const inferredStatus =
+      status === "Abandoned" ||
+      "abandonedItemCount" in row ||
+      "abandonedTotalAmount" in row ||
+      "lastAbandonedAt" in row
+        ? "Abandoned"
+        : "Active";
 
-const mapCartRows = (payload: unknown, status: CartRow["status"]): ReadonlyArray<CartRow> =>
-  getRows(payload).map((entry) => {
-    const item = entry;
     return {
-      id: toText(item.customerId ?? item.id, crypto.randomUUID()),
-      customerName: getFullName(item),
-      customerEmail: toText(item.email, "—"),
-      items: toNumber(item.itemCount ?? item.itemsCount ?? item.abandonedItemCount),
-      total: toNumber(item.totalAmount ?? item.abandonedTotalAmount ?? item.total),
-      status,
+      customerId: text(row.customerId, crypto.randomUUID()),
+      customerName: buildFullName(row.firstname, row.middlename, row.lastname),
+      customerEmail: text(row.email, "—"),
+      customerPhone: text(row.phone, "—"),
+      itemCount: toNumber(row.itemCount ?? row.itemsCount ?? row.abandonedItemCount),
+      totalAmount: toNumber(row.totalAmount ?? row.abandonedTotalAmount ?? row.total),
+      lastCartActivityAt: text(
+        row.lastCartActivityAt ?? row.lastAbandonedAt ?? row.updatedAt ?? row.createdAt,
+      ),
+      status: inferredStatus,
     };
   });
 
 const LIMIT = 20;
 
 export const CartsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
   const [page, setPage] = React.useState(1);
@@ -70,33 +130,47 @@ export const CartsPage: React.FC = () => {
       ...mapCartRows(activeQuery.data, "Active"),
       ...mapCartRows(abandonedQuery.data, "Abandoned"),
     ],
-    [activeQuery.data, abandonedQuery.data]
+    [activeQuery.data, abandonedQuery.data],
   );
 
-  const tabFiltered = React.useMemo(() => {
+  const filteredByTab = React.useMemo(() => {
     if (activeTab === "all") return carts;
-    return carts.filter((c) => c.status.toLowerCase() === activeTab);
-  }, [carts, activeTab]);
+    return carts.filter((cart) => cart.status.toLowerCase() === activeTab);
+  }, [activeTab, carts]);
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return tabFiltered;
-    return tabFiltered.filter((c) =>
-      [c.customerName, c.customerEmail, c.status].some((v) => v.toLowerCase().includes(q))
+    if (!q) return filteredByTab;
+    return filteredByTab.filter((cart) =>
+      [
+        cart.customerName,
+        cart.customerEmail,
+        cart.customerPhone,
+        cart.status,
+        String(cart.itemCount),
+        String(cart.totalAmount),
+      ].some((value) => value.toLowerCase().includes(q)),
     );
-  }, [tabFiltered, search]);
+  }, [filteredByTab, search]);
 
-  const totalPages = Math.ceil(filtered.length / LIMIT) || 1;
-  const pageData = React.useMemo(() => filtered.slice((page - 1) * LIMIT, page * LIMIT), [filtered, page]);
-  const visibleIds = React.useMemo(() => pageData.map((row) => row.id), [pageData]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / LIMIT));
+  const currentPage = Math.min(page, totalPages);
+  const pageData = React.useMemo(
+    () => filtered.slice((currentPage - 1) * LIMIT, currentPage * LIMIT),
+    [currentPage, filtered],
+  );
+  const visibleIds = React.useMemo(() => pageData.map((row) => row.customerId), [pageData]);
   const isAllVisibleSelected = React.useMemo(
     () => visibleIds.length > 0 && visibleIds.every((entry) => selectedIds.includes(entry)),
     [visibleIds, selectedIds],
   );
 
   const toggleSelectOne = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => (checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((entry) => entry !== id)));
+    setSelectedIds((prev) =>
+      checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((entry) => entry !== id),
+    );
   };
+
   const toggleSelectAllVisible = (checked: boolean) => {
     setSelectedIds((prev) => {
       if (!checked) return prev.filter((entry) => !visibleIds.includes(entry));
@@ -104,71 +178,184 @@ export const CartsPage: React.FC = () => {
     });
   };
 
-  const stats = React.useMemo(() => ({
-    total: carts.length,
-    active: carts.filter((c) => c.status === "Active").length,
-    abandoned: carts.filter((c) => c.status === "Abandoned").length,
-    totalValue: carts.reduce((sum, c) => sum + c.total, 0),
-  }), [carts]);
+  const stats = React.useMemo(() => {
+    const totalValue = carts.reduce((sum, cart) => sum + cart.totalAmount, 0);
+    const totalItems = carts.reduce((sum, cart) => sum + cart.itemCount, 0);
+    const latestActivity = carts
+      .map((cart) => cart.lastCartActivityAt)
+      .filter(Boolean)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+
+    return {
+      total: carts.length,
+      active: carts.filter((cart) => cart.status === "Active").length,
+      abandoned: carts.filter((cart) => cart.status === "Abandoned").length,
+      totalItems,
+      totalValue,
+      latestActivity: latestActivity ? formatDateTime(latestActivity) : "—",
+    };
+  }, [carts]);
 
   const tabs = [
-    { key: "all", label: "All" },
-    { key: "active", label: "Active" },
-    { key: "abandoned", label: "Abandoned" },
+    { key: "all", label: "All", count: carts.length },
+    { key: "active", label: "Active", count: stats.active },
+    { key: "abandoned", label: "Abandoned", count: stats.abandoned },
   ];
+
+  const openCart = (row: CartRow) => {
+    navigate(`/dashboard/carts/${row.customerId}`, {
+      state: {
+        customer: {
+          name: row.customerName,
+          email: row.customerEmail,
+          phone: row.customerPhone,
+          type: row.status.toLowerCase(),
+        },
+      },
+    });
+  };
 
   const columns = [
     {
       key: "select",
-      label: <input type="checkbox" checked={isAllVisibleSelected} onChange={(e) => toggleSelectAllVisible(e.target.checked)} aria-label="Select all carts" />,
+      label: (
+        <input
+          type="checkbox"
+          checked={isAllVisibleSelected}
+          onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+          aria-label="Select all carts"
+        />
+      ),
       render: (row: CartRow) => (
-        <input type="checkbox" checked={selectedIds.includes(row.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleSelectOne(row.id, e.target.checked)} aria-label={`Select ${row.id}`} />
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(row.customerId)}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => toggleSelectOne(row.customerId, event.target.checked)}
+          aria-label={`Select ${row.customerName}`}
+        />
       ),
       width: "44px",
     },
-    { key: "customer", label: "Customer", render: (row: CartRow) => (
-      <div>
-        <div className="font-medium text-gray-900">{row.customerName}</div>
-        <div className="text-xs text-gray-400">{row.customerEmail}</div>
-      </div>
-    )},
-    { key: "items", label: "Items", render: (row: CartRow) => (
-      <span className="font-medium text-gray-900">{row.items}</span>
-    )},
-    { key: "total", label: "Total", render: (row: CartRow) => (
-      <span className="font-medium text-gray-900">Rs {row.total.toFixed(2)}</span>
-    )},
-    { key: "status", label: "Status", render: (row: CartRow) => <StatusBadge status={row.status} /> },
+    {
+      key: "customer",
+      label: "Customer",
+      render: (row: CartRow) => (
+        <button type="button" onClick={() => openCart(row)} className="text-left">
+          <div className="font-medium text-gray-900">{row.customerName}</div>
+          <div className="text-xs text-gray-400">{row.customerEmail}</div>
+        </button>
+      ),
+    },
+    {
+      key: "phone",
+      label: "Phone",
+      render: (row: CartRow) => (
+        <span className="text-sm text-gray-700">{row.customerPhone}</span>
+      ),
+    },
+    {
+      key: "items",
+      label: "Items",
+      render: (row: CartRow) => (
+        <span className="inline-flex items-center rounded-full bg-[#f5f5f7] px-2.5 py-1 text-sm font-medium text-[#1d1d1f]">
+          {row.itemCount}
+        </span>
+      ),
+    },
+    {
+      key: "total",
+      label: "Total",
+      render: (row: CartRow) => (
+        <span className="font-medium text-gray-900">Rs {row.totalAmount.toFixed(2)}</span>
+      ),
+    },
+    {
+      key: "activity",
+      label: "Last Activity",
+      render: (row: CartRow) => (
+        <span className="text-sm text-gray-700">
+          {formatDateTime(row.lastCartActivityAt)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row: CartRow) => (
+        <StatusBadge status={row.status} label={row.status} />
+      ),
+    },
+    {
+      key: "action",
+      label: "Action",
+      render: (row: CartRow) => (
+        <button
+          type="button"
+          onClick={() => openCart(row)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#d2d2d7] bg-white px-3 py-1.5 text-xs font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+        >
+          View
+          <ArrowRight size={12} />
+        </button>
+      ),
+    },
   ];
 
   return (
-    <PageLayout title="Shopping Carts" subtitle="Monitor active and abandoned carts.">
+    <PageLayout
+      title="Shopping Carts"
+      subtitle="Monitor active and abandoned carts."
+      searchValue={search}
+      onSearchChange={(value) => {
+        setSearch(value);
+        setPage(1);
+      }}
+      searchPlaceholder="Search carts..."
+    >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCardV2 label="Total Carts" value={stats.total} icon={ShoppingCart} colorVariant="blue" />
         <StatCardV2 label="Active" value={stats.active} icon={Users} colorVariant="emerald" />
         <StatCardV2 label="Abandoned" value={stats.abandoned} icon={Clock} colorVariant="amber" />
         <StatCardV2 label="Total Value" value={`Rs ${stats.totalValue.toFixed(2)}`} icon={DollarSign} colorVariant="blue" />
       </div>
+
       <DataTableV2
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={(tab) => { setActiveTab(tab); setPage(1); }}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setPage(1);
+        }}
         columns={columns}
         data={pageData}
-        actions={selectedIds.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-[#6e6e73]">{selectedIds.length} selected</span>
-            <button type="button" onClick={() => setSelectedIds([])} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]" aria-label="Clear selected carts">
-              <X size={12} />
-            </button>
-          </div>
-        ) : undefined}
+        onRowClick={(row) => openCart(row)}
+        actions={
+          selectedIds.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[#6e6e73]">
+                {selectedIds.length} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedIds([])}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                aria-label="Clear selected carts"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : undefined
+        }
         searchValue={search}
-        onSearchChange={(v) => { setSearch(v); setPage(1); }}
         searchPlaceholder="Search carts..."
-        emptyMessage={activeQuery.isLoading || abandonedQuery.isLoading ? "Loading carts..." : "No carts found."}
-        showPagination={true}
-        currentPage={page}
+        emptyMessage={
+          activeQuery.isLoading || abandonedQuery.isLoading
+            ? "Loading carts..."
+            : "No carts found."
+        }
+        showPagination
+        currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setPage}
       />

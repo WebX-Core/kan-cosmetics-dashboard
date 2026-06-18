@@ -1,4 +1,5 @@
 type OrderRecord = Record<string, unknown>;
+type ListRecord = Record<string, unknown>;
 
 export type NormalizedOrderRow = Readonly<{
   id: string;
@@ -103,25 +104,60 @@ const collectOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> => {
   return [];
 };
 
+const collectNestedRows = (payload: unknown): ReadonlyArray<ListRecord> => {
+  if (Array.isArray(payload)) {
+    return payload.filter(
+      (item): item is ListRecord => typeof item === "object" && item !== null,
+    );
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const record = toRecord(payload);
+  const nestedCandidates = [record.items, record.results, record.orders, record.data];
+
+  for (const candidate of nestedCandidates) {
+    if (Array.isArray(candidate)) {
+      const rows = collectNestedRows(candidate);
+      if (rows.length > 0) return rows;
+      continue;
+    }
+
+    if (candidate && typeof candidate === "object") {
+      const nestedRows = collectNestedRows(candidate);
+      if (nestedRows.length > 0) return nestedRows;
+    }
+  }
+
+  return [];
+};
+
 const normalizeStatus = (value: unknown): string => {
   const raw = text(value, "PENDING");
   if (!raw) return "PENDING";
 
   const lower = raw.toLowerCase();
+  if (lower.includes("complete")) return "COMPLETED";
   if (lower.includes("deliver")) return "DELIVERED";
   if (lower.includes("ship")) return "SHIPPED";
+  if (lower.includes("ready")) return "READY_FOR_SHIPMENT";
+  if (lower.includes("pack")) return "READY_FOR_SHIPMENT";
+  if (lower.includes("confirm")) return "PROCESSING";
   if (lower.includes("process")) return "PROCESSING";
-  if (lower.includes("confirm")) return "CONFIRMED";
-  if (lower.includes("pack")) return "PACKED";
   if (lower.includes("return")) return "RETURNED";
   if (lower.includes("cancel")) return "CANCELLED";
   if (lower.includes("pend")) return "PENDING";
 
-  return raw.toUpperCase();
+  return raw.toUpperCase().replace(/\s+/g, "_");
 };
 
 export const getOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> =>
   collectOrderRows(payload);
+
+export const getListRows = (payload: unknown): ReadonlyArray<ListRecord> =>
+  collectNestedRows(payload);
 
 export const getOrderCustomerName = (record: unknown): string => {
   const row = extractOrderRecord(record);

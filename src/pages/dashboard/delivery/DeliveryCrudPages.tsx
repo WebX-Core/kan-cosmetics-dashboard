@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, X } from "lucide-react";
 import { deliveryApi } from "@/features/delivery";
+import { ShipmentDetailPage } from "./ShipmentDetailPage";
+import { ShipmentViewPage } from "./ShipmentViewPage";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
@@ -183,6 +185,12 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
     setSelectedIds((prev) => prev.filter((entry) => entry !== id));
   };
 
+  const isShipmentModule = config.key === "shipments";
+  const getDetailPath = (id: string) =>
+    `${config.basePath}/${id}${isShipmentModule ? "" : "/edit"}`;
+  const getEditPath = (id: string) =>
+    `${config.basePath}/${id}/edit`;
+
   const tableActions = selectedIds.length > 0 ? (
     <div className="flex items-center gap-2">
       <span className="text-xs font-medium text-[#6e6e73]">{selectedIds.length} selected</span>
@@ -211,8 +219,8 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
         columns={columns}
         data={rows}
         actions={tableActions}
-        onRowClick={(row) => navigate(`${config.basePath}/${String(row.id)}/edit`)}
-        onEdit={(row) => navigate(`${config.basePath}/${String(row.id)}/edit`)}
+        onRowClick={(row) => navigate(getDetailPath(String(row.id)))}
+        onEdit={(row) => navigate(getEditPath(String(row.id)))}
         onDelete={(row) => void handleDelete(String(row.id))}
         emptyMessage={query.isLoading ? "Loading..." : "No records found."}
         showPagination={true}
@@ -453,7 +461,8 @@ export const CourierPickupAddressesEditPage = courierPickupAddresses.EditPage;
 
 export const ShipmentsListPage = shipments.ListPage;
 export const ShipmentsCreatePage = shipments.CreatePage;
-export const ShipmentsEditPage = shipments.EditPage;
+export const ShipmentsEditPage = ShipmentDetailPage;
+export const ShipmentsViewPage = ShipmentViewPage;
 
 export const ShipmentTrackingListPage = shipmentTracking.ListPage;
 export const ShipmentTrackingCreatePage = shipmentTracking.CreatePage;

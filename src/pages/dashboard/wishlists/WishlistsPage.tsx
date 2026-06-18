@@ -1,145 +1,273 @@
 import React from "react";
-import { Heart, Users, Package, TrendingUp, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Heart, Users, Package, TrendingUp, ArrowRight } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useWishlistAggregate } from "@/features/commerce";
 
 type WishlistRow = Readonly<{
-  id: string;
+  customerId: string;
   customerName: string;
   customerEmail: string;
-  items: number;
-  totalValue: number;
-  status: "Active" | "Inactive";
+  customerPhone: string;
+  wishlistItemCount: number;
+  lastWishlistActivityAt: string;
 }>;
 
-const toText = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
-const toNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
+const text = (value: unknown, fallback = ""): string =>
+  typeof value === "string" ? value.trim() : fallback;
 
-const mapWishlistRows = (payload: unknown): ReadonlyArray<WishlistRow> => {
-  const rows: unknown[] = Array.isArray(payload)
-    ? payload
-    : (Array.isArray((payload as { data?: unknown[] } | undefined)?.data)
-      ? ((payload as { data?: unknown[] } | undefined)?.data ?? [])
-      : []);
-
-  return rows.map((entry) => {
-    const item = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
-    const statusValue = toText(item.status, "active").toLowerCase();
-    return {
-      id: toText(item.id, crypto.randomUUID()),
-      customerName: toText(item.customerName ?? item.fullname, "Unknown"),
-      customerEmail: toText(item.customerEmail ?? item.email, "—"),
-      items: toNumber(item.items ?? item.itemsCount),
-      totalValue: toNumber(item.totalValue ?? item.totalAmount),
-      status: statusValue === "inactive" ? "Inactive" : "Active",
-    };
-  });
+const toNumber = (value: unknown): number => {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
 };
 
-const LIMIT = 20;
+const formatDateTime = (value: unknown): string => {
+  const raw = text(value);
+  if (!raw) return "—";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-NP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const buildFullName = (firstName: unknown, middleName: unknown, lastName: unknown): string => {
+  const parts = [firstName, middleName, lastName]
+    .map((part) => text(part))
+    .filter(Boolean);
+  return parts.join(" ") || "Unknown Customer";
+};
+
+const toWishlistRow = (entry: unknown): WishlistRow => {
+  const row = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
+
+  return {
+    customerId: text(row.customerId, crypto.randomUUID()),
+    customerName: buildFullName(row.firstname, row.middlename, row.lastname),
+    customerEmail: text(row.email, "—"),
+    customerPhone: text(row.phone, "—"),
+    wishlistItemCount: toNumber(row.wishlistItemCount ?? row.itemsCount ?? row.items),
+    lastWishlistActivityAt: text(row.lastWishlistActivityAt ?? row.updatedAt ?? row.createdAt),
+  };
+};
+
+const getRows = (payload: unknown): ReadonlyArray<WishlistRow> => {
+  const root = (typeof payload === "object" && payload !== null ? payload : {}) as Record<string, unknown>;
+  const candidates = [
+    payload,
+    root.data,
+    root.rows,
+    root.items,
+    (root.data as Record<string, unknown> | undefined)?.rows,
+    (root.data as Record<string, unknown> | undefined)?.items,
+  ];
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+    return candidate.map(toWishlistRow);
+  }
+
+  return [];
+};
 
 export const WishlistsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const query = useWishlistAggregate();
 
-  const wishlists = React.useMemo(
-    () => {
-      const payloads = Array.isArray(query.data) ? query.data : [];
-      return payloads.flatMap((payload: unknown) => mapWishlistRows(payload));
-    },
-    [query.data]
-  );
+  const wishlists = React.useMemo(() => getRows(query.data), [query.data]);
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return wishlists;
     return wishlists.filter((row) =>
-      [row.customerName, row.customerEmail, row.status].some((v) => v.toLowerCase().includes(q))
+      [
+        row.customerName,
+        row.customerEmail,
+        row.customerPhone,
+        String(row.wishlistItemCount),
+      ].some((value) => value.toLowerCase().includes(q)),
     );
-  }, [wishlists, search]);
+  }, [search, wishlists]);
 
-  const totalPages = Math.ceil(filtered.length / LIMIT) || 1;
-  const pageData = React.useMemo(() => filtered.slice((page - 1) * LIMIT, page * LIMIT), [filtered, page]);
-  const visibleIds = React.useMemo(() => pageData.map((row) => row.id), [pageData]);
-  const isAllVisibleSelected = React.useMemo(
-    () => visibleIds.length > 0 && visibleIds.every((entry) => selectedIds.includes(entry)),
-    [visibleIds, selectedIds],
+  const limit = 20;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+  const currentPage = Math.min(page, totalPages);
+  const pageData = React.useMemo(
+    () => filtered.slice((currentPage - 1) * limit, currentPage * limit),
+    [currentPage, filtered],
   );
-  const toggleSelectOne = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => (checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((entry) => entry !== id)));
-  };
-  const toggleSelectAllVisible = (checked: boolean) => {
-    setSelectedIds((prev) => {
-      if (!checked) return prev.filter((entry) => !visibleIds.includes(entry));
-      return Array.from(new Set([...prev, ...visibleIds]));
-    });
-  };
 
-  const stats = React.useMemo(() => ({
-    total: wishlists.length,
-    active: wishlists.filter((r) => r.status === "Active").length,
-    totalItems: wishlists.reduce((sum: number, r: WishlistRow) => sum + r.items, 0),
-    totalValue: wishlists.reduce((sum: number, r: WishlistRow) => sum + r.totalValue, 0),
-  }), [wishlists]);
+  React.useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  React.useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const stats = React.useMemo(() => {
+    const totalItems = wishlists.reduce((sum, row) => sum + row.wishlistItemCount, 0);
+    const latestActivity = wishlists
+      .map((row) => row.lastWishlistActivityAt)
+      .filter(Boolean)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+
+    return {
+      customers: wishlists.length,
+      totalItems,
+      latestActivity: latestActivity ? formatDateTime(latestActivity) : "—",
+      activeCustomers: wishlists.filter((row) => row.wishlistItemCount > 0).length,
+    };
+  }, [wishlists]);
 
   const columns = [
     {
-      key: "select",
-      label: <input type="checkbox" checked={isAllVisibleSelected} onChange={(e) => toggleSelectAllVisible(e.target.checked)} aria-label="Select all wishlists" />,
+      key: "customer",
+      label: "Customer",
       render: (row: WishlistRow) => (
-        <input type="checkbox" checked={selectedIds.includes(row.id)} onClick={(e) => e.stopPropagation()} onChange={(e) => toggleSelectOne(row.id, e.target.checked)} aria-label={`Select ${row.id}`} />
+        <button
+          type="button"
+          onClick={() =>
+            navigate(`/dashboard/wishlists/${row.customerId}`, {
+              state: {
+                customer: {
+                  name: row.customerName,
+                  email: row.customerEmail,
+                  phone: row.customerPhone,
+                },
+              },
+            })
+          }
+          className="text-left"
+        >
+          <div className="font-medium text-gray-900">{row.customerName}</div>
+          <div className="text-xs text-gray-400">{row.customerEmail}</div>
+        </button>
       ),
-      width: "44px",
     },
-    { key: "customer", label: "Customer", render: (row: WishlistRow) => (
-      <div>
-        <div className="font-medium text-gray-900">{row.customerName}</div>
-        <div className="text-xs text-gray-400">{row.customerEmail}</div>
-      </div>
-    )},
-    { key: "items", label: "Items", render: (row: WishlistRow) => (
-      <span className="font-medium text-gray-900">{row.items}</span>
-    )},
-    { key: "totalValue", label: "Total Value", render: (row: WishlistRow) => (
-      <span className="font-medium text-gray-900">Rs {row.totalValue.toFixed(2)}</span>
-    )},
-    { key: "status", label: "Status", render: (row: WishlistRow) => <StatusBadge status={row.status} /> },
+    {
+      key: "phone",
+      label: "Phone",
+      render: (row: WishlistRow) => (
+        <span className="text-sm text-gray-700">{row.customerPhone}</span>
+      ),
+    },
+    {
+      key: "items",
+      label: "Wishlist Items",
+      render: (row: WishlistRow) => (
+        <span className="inline-flex items-center rounded-full bg-[#f5f5f7] px-2.5 py-1 text-sm font-medium text-[#1d1d1f]">
+          {row.wishlistItemCount}
+        </span>
+      ),
+    },
+    {
+      key: "lastWishlistActivityAt",
+      label: "Last Activity",
+      render: (row: WishlistRow) => (
+        <span className="text-sm text-gray-700">
+          {formatDateTime(row.lastWishlistActivityAt)}
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      label: "Action",
+      render: (row: WishlistRow) => (
+        <button
+          type="button"
+          onClick={() =>
+            navigate(`/dashboard/wishlists/${row.customerId}`, {
+              state: {
+                customer: {
+                  name: row.customerName,
+                  email: row.customerEmail,
+                  phone: row.customerPhone,
+                },
+              },
+            })
+          }
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#d2d2d7] bg-white px-3 py-1.5 text-xs font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+        >
+          View
+          <ArrowRight size={12} />
+        </button>
+      ),
+    },
   ];
 
   return (
     <PageLayout
       title="Wishlists"
-      subtitle="View customer wishlist items and values."
+      subtitle="Customer wishlists, item counts, and last activity."
       searchValue={search}
-      onSearchChange={(v) => { setSearch(v); setPage(1); }}
-      searchPlaceholder="Search wishlists..."
+      onSearchChange={(value) => {
+        setSearch(value);
+        setPage(1);
+      }}
+      searchPlaceholder="Search customers, email, phone..."
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCardV2 label="Total Wishlists" value={stats.total} icon={Heart} colorVariant="rose" />
-        <StatCardV2 label="Active" value={stats.active} icon={Users} colorVariant="emerald" />
-        <StatCardV2 label="Total Items" value={stats.totalItems} icon={Package} colorVariant="blue" />
-        <StatCardV2 label="Total Value" value={`Rs ${stats.totalValue.toFixed(2)}`} icon={TrendingUp} colorVariant="blue" />
+        <StatCardV2
+          label="Customers"
+          value={stats.customers}
+          icon={Users}
+          colorVariant="blue"
+        />
+        <StatCardV2
+          label="Active Wishlists"
+          value={stats.activeCustomers}
+          icon={Heart}
+          colorVariant="rose"
+        />
+        <StatCardV2
+          label="Total Items"
+          value={stats.totalItems}
+          icon={Package}
+          colorVariant="emerald"
+        />
+        <StatCardV2
+          label="Latest Activity"
+          value={stats.latestActivity}
+          icon={TrendingUp}
+          colorVariant="amber"
+        />
       </div>
+
       <DataTableV2
+        title="Wishlist Customers"
+        subtitle="Open a customer to review all wishlist items."
         columns={columns}
         data={pageData}
-        actions={selectedIds.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-[#6e6e73]">{selectedIds.length} selected</span>
-            <button type="button" onClick={() => setSelectedIds([])} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]" aria-label="Clear selected wishlists">
-              <X size={12} />
-            </button>
-          </div>
-        ) : undefined}
         searchValue={search}
+        onRowClick={(row) =>
+          navigate(`/dashboard/wishlists/${row.customerId}`, {
+            state: {
+              customer: {
+                name: row.customerName,
+                email: row.customerEmail,
+                phone: row.customerPhone,
+              },
+            },
+          })
+        }
         emptyMessage={query.isLoading ? "Loading wishlists..." : "No wishlists found."}
-        showPagination={true}
-        currentPage={page}
+        showPagination
+        currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setPage}
       />

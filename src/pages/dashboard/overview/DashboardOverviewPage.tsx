@@ -17,7 +17,7 @@ import { useOrders, usePaymentsAggregate } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
 import { useInquiryList, useSiteInquiryList } from "@/features/engagement";
 import { useAdminUsersList } from "@/features/adminUsers";
-import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
+import { getListRows, getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
 
 // ──────────────────────────────────────────────
 // Sales Overview interactive line chart
@@ -290,14 +290,17 @@ const viewAllButtonClassName =
   "inline-flex h-[24px] items-center  rounded-full  px-2 py-2 bg-white border border-zinc-200 text-[13px] font-medium text-[var(--primary)] transition-colors hover:bg-[#f5f5f7] hover:border-[var(--primary)]/25 hover:text-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25 active:scale-[0.98]";
 
 const orderStatusStyle: Record<
-  "Processing" | "Shipped" | "Pending" | "Delivered" | "Cancelled",
+  "PENDING" | "PROCESSING" | "READY_FOR_SHIPMENT" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED" | "RETURNED",
   string
 > = {
-  Pending: "bg-amber-100 text-amber-800",
-  Processing: "bg-sky-100 text-sky-800",
-  Shipped: "bg-blue-100 text-blue-800",
-  Delivered: "bg-emerald-100 text-emerald-800",
-  Cancelled: "bg-red-100 text-red-800",
+  PENDING: "bg-amber-100 text-amber-800",
+  PROCESSING: "bg-sky-100 text-sky-800",
+  READY_FOR_SHIPMENT: "bg-indigo-100 text-indigo-800",
+  SHIPPED: "bg-blue-100 text-blue-800",
+  DELIVERED: "bg-emerald-100 text-emerald-800",
+  COMPLETED: "bg-emerald-100 text-emerald-800",
+  CANCELLED: "bg-red-100 text-red-800",
+  RETURNED: "bg-red-100 text-red-800",
 };
 
 const inquiryStatusStyle: Record<"New" | "In Progress" | "Resolved", string> = {
@@ -314,14 +317,9 @@ const inquiryTypeStyle: Record<"Product" | "Site", string> = {
 const formatOrderStatusLabel = (
   status: string,
 ): keyof typeof orderStatusStyle => {
-  const normalized = status
-    .toLowerCase()
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
-  const label = normalized.join(" ") || "Pending";
-  if (label in orderStatusStyle) return label as keyof typeof orderStatusStyle;
-  return "Pending";
+  const normalized = status.trim().toUpperCase().replace(/\s+/g, "_");
+  if (normalized in orderStatusStyle) return normalized as keyof typeof orderStatusStyle;
+  return "PENDING";
 };
 type PaymentRow = Readonly<{
   amount: number;
@@ -341,9 +339,7 @@ const normalizePaymentStatus = (value: unknown): PaymentRow["status"] => {
   return "Pending";
 };
 const toPaymentRows = (payload: unknown): ReadonlyArray<PaymentRow> => {
-  const rows = Array.isArray(payload)
-    ? payload
-    : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+  const rows = getListRows(payload);
   return rows.map((entry) => {
     const row = toRecord(entry);
     return {
@@ -419,30 +415,23 @@ export const DashboardOverviewPage: React.FC = () => {
 
   const products = React.useMemo(
     () =>
-      (productsQuery.data?.data ?? []) as ReadonlyArray<
-        Record<string, unknown>
-      >,
-    [productsQuery.data?.data],
+      getListRows(productsQuery.data),
+    [productsQuery.data],
   );
   const categories = React.useMemo(
     () =>
-      (categoriesQuery.data?.data ?? []) as ReadonlyArray<
-        Record<string, unknown>
-      >,
-    [categoriesQuery.data?.data],
+      getListRows(categoriesQuery.data),
+    [categoriesQuery.data],
   );
   const users = React.useMemo(
     () =>
-      (usersQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>,
-    [usersQuery.data?.data],
+      getListRows(usersQuery.data),
+    [usersQuery.data],
   );
 
   const inquiries = React.useMemo(() => {
-    const productRows = ((inquiryQuery.data as { data?: unknown[] } | undefined)
-      ?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
-    const siteRows = ((
-      siteInquiryQuery.data as { data?: unknown[] } | undefined
-    )?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
+    const productRows = getListRows(inquiryQuery.data);
+    const siteRows = getListRows(siteInquiryQuery.data);
 
     const mapStatus = (value: string): "New" | "In Progress" | "Resolved" =>
       value.toLowerCase().includes("progress")
@@ -759,11 +748,7 @@ export const DashboardOverviewPage: React.FC = () => {
             new Date().getDate(),
           ).getTime()
         : now - (visitorsRange === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
-    const combined = [
-      ...((inquiryQuery.data as { data?: unknown[] } | undefined)?.data ?? []),
-      ...((siteInquiryQuery.data as { data?: unknown[] } | undefined)?.data ??
-        []),
-    ] as ReadonlyArray<Record<string, unknown>>;
+    const combined = [...getListRows(inquiryQuery.data), ...getListRows(siteInquiryQuery.data)];
     const buckets = new Map<string, number>();
     combined.forEach((row) => {
       const created = new Date(toText(row.createdAt)).getTime();

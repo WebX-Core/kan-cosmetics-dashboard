@@ -90,6 +90,7 @@ export type WebPushSubscriptionDto = Readonly<{
 }>;
 
 export type WebPushNotificationDto = Readonly<{
+  broadcastAll?: boolean;
   subscriptionId?: string;
   customerId?: string;
   userId?: string;

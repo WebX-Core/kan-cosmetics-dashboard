@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { useOrders, commerceApi } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
 import { useAuditLogList, useUserActivityList } from "@/features/telemetry";
+import { getListRows, getOrderRows } from "@/shared/utils/orderMapping";
 
 type Detail = Readonly<{
   id: string;
@@ -16,13 +17,6 @@ type Detail = Readonly<{
   trend: string;
   metrics: ReadonlyArray<Readonly<{ label: string; value: string; note: string }>>;
 }>;
-
-const rows = (value: unknown): ReadonlyArray<Record<string, unknown>> => {
-  if (Array.isArray(value)) return value as ReadonlyArray<Record<string, unknown>>;
-  if (!value || typeof value !== "object") return [];
-  const r = value as Record<string, unknown>;
-  return Array.isArray(r.data) ? (r.data as ReadonlyArray<Record<string, unknown>>) : [];
-};
 
 const amount = (value: unknown): number => {
   if (typeof value === "number") return value;
@@ -47,11 +41,11 @@ export const ReportDetailsPage: React.FC = () => {
   });
 
   const detail = React.useMemo<Detail | null>(() => {
-    const orders = rows(ordersQuery.data);
-    const products = rows(productsQuery.data);
-    const inventory = rows(inventoryQuery.data);
-    const audits = rows(auditQuery.data);
-    const activities = rows(activityQuery.data);
+    const orders = getOrderRows(ordersQuery.data);
+    const products = getListRows(productsQuery.data);
+    const inventory = getListRows(inventoryQuery.data);
+    const audits = getListRows(auditQuery.data);
+    const activities = getListRows(activityQuery.data);
     const revenue = orders.reduce((sum, row) => sum + amount(row.total ?? row.totalAmount), 0);
 
     const map: Readonly<Record<string, Detail>> = {

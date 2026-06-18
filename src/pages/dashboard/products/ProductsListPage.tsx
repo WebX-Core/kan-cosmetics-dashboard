@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw } from "lucide-react";
+import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -258,6 +258,24 @@ export const ProductsListPage: React.FC = () => {
                   Reviews
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/product-tags?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                }}
+              >
+                <Tag className="mr-2 h-4 w-4" />
+                Edit Tags
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/product-attributes?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                }}
+              >
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Edit Attributes
+              </DropdownMenuItem>
               {canFaqView && (
                 <DropdownMenuItem
                   onClick={(event) => {

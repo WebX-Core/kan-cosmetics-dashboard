@@ -20,22 +20,7 @@ import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
-
-const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
-
-const fmt = (v: string): string => {
-  if (!v) return "—";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime())
-    ? "—"
-    : new Intl.DateTimeFormat("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(d);
-};
+import { formatDateTime, notificationTargetLabel, readString } from "./webPushNotification.utils";
 
 const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   if (!payload || typeof payload !== "object") return [];
@@ -61,41 +46,19 @@ type NotificationRow = Readonly<{
   createdAt: string;
 }>;
 
-const targetLabel = (row: Record<string, unknown>): string => {
-  if (typeof row.subscription === "object" && row.subscription !== null) {
-    const subscription = row.subscription as Record<string, unknown>;
-    return text(subscription.endpoint, text(subscription.id, "Subscription"));
-  }
-
-  const customer = typeof row.customer === "object" && row.customer !== null
-    ? (row.customer as Record<string, unknown>)
-    : null;
-  const customerId = text(customer?.id ?? row.customerId, "");
-  if (customerId) return `Customer ${customerId}`;
-
-  const user = typeof row.user === "object" && row.user !== null
-    ? (row.user as Record<string, unknown>)
-    : null;
-  const userId = text(user?.id ?? row.userId, "");
-  if (userId) return `User ${userId}`;
-
-  const sessionId = text(row.sessionId, "");
-  if (sessionId) return `Session ${sessionId}`;
-
-  return "—";
-};
+const targetLabel = (row: Record<string, unknown>): string => notificationTargetLabel(row);
 
 const toNotificationRows = (payload: unknown): ReadonlyArray<NotificationRow> =>
   getRows(payload).map((item) => ({
-    id: text(item.id, crypto.randomUUID()),
-    title: text(item.title, "Untitled"),
-    body: text(item.body, "—"),
+    id: readString(item.id, crypto.randomUUID()),
+    title: readString(item.title, "Untitled"),
+    body: readString(item.body, "—"),
     target: targetLabel(item),
-    status: text(item.status, "queued"),
-    scheduledAt: text(item.scheduledAt, ""),
-    deliveredAt: text(item.deliveredAt, ""),
-    sentAt: text(item.sentAt, ""),
-    createdAt: text(item.createdAt, ""),
+    status: readString(item.status, "queued"),
+    scheduledAt: readString(item.scheduledAt, ""),
+    deliveredAt: readString(item.deliveredAt, ""),
+    sentAt: readString(item.sentAt, ""),
+    createdAt: readString(item.createdAt, ""),
   }));
 
 const normalizeStatus = (status: string): string => {
@@ -215,9 +178,9 @@ export const WebPushNotificationsPage: React.FC = () => {
       render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{r.target}</span>,
     },
     { key: "status", label: "Status", render: (r: NotificationRow) => <StatusBadge status={r.status} /> },
-    { key: "sentAt", label: "Sent At", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.sentAt || r.deliveredAt)}</span> },
-    { key: "scheduledAt", label: "Scheduled", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.scheduledAt)}</span> },
-    { key: "createdAt", label: "Created", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.createdAt)}</span> },
+    { key: "sentAt", label: "Sent At", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{formatDateTime(r.sentAt || r.deliveredAt)}</span> },
+    { key: "scheduledAt", label: "Scheduled", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{formatDateTime(r.scheduledAt)}</span> },
+    { key: "createdAt", label: "Created", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{formatDateTime(r.createdAt)}</span> },
   ];
 
   return (
@@ -298,9 +261,7 @@ export const WebPushNotificationsPage: React.FC = () => {
           ) : undefined
         }
         searchValue={state.search}
-        onRowClick={
-          !isDeletedView ? (row) => navigate(`/dashboard/marketing/web-push/notifications/${row.id}/edit`) : undefined
-        }
+        onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/marketing/web-push/notifications/${row.id}`) : undefined}
         onEdit={!isDeletedView ? (r) => navigate(`/dashboard/marketing/web-push/notifications/${r.id}/edit`) : undefined}
         onDelete={!isDeletedView ? (r) => confirm.prompt("delete", [r.id]) : undefined}
         emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading notifications..." : "No notifications found."}

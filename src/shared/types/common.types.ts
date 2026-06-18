@@ -8,6 +8,8 @@ export type ApiListQuery = Readonly<{
   category?: string;
   /** backend filter: product list by subcategory id or slug */
   subcategory?: string;
+  /** backend filter: product-tag/product-attribute list by product id or slug */
+  productId?: string;
   /** backend filter: product-variant list by product id or slug */
   product?: string;
   /** backend filter: inventory list by product variant id */

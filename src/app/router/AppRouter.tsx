@@ -112,6 +112,7 @@ import {
   PickupRequestsListPage,
   ShipmentsCreatePage,
   ShipmentsEditPage,
+  ShipmentsViewPage,
   ShipmentsListPage,
   ShipmentTrackingCreatePage,
   ShipmentTrackingEditPage,
@@ -161,6 +162,7 @@ import { WebPushSubscriptionsPage } from "@/pages/dashboard/marketing/web-push/W
 import { WebPushSubscriptionDetailPage } from "@/pages/dashboard/marketing/web-push/WebPushSubscriptionDetailPage";
 import { WebPushNotificationsPage } from "@/pages/dashboard/marketing/web-push/WebPushNotificationsPage";
 import { WebPushNotificationFormPage } from "@/pages/dashboard/marketing/web-push/WebPushNotificationFormPage";
+import { WebPushNotificationDetailPage } from "@/pages/dashboard/marketing/web-push/WebPushNotificationDetailPage";
 import { CustomerBanPage } from "@/pages/dashboard/customers/CustomerBanPage";
 import { CustomerBanFormPage } from "@/pages/dashboard/customers/CustomerBanFormPage";
 import { CustomerAddressesPage } from "@/pages/dashboard/customers/CustomerAddressesPage";
@@ -372,6 +374,10 @@ export const AppRouter: React.FC = () => {
           />
           <Route
             path="/dashboard/delivery/shipments/:id"
+            element={<ShipmentsViewPage />}
+          />
+          <Route
+            path="/dashboard/delivery/shipments/:id/edit"
             element={<ShipmentsEditPage />}
           />
           <Route path="/dashboard/delivery/shipments/create" element={<ShipmentsCreatePage />} />
@@ -565,6 +571,7 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/marketing/web-push/subscriptions/:id" element={<WebPushSubscriptionDetailPage />} />
           <Route path="/dashboard/marketing/web-push/notifications" element={<WebPushNotificationsPage />} />
           <Route path="/dashboard/marketing/web-push/notifications/deleted" element={<WebPushNotificationsPage />} />
+          <Route path="/dashboard/marketing/web-push/notifications/:id" element={<WebPushNotificationDetailPage />} />
           <Route path="/dashboard/marketing/web-push/notifications/create" element={<WebPushNotificationFormPage />} />
           <Route path="/dashboard/marketing/web-push/notifications/:id/edit" element={<WebPushNotificationFormPage />} />
           <Route path="/dashboard/marketing/web-push" element={<Navigate to="/dashboard/marketing/web-push/notifications" replace />} />

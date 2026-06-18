@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import type { ApiListQuery, UUID } from "@/shared/types/common.types";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
+import { getOrderRows } from "@/shared/utils/orderMapping";
 import { commerceApi } from "./commerce.api";
 
 const keys = {
@@ -153,7 +154,7 @@ export const usePaymentsAggregate = () =>
     queryKey: keys.paymentsAggregate(),
     queryFn: async () => {
       const orderPayload = await commerceApi.orders.all();
-      const orders = Array.isArray(orderPayload) ? orderPayload : ((orderPayload as { data?: unknown[] } | undefined)?.data ?? []);
+      const orders = getOrderRows(orderPayload);
       return Promise.all(
         orders.map(async (order) => {
           if (!order || typeof order !== "object") return [];

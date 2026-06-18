@@ -1,17 +1,56 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, RefreshCw, Truck, Bell } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  Bell,
+  CircleDot,
+  Cog,
+  Package,
+  Truck,
+  BadgeCheck,
+  Tag,
+  Clock,
+  Calendar,
+  User,
+  Mail,
+  Phone,
+  CheckCircle,
+  MapPin,
+  CreditCard,
+  Banknote,
+  Building2,
+  Hash,
+  FileText,
+  Wallet,
+  Map,
+  UserRound,
+  ShoppingBag,
+  CalendarCheck,
+  Layers,
+} from "lucide-react";
 import { z } from "zod";
-import { useOrderGet, useUpdateOrderStatus, useSyncOrderDelivery } from "@/features/commerce";
+import {
+  useOrderGet,
+  useUpdateOrderStatus,
+  useSyncOrderDelivery,
+} from "@/features/commerce";
 import { commerceApi } from "@/features/commerce";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { resolveProfileImageUrl } from "@/shared/utils/profileImage";
 import { parseApiError } from "@/shared/utils/apiError";
 import { validateOrToast } from "@/shared/utils/validation";
 import { ModernFormLayout } from "@/shared/components/forms/ModernFormLayout";
+import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { getOrderDetail, normalizeOrderRow } from "@/shared/utils/orderMapping";
+import {
+  formatOrderStatusLabel,
+  orderFlowStages,
+  orderStatusOptions,
+  orderStatuses,
+} from "./orderStore";
 
-const orderStatusSchema = z.enum(["Pending", "Confirmed", "Packed", "Shipped", "Delivered", "Cancelled", "Returned"]);
+const orderStatusSchema = z.enum(orderStatuses);
 const paymentStatusOptions = ["Pending", "Completed", "Failed", "Refunded"];
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
@@ -36,24 +75,34 @@ const formatDateTime = (value: unknown): string => {
 };
 const formatMoney = (value: unknown): string => {
   if (typeof value === "number") return `Rs ${value.toLocaleString("en-NP")}`;
-  if (typeof value === "string" && value) return `Rs ${Number(value).toLocaleString("en-NP")}`;
+  if (typeof value === "string" && value)
+    return `Rs ${Number(value).toLocaleString("en-NP")}`;
   return "—";
 };
 const compactAddress = (parts: ReadonlyArray<string>): string =>
   parts.filter(Boolean).join(", ");
-const firstItemRecord = (items: ReadonlyArray<unknown>): Record<string, unknown> => {
+const firstItemRecord = (
+  items: ReadonlyArray<unknown>,
+): Record<string, unknown> => {
   if (items.length === 0) return {};
   return toRecord(items[0]);
 };
-const getOrderCustomer = (order: Record<string, unknown>): Record<string, unknown> =>
-  toRecord(order.customer);
-const getShippingAddress = (addresses: ReadonlyArray<unknown>): Record<string, unknown> => {
-  const shipping = addresses.find((address) => toRecord(address).type === "shipping");
+const getOrderCustomer = (
+  order: Record<string, unknown>,
+): Record<string, unknown> => toRecord(order.customer);
+const getShippingAddress = (
+  addresses: ReadonlyArray<unknown>,
+): Record<string, unknown> => {
+  const shipping = addresses.find(
+    (address) => toRecord(address).type === "shipping",
+  );
   return toRecord(shipping ?? addresses[0]);
 };
 const sumQuantity = (items: ReadonlyArray<unknown>): number =>
   items.reduce<number>((sum, item) => sum + num(toRecord(item).quantity, 0), 0);
-const getItemImageCandidates = (item: Record<string, unknown>): ReadonlyArray<string> => {
+const getItemImageCandidates = (
+  item: Record<string, unknown>,
+): ReadonlyArray<string> => {
   const product = toRecord(item.product);
   const variant = toRecord(item.productVariant);
 
@@ -87,9 +136,10 @@ const getItemFallbackLabel = (item: Record<string, unknown>): string =>
     .join("")
     .toUpperCase() || "P";
 
-type DetailField = Readonly<{
+type IconField = Readonly<{
   label: string;
   value: React.ReactNode;
+  icon: React.ReactNode;
 }>;
 
 type OrderRecord = Readonly<Record<string, unknown>>;
@@ -115,12 +165,11 @@ const ProductThumbnail: React.FC<{
       setIndex((current) => current + 1);
       return;
     }
-
     setFailed(true);
   };
 
   return (
-    <div className="flex h-full w-full items-center justify-center bg-[#fafaf9]">
+    <div className="flex h-full w-full items-center justify-center bg-transparent">
       {!failed && src ? (
         <img
           src={src}
@@ -140,43 +189,167 @@ const ProductThumbnail: React.FC<{
   );
 };
 
-const DetailGrid: React.FC<{ fields: ReadonlyArray<DetailField> }> = ({ fields }) => (
-  <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-    {fields.map((field) => (
-      <div key={field.label} className="min-w-0">
-        <dt className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#787774]">
-          {field.label}
-        </dt>
-        <dd className="mt-1 text-sm font-medium leading-6 text-[#1d1d1f]">{field.value}</dd>
-      </div>
-    ))}
-  </dl>
-);
+const IconFieldList: React.FC<{ fields: ReadonlyArray<IconField> }> = ({ fields }) => {
+  const pairs = React.useMemo(() => {
+    const result: Array<Array<IconField>> = [];
+    for (let i = 0; i < fields.length; i += 2) {
+      result.push(fields.slice(i, i + 2) as Array<IconField>);
+    }
+    return result;
+  }, [fields]);
 
-const SectionHeader: React.FC<{ title: string; description?: string }> = ({
-  title,
-  description,
-}) => (
-  <div className="pb-4">
-    <h2 className="text-[14px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+  return (
+    <div>
+      {pairs.map((pair, rowIdx) => (
+        <div
+          key={rowIdx}
+          className={`grid grid-cols-2 gap-x-6 py-3.5 ${rowIdx < pairs.length - 1 ? "border-b border-[#f3f2f0]" : ""}`}
+        >
+          {pair.map((field) => (
+            <div key={field.label} className="flex min-w-0 items-start gap-2.5">
+              <div className="mt-0.5 shrink-0 text-[#b0aaa3]">{field.icon}</div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#9a948d]">
+                  {field.label}
+                </p>
+                <div className="mt-0.5 text-[13px] font-medium leading-5 text-[#1d1d1f]">
+                  {field.value}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const SectionIconHeader: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  bg: string;
+}> = ({ title, icon, bg }) => (
+  <div className="flex items-center gap-3">
+    <div
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bg}`}
+    >
+      {icon}
+    </div>
+    <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
       {title}
     </h2>
-    {description && (
-      <p className="mt-1 text-[11px] leading-5 text-[#787774]">{description}</p>
-    )}
   </div>
 );
 
-const SectionBlock: React.FC<{
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}> = ({ title, description, children }) => (
-  <section className="px-6 py-5 sm:px-8">
-    <SectionHeader title={title} description={description} />
-    {children}
-  </section>
-);
+
+const statusColors = (
+  status: string,
+): { border: string; bg: string; text: string; dot: string } => {
+  const key = status.toLowerCase().replace(/[\s_]+/g, "");
+  if (["completed", "delivered", "shipped", "paid", "fulfilled", "active"].includes(key))
+    return { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" };
+  if (["pending", "processing", "readyforshipment", "unpaid", "partial", "scheduled"].includes(key))
+    return { border: "border-amber-200", bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400" };
+  if (["cancelled", "failed", "returned", "refunded", "expired"].includes(key))
+    return { border: "border-red-200", bg: "bg-red-50", text: "text-red-700", dot: "bg-red-400" };
+  return { border: "border-[#d2d2d7]", bg: "bg-white", text: "text-[#6e6e73]", dot: "bg-[#86868b]" };
+};
+
+const getOrderProgressStages = (status: string): ReadonlyArray<string> =>
+  status === "CANCELLED" || status === "RETURNED"
+    ? [...orderFlowStages, status]
+    : orderFlowStages;
+
+const getOrderProgressIndex = (
+  status: string,
+  stages: ReadonlyArray<string>,
+): number => {
+  const normalized = status.toLowerCase();
+  const index = stages.findIndex((stage) => stage.toLowerCase() === normalized);
+  return index >= 0 ? index : 0;
+};
+
+const getStageState = (
+  index: number,
+  currentIndex: number,
+): "complete" | "current" | "upcoming" => {
+  if (index < currentIndex) return "complete";
+  if (index === currentIndex) return "current";
+  return "upcoming";
+};
+
+const getStageTone = (state: "complete" | "current" | "upcoming"): string => {
+  if (state === "current") return "border-[#1d1d1f] bg-[#1d1d1f] text-white";
+  if (state === "complete") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "border-[#d2d2d7] bg-[#f5f5f7] text-[#6e6e73]";
+};
+
+const getStageIcon = (stage: string): React.ReactNode => {
+  switch (stage) {
+    case "PENDING":            return <CircleDot size={14} strokeWidth={2.25} />;
+    case "PROCESSING":         return <Cog size={14} strokeWidth={2.25} />;
+    case "READY_FOR_SHIPMENT": return <Package size={14} strokeWidth={2.25} />;
+    case "SHIPPED":            return <Truck size={14} strokeWidth={2.25} />;
+    case "DELIVERED":
+    case "COMPLETED":          return <BadgeCheck size={14} strokeWidth={2.25} />;
+    default:                   return <CircleDot size={14} strokeWidth={2.25} />;
+  }
+};
+
+const ProgressTimeline: React.FC<{ status: string }> = ({ status }) => {
+  const stages = React.useMemo(() => getOrderProgressStages(status), [status]);
+  const currentIndex = React.useMemo(
+    () => getOrderProgressIndex(status, stages),
+    [stages, status],
+  );
+
+  return (
+    <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+      <div className="overflow-x-auto">
+        <ol className="flex min-w-max items-start px-0 py-1">
+          {stages.map((stage, index) => {
+            const state = getStageState(index, currentIndex);
+            const isLast = index === stages.length - 1;
+            const connectorTone =
+              state === "complete" || state === "current"
+                ? "bg-[#d2d2d7]"
+                : "bg-[#e7e5e4]";
+
+            return (
+              <li
+                key={stage}
+                className="relative flex min-w-40 flex-1 flex-col items-center text-center"
+              >
+                {!isLast && (
+                  <span
+                    className={`absolute left-[calc(50%+18px)] right-[-50%] top-4.5 h-px ${connectorTone}`}
+                  />
+                )}
+                <span
+                  className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold ${getStageTone(state)}`}
+                >
+                  <span className={state === "current" ? "text-white" : "text-current"}>
+                    {state === "complete"
+                      ? <BadgeCheck size={14} strokeWidth={2.25} />
+                      : getStageIcon(stage)}
+                  </span>
+                </span>
+                <div className="mt-2.5 min-w-0">
+                  <p className="text-[12px] font-medium tracking-[-0.01em] text-[#1d1d1f]">
+                    {formatOrderStatusLabel(stage)}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-[#9a948d]">
+                    {state === "complete" ? "Done" : state === "current" ? "Current" : "Upcoming"}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </section>
+  );
+};
 
 export const OrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -187,7 +360,7 @@ export const OrderDetailsPage: React.FC = () => {
   const updateOrderStatus = useUpdateOrderStatus();
   const syncDelivery = useSyncOrderDelivery();
 
-  const [orderStatus, setOrderStatus] = React.useState("Pending");
+  const [orderStatus, setOrderStatus] = React.useState("PENDING");
   const [paymentStatus, setPaymentStatus] = React.useState("Pending");
   const [paymentId, setPaymentId] = React.useState<string | null>(null);
   const [syncingPickup, setSyncingPickup] = React.useState(false);
@@ -198,19 +371,25 @@ export const OrderDetailsPage: React.FC = () => {
     return p as OrderRecord;
   }, [query.data]);
 
-  const orderDetail = React.useMemo(() => getOrderDetail(record ?? {}), [record]);
-  const order = React.useMemo(() => normalizeOrderRow(orderDetail), [orderDetail]);
+  const orderDetail = React.useMemo(
+    () => getOrderDetail(record ?? {}),
+    [record],
+  );
+  const order = React.useMemo(
+    () => normalizeOrderRow(orderDetail),
+    [orderDetail],
+  );
 
   React.useEffect(() => {
     if (!record) return;
-    setOrderStatus(text(record.status, "Pending"));
+    setOrderStatus(text(orderDetail.status, "PENDING"));
     const payments = toArray(record.payments);
     if (payments.length > 0) {
       const pm = firstItemRecord(payments);
       setPaymentStatus(text(pm.status ?? pm.paymentStatus, "Pending"));
       setPaymentId(text(pm.id, null as unknown as string) || null);
     }
-  }, [record]);
+  }, [record, orderDetail.status]);
 
   if (!id) {
     return (
@@ -257,15 +436,6 @@ export const OrderDetailsPage: React.FC = () => {
     }
   };
 
-  const handleSyncBranches = async () => {
-    try {
-      await commerceApi.orders.syncBranches();
-      toast.success("Branches synced");
-    } catch (error) {
-      toast.error(parseApiError(error).message);
-    }
-  };
-
   const customer = getOrderCustomer(orderDetail);
   const payments = toArray(record?.payments);
   const payment = firstItemRecord(payments);
@@ -286,244 +456,303 @@ export const OrderDetailsPage: React.FC = () => {
     text(shippingAddress.country),
   ]);
   const customerAddress = text(customer.address, "—");
+  const orderSource = text(orderDetail.orderSource, "");
+  const paymentStatusValue = text(payment.paymentStatus, order.paymentStatus);
 
   return (
     <ModernFormLayout
       title={order.orderNumber}
+      subtitle={
+        <>
+          <span>Created on {formatDateTime(orderDetail.createdAt)}</span>
+          {orderSource && (
+            <>
+              <span className="text-[#c4c4c8]">•</span>
+              <span>Source: {orderSource}</span>
+            </>
+          )}
+        </>
+      }
       titleMeta={
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="inline-flex min-h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245]">
-            {order.customerName}
-          </span>
-          <span className="inline-flex min-h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245]">
-            Rs {order.total}
-          </span>
-          <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#6e6e73]">
-            <span>Order</span>
-            <select
-              value={orderStatus}
-              onChange={async (e) => {
-                const nextStatus = e.target.value;
-                const previousStatus = orderStatus;
-                setOrderStatus(nextStatus);
-                const parsed = validateOrToast(
-                  orderStatusSchema,
-                  nextStatus,
-                  toast,
-                  "Invalid order status",
-                );
-                if (!parsed) {
-                  setOrderStatus(previousStatus);
-                  return;
-                }
-                try {
-                  await updateOrderStatus.mutateAsync({ id, payload: { orderStatus: parsed } });
-                  await query.refetch();
-                } catch (error) {
-                  setOrderStatus(previousStatus);
-                  toast.error(parseApiError(error).message);
-                }
-              }}
-              disabled={updateOrderStatus.isPending}
-              className="bg-transparent text-[11px] font-medium text-[#1d1d1f] outline-none disabled:opacity-60"
-            >
-              {["Pending", "Confirmed", "Packed", "Shipped", "Delivered", "Cancelled", "Returned"].map(
-                (s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-          {canUpdatePayment && (
-            <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#6e6e73]">
-              <span>Payment</span>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <label className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-[11px] font-medium transition-colors ${statusColors(orderStatus).border} ${statusColors(orderStatus).bg}`}>
+              <span className={statusColors(orderStatus).text}>Order status</span>
               <select
-                value={paymentStatus}
+                value={orderStatus}
                 onChange={async (e) => {
                   const nextStatus = e.target.value;
-                  const previousStatus = paymentStatus;
-                  setPaymentStatus(nextStatus);
-                  if (!paymentId) {
-                    setPaymentStatus(previousStatus);
+                  const previousStatus = orderStatus;
+                  setOrderStatus(nextStatus);
+                  const parsed = validateOrToast(
+                    orderStatusSchema,
+                    nextStatus,
+                    toast,
+                    "Invalid order status",
+                  );
+                  if (!parsed) {
+                    setOrderStatus(previousStatus);
                     return;
                   }
                   try {
-                    await commerceApi.payments.update(paymentId, { paymentStatus: nextStatus });
-                    toast.success("Payment status updated");
+                    await updateOrderStatus.mutateAsync({
+                      id,
+                      payload: { orderStatus: parsed },
+                    });
                     await query.refetch();
                   } catch (error) {
-                    setPaymentStatus(previousStatus);
+                    setOrderStatus(previousStatus);
                     toast.error(parseApiError(error).message);
                   }
                 }}
-                disabled={!paymentId}
-                className="bg-transparent text-[11px] font-medium text-[#1d1d1f] outline-none disabled:opacity-60"
+                disabled={updateOrderStatus.isPending}
+                className={`bg-transparent text-[11px] font-semibold outline-none disabled:opacity-60 ${statusColors(orderStatus).text}`}
               >
-                {paymentStatusOptions.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                {orderStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          <button
-            type="button"
-            onClick={() => void handleSyncDelivery()}
-            disabled={syncDelivery.isPending}
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
-          >
-            {syncDelivery.isPending ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <RefreshCw size={12} />
+            {canUpdatePayment && (
+              <label className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-[11px] font-medium transition-colors ${statusColors(paymentStatus).border} ${statusColors(paymentStatus).bg}`}>
+                <span className={statusColors(paymentStatus).text}>Payment</span>
+                <select
+                  value={paymentStatus}
+                  onChange={async (e) => {
+                    const nextStatus = e.target.value;
+                    const previousStatus = paymentStatus;
+                    setPaymentStatus(nextStatus);
+                    if (!paymentId) {
+                      setPaymentStatus(previousStatus);
+                      return;
+                    }
+                    try {
+                      await commerceApi.payments.update(paymentId, {
+                        paymentStatus: nextStatus,
+                      });
+                      toast.success("Payment status updated");
+                      await query.refetch();
+                    } catch (error) {
+                      setPaymentStatus(previousStatus);
+                      toast.error(parseApiError(error).message);
+                    }
+                  }}
+                  disabled={!paymentId}
+                  className={`bg-transparent text-[11px] font-semibold outline-none disabled:opacity-60 ${statusColors(paymentStatus).text}`}
+                >
+                  {paymentStatusOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
-            Sync delivery
-          </button>
-          <button
-            type="button"
-            onClick={() => void handlePickupNotification()}
-            disabled={syncingPickup}
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
-          >
-            {syncingPickup ? <Loader2 size={12} className="animate-spin" /> : <Bell size={12} />}
-            Pickup notification
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSyncBranches()}
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Truck size={12} />
-            Sync branches
-          </button>
+            <button
+              type="button"
+              onClick={() => void handleSyncDelivery()}
+              disabled={syncDelivery.isPending}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
+            >
+              {syncDelivery.isPending ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <RefreshCw size={12} />
+              )}
+              Sync delivery
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePickupNotification()}
+              disabled={syncingPickup}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
+            >
+              {syncingPickup ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Bell size={12} />
+              )}
+              Pickup notification
+            </button>
+          </div>
         </div>
       }
       onBack={() => navigate("/dashboard/orders")}
     >
-      <div className="overflow-hidden rounded-[24px] border border-[#e7e5e4] bg-white">
-        <div className="divide-y divide-[#e7e5e4]">
-          <SectionBlock
-            title="Order summary"
-            description="Only the values that help staff review and process the order."
-          >
-            <DetailGrid
-              fields={[
-                { label: "Order source", value: text(orderDetail.orderSource, "—") },
-                { label: "Total", value: formatMoney(orderDetail.totalAmount) },
-                { label: "Subtotal", value: formatMoney(orderDetail.subtotalAmount) },
-                { label: "Discount", value: formatMoney(orderDetail.discountAmount) },
-                { label: "Shipping", value: formatMoney(orderDetail.shippingAmount) },
-                { label: "Item count", value: String(itemCount) },
-                { label: "Quantity total", value: String(quantityCount) },
-                { label: "Editable until", value: formatDateTime(orderDetail.editableUntil) },
-                { label: "Created at", value: formatDateTime(orderDetail.createdAt) },
-                { label: "Updated at", value: formatDateTime(orderDetail.updatedAt) },
-              ]}
-            />
-          </SectionBlock>
+      <div className="space-y-3">
+        <ProgressTimeline status={orderStatus} />
 
-          <SectionBlock title="Customer">
-            <DetailGrid
-              fields={[
-                {
-                  label: "Name",
-                  value: text(
-                    customer.firstname
-                      ? `${text(customer.firstname)} ${text(customer.lastname)}`.trim()
-                      : customer.fullname ?? customer.name,
-                    order.customerName,
-                  ),
-                },
-                { label: "Email", value: text(customer.email, order.customerEmail) },
-                { label: "Phone", value: text(customer.phone, "—") },
-                { label: "Gender", value: text(customer.gender, "—") },
-                { label: "Verified", value: boolText(customer.isVerified) },
-                { label: "Address", value: customerAddress },
-              ]}
-            />
-          </SectionBlock>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+          {/* Left column */}
+          <div className="space-y-3">
+            <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+              <SectionIconHeader
+                title="Order Summary"
+                icon={<FileText size={18} className="text-white" strokeWidth={2} />}
+                bg="bg-blue-500"
+              />
+              <div className="my-4 rounded-xl bg-blue-50 p-4">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-blue-400">
+                  Total Amount
+                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-[26px] font-bold tracking-[-0.03em] text-blue-600">
+                    {formatMoney(orderDetail.totalAmount)}
+                  </p>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+                    <Wallet size={16} className="text-blue-500" />
+                  </div>
+                </div>
+              </div>
+              <IconFieldList
+                fields={[
+                  { label: "Subtotal", value: formatMoney(orderDetail.subtotalAmount), icon: <Tag size={13} /> },
+                  { label: "Shipping", value: formatMoney(orderDetail.shippingAmount), icon: <Truck size={13} /> },
+                  { label: "Discount", value: formatMoney(orderDetail.discountAmount), icon: <Tag size={13} /> },
+                  { label: "Item count", value: String(itemCount), icon: <ShoppingBag size={13} /> },
+                  { label: "Quantity total", value: String(quantityCount), icon: <Layers size={13} /> },
+                  { label: "Created at", value: formatDateTime(orderDetail.createdAt), icon: <Calendar size={13} /> },
+                  { label: "Editable until", value: formatDateTime(orderDetail.editableUntil), icon: <Clock size={13} /> },
+                  { label: "Updated at", value: formatDateTime(orderDetail.updatedAt), icon: <Calendar size={13} /> },
+                ]}
+              />
+            </section>
 
-          <SectionBlock title="Payment">
-            <DetailGrid
-              fields={[
-                { label: "Method", value: text(payment.paymentMethod, order.paymentMethod) },
-                { label: "Status", value: text(payment.paymentStatus, order.paymentStatus) },
-                { label: "Amount", value: formatMoney(payment.amount ?? order.total) },
-                { label: "Source", value: text(payment.paymentSource, "—") },
-                { label: "Provider", value: text(payment.providerName, "—") },
-                { label: "Transaction ID", value: text(payment.transactionId, "—") },
-                { label: "Paid at", value: formatDateTime(payment.paidAt) },
-              ]}
-            />
-          </SectionBlock>
+            <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+              <SectionIconHeader
+                title="Customer"
+                icon={<UserRound size={18} className="text-white" strokeWidth={2} />}
+                bg="bg-violet-500"
+              />
+              <div className="mt-4">
+                <IconFieldList
+                  fields={[
+                    {
+                      label: "Name",
+                      value: text(
+                        customer.firstname
+                          ? `${text(customer.firstname)} ${text(customer.lastname)}`.trim()
+                          : (customer.fullname ?? customer.name),
+                        order.customerName,
+                      ),
+                      icon: <User size={13} />,
+                    },
+                    { label: "Email", value: text(customer.email, order.customerEmail), icon: <Mail size={13} /> },
+                    { label: "Phone", value: text(customer.phone, "—"), icon: <Phone size={13} /> },
+                    { label: "Gender", value: text(customer.gender, "—"), icon: <User size={13} /> },
+                    { label: "Verified", value: boolText(customer.isVerified), icon: <CheckCircle size={13} /> },
+                    { label: "Address", value: customerAddress, icon: <MapPin size={13} /> },
+                  ]}
+                />
+              </div>
+            </section>
+          </div>
 
-          <SectionBlock title="Delivery">
-            <DetailGrid
-              fields={[
-                { label: "Recipient", value: text(shippingAddress.fullName, "—") },
-                { label: "Phone", value: text(shippingAddress.phone, "—") },
-                { label: "Address line", value: addressLine || "—" },
-                { label: "Location", value: cityLine || "—" },
-                { label: "Auto assigned", value: boolText(orderDetail.deliveryAutoAssigned) },
-                { label: "Assigned at", value: formatDateTime(orderDetail.deliveryAssignedAt) },
-              ]}
-            />
-          </SectionBlock>
+          {/* Right column */}
+          <div className="space-y-3">
+            <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+              <SectionIconHeader
+                title="Payment"
+                icon={<CreditCard size={18} className="text-white" strokeWidth={2} />}
+                bg="bg-emerald-500"
+              />
+              <div className="mt-4">
+                <IconFieldList
+                  fields={[
+                    { label: "Method", value: text(payment.paymentMethod, order.paymentMethod), icon: <CreditCard size={13} /> },
+                    {
+                      label: "Status",
+                      value: <StatusBadge status={paymentStatusValue} />,
+                      icon: <CheckCircle size={13} />,
+                    },
+                    { label: "Amount", value: formatMoney(payment.amount ?? order.total), icon: <Banknote size={13} /> },
+                    { label: "Source", value: text(payment.paymentSource, "—"), icon: <Building2 size={13} /> },
+                    { label: "Provider", value: text(payment.providerName, "—"), icon: <Building2 size={13} /> },
+                    { label: "Transaction ID", value: text(payment.transactionId, "—"), icon: <Hash size={13} /> },
+                    { label: "Paid at", value: formatDateTime(payment.paidAt), icon: <CalendarCheck size={13} /> },
+                  ]}
+                />
+              </div>
+            </section>
 
-          {items.length > 0 && (
-            <SectionBlock
+            <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+              <SectionIconHeader
+                title="Delivery"
+                icon={<Truck size={18} className="text-white" strokeWidth={2} />}
+                bg="bg-sky-500"
+              />
+              <div className="mt-4">
+                <IconFieldList
+                  fields={[
+                    { label: "Recipient", value: text(shippingAddress.fullName, "—"), icon: <User size={13} /> },
+                    { label: "Phone", value: text(shippingAddress.phone, "—"), icon: <Phone size={13} /> },
+                    { label: "Address line", value: addressLine || "—", icon: <Map size={13} /> },
+                    { label: "Location", value: cityLine || "—", icon: <MapPin size={13} /> },
+                    { label: "Auto assigned", value: boolText(orderDetail.deliveryAutoAssigned), icon: <CheckCircle size={13} /> },
+                    { label: "Assigned at", value: formatDateTime(orderDetail.deliveryAssignedAt), icon: <Calendar size={13} /> },
+                  ]}
+                />
+              </div>
+            </section>
+          </div>
+        </div>
+
+        {items.length > 0 && (
+          <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+            <SectionIconHeader
               title="Items"
-              description="Product image, title, quantity, and subtotal."
-            >
-              <div className="divide-y divide-[#e7e5e4]">
-                {items.map((item, index) => {
-                  const row = toRecord(item);
-                  const images = getItemImageCandidates(row);
-                  const title = getItemTitle(row);
+              icon={<Package size={18} className="text-white" strokeWidth={2} />}
+              bg="bg-orange-500"
+            />
+            <p className="mt-0.5 pl-13 text-[11px] text-[#9a948d]">
+              {itemCount} product{itemCount !== 1 ? "s" : ""} · {quantityCount} unit{quantityCount !== 1 ? "s" : ""}
+            </p>
+            <div className="mt-4 border-t border-[#f3f2f0]">
+              {items.map((item, index) => {
+                const row = toRecord(item);
+                const images = getItemImageCandidates(row);
+                const title = getItemTitle(row);
+                const isLast = index === items.length - 1;
 
-                  return (
-                    <div
-                      key={text(row.id, `${index}`)}
-                      className="flex items-start gap-4 py-4"
-                    >
-                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#e7e5e4] bg-white">
-                        {images.length > 0 ? (
-                          <ProductThumbnail
-                            sources={images}
-                            alt={title}
-                            fallbackLabel={getItemFallbackLabel(row)}
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[10px] text-[#787774]">
-                            {getItemFallbackLabel(row)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-[#1d1d1f]">
-                              {title}
-                            </p>
-                            <p className="mt-1 text-[11px] leading-5 text-[#787774]">
-                              Qty {num(row.quantity, 0)} · Unit {formatMoney(row.price)}
-                            </p>
-                          </div>
-                          <p className="text-sm font-medium text-[#1d1d1f]">
-                            {formatMoney(row.subtotal)}
+                return (
+                  <div
+                    key={text(row.id, `${index}`)}
+                    className={`flex items-center gap-4 py-3.5 ${!isLast ? "border-b border-[#f3f2f0]" : ""}`}
+                  >
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f7]">
+                      {images.length > 0 ? (
+                        <ProductThumbnail
+                          sources={images}
+                          alt={title}
+                          fallbackLabel={getItemFallbackLabel(row)}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-[#9a948d]">
+                          {getItemFallbackLabel(row)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-medium text-[#1d1d1f]">{title}</p>
+                          <p className="mt-0.5 text-[11px] text-[#9a948d]">
+                            Qty {num(row.quantity, 0)} · {formatMoney(row.price)} each
                           </p>
                         </div>
+                        <p className="shrink-0 text-[13px] font-semibold tabular-nums text-[#1d1d1f]">
+                          {formatMoney(row.subtotal)}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </SectionBlock>
-          )}
-        </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </ModernFormLayout>
   );

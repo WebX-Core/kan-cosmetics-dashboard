@@ -234,40 +234,21 @@ export function DataTableV2<T extends Record<string, unknown>>({
       {hasToolbar && (
         <div className={`flex flex-col gap-[10px] border-b border-[#e5e5e7] px-[21px] py-[10px] ${hasTabs ? "lg:flex-row lg:items-center lg:justify-between" : "lg:flex-row lg:items-center lg:justify-end"}`}>
           {hasTabs ? (
-            <div
-              className="flex min-w-0 items-center gap-[8px] overflow-x-auto pb-px [scrollbar-width:none]"
-              style={{ msOverflowStyle: "none" }}
-            >
-              {tabItems.map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => onTabChange?.(tab.key)}
-                    aria-pressed={isActive}
-                    className={`flex shrink-0 items-center gap-[6px] rounded-full border px-[13px] py-[4px] text-[13px] font-medium transition-colors ${
-                      isActive
-                        ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm"
-                        : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:border-[#b8bcc2] hover:bg-[#f5f5f7]"
-                    }`}
-                  >
+            <label className="inline-flex min-h-[34px] items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-[13px] text-[13px] font-medium text-[#1d1d1f]">
+              <span className="text-[#6e6e73]">Filter</span>
+              <select
+                value={activeTab ?? tabItems[0]?.key ?? "all"}
+                onChange={(event) => onTabChange?.(event.target.value)}
+                className="bg-transparent outline-none"
+              >
+                {tabItems.map((tab) => (
+                  <option key={tab.key} value={tab.key}>
                     {tab.label}
-                    {tab.count !== undefined && tab.count > 0 && (
-                      <span
-                        className={`rounded-full px-[6px] py-px text-[10px] font-semibold leading-none ${
-                          isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-[#f5f5f7] text-[#6e6e73]"
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                    {tab.count !== undefined ? ` (${tab.count})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
           ) : null}
 
           <div className="flex shrink-0 flex-wrap items-center gap-[8px]">

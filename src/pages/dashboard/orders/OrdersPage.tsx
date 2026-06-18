@@ -15,6 +15,7 @@ import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useOrders } from "@/features/commerce";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
+import { formatOrderStatusLabel, orderStatusOptions } from "./orderStore";
 
 type OrderRow = Readonly<{
   id: string;
@@ -95,7 +96,7 @@ export const OrdersPage: React.FC = () => {
       total: totalOrders,
       pending: orders.filter((o) => o.status === "PENDING").length,
       shipped: orders.filter((o) => o.status === "SHIPPED").length,
-      delivered: orders.filter((o) => o.status === "DELIVERED").length,
+      delivered: orders.filter((o) => o.status === "DELIVERED" || o.status === "COMPLETED").length,
     }),
     [orders, totalOrders],
   );
@@ -107,9 +108,10 @@ export const OrdersPage: React.FC = () => {
 
   const tabs = [
     { key: "all", label: "All" },
-    { key: "pending", label: "Pending" },
-    { key: "shipped", label: "Shipped" },
-    { key: "delivered", label: "Delivered" },
+    ...orderStatusOptions.map((option) => ({
+      key: option.value.toLowerCase(),
+      label: option.label,
+    })),
   ];
 
   const columns = [
@@ -174,7 +176,12 @@ export const OrdersPage: React.FC = () => {
     {
       key: "status",
       label: "Status",
-      render: (row: OrderRow) => <StatusBadge status={row.status} />,
+      render: (row: OrderRow) => (
+        <StatusBadge
+          status={row.status}
+          label={formatOrderStatusLabel(row.status)}
+        />
+      ),
     },
   ];
 

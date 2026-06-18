@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Tag, SlidersHorizontal } from "lucide-react";
 import { z } from "zod";
 import { catalogApi } from "@/features/catalog";
@@ -19,6 +19,9 @@ const toRows = (value: unknown): ReadonlyArray<Readonly<Record<string, unknown>>
   const nested = Object.values(value as Record<string, unknown>).find(Array.isArray);
   return Array.isArray(nested) ? (nested as ReadonlyArray<Readonly<Record<string, unknown>>>) : [];
 };
+
+const readQueryParam = (searchParams: URLSearchParams, key: string): string =>
+  searchParams.get(key)?.trim() ?? "";
 
 const tagSchema = z.object({
   productId: z.string().min(1),
@@ -52,9 +55,17 @@ type AttrRow = Readonly<{ id: string; name: string; value: string; productId: st
 export const ProductTagsPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
+  const productId = readQueryParam(searchParams, "productId");
+  const productName = readQueryParam(searchParams, "productName");
 
-  const q = catalogApi.productTags.hooks.useList({ page: state.page, limit: state.limit, search: debouncedSearch || undefined });
+  const q = catalogApi.productTags.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+    productId: productId || undefined,
+  });
   const del = catalogApi.productTags.hooks.useSoftDelete();
 
   const rows: ReadonlyArray<TagRow> = React.useMemo(() =>
@@ -67,6 +78,17 @@ export const ProductTagsPage: React.FC = () => {
   );
 
   const totalPages = q.data?.totalPages ?? 1;
+  const pageTitle = productName ? `${productName} Tags` : "Product Tags";
+  const pageSubtitle = productName
+    ? "Manage tags attached to this product."
+    : "Keyword tags attached to products.";
+  const createPath = productId
+    ? `/dashboard/product-tags/create?productId=${encodeURIComponent(productId)}&productName=${encodeURIComponent(productName || "")}`
+    : "/dashboard/product-tags/create";
+  const editPath = (id: string) =>
+    productId
+      ? `/dashboard/product-tags/${id}/edit?productId=${encodeURIComponent(productId)}&productName=${encodeURIComponent(productName || "")}`
+      : `/dashboard/product-tags/${id}/edit`;
 
   const handleDelete = async (id: string) => {
     const ok = await confirmAction("Delete this tag?");
@@ -82,9 +104,9 @@ export const ProductTagsPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Product Tags"
-      subtitle="Keyword tags attached to products."
-      onNew={() => navigate("/dashboard/product-tags/create")}
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      onNew={() => navigate(createPath)}
       newButtonLabel="New Tag"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
@@ -95,7 +117,7 @@ export const ProductTagsPage: React.FC = () => {
         columns={columns}
         data={rows}
         searchValue={state.search}
-        onEdit={(r) => navigate(`/dashboard/product-tags/${r.id}/edit`)}
+        onEdit={(r) => navigate(editPath(r.id))}
         onDelete={(r) => void handleDelete(r.id)}
         emptyMessage={q.isLoading ? "Loading tags..." : "No product tags found."}
         showPagination={true}
@@ -110,20 +132,33 @@ export const ProductTagsPage: React.FC = () => {
 export const ProductTagCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
   const create = catalogApi.productTags.hooks.useCreate();
-  const [productId, setProductId] = React.useState("");
+  const scopedProductId = readQueryParam(searchParams, "productId");
+  const scopedProductName = readQueryParam(searchParams, "productName");
+  const [productId, setProductId] = React.useState(scopedProductId);
   const [tag, setTag] = React.useState("");
   const [sortOrder] = React.useState("0");
+  React.useEffect(() => {
+    if (scopedProductId) setProductId(scopedProductId);
+  }, [scopedProductId]);
   const submit = async () => {
     const parsed = validateOrToast(tagSchema, { productId, tag, sortOrder }, toast);
     if (!parsed) return;
     await create.mutateAsync(parsed);
-    navigate("/dashboard/product-tags");
+    navigate(
+      scopedProductId
+        ? `/dashboard/product-tags?productId=${encodeURIComponent(scopedProductId)}&productName=${encodeURIComponent(scopedProductName || "")}`
+        : "/dashboard/product-tags",
+    );
   };
   return (
-    <PageLayout title="New Product Tag" subtitle="Add a keyword tag to a product.">
+    <PageLayout
+      title="New Product Tag"
+      subtitle={scopedProductName ? `Add a keyword tag to ${scopedProductName}.` : "Add a keyword tag to a product."}
+    >
       <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
+        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
         <input className={input} placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
         <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Create Tag</button>
       </div>
@@ -135,9 +170,12 @@ export const ProductTagEditPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const scopedProductId = readQueryParam(searchParams, "productId");
+  const scopedProductName = readQueryParam(searchParams, "productName");
   const get = catalogApi.productTags.hooks.useGet(id);
   const update = catalogApi.productTags.hooks.useUpdate();
-  const [productId, setProductId] = React.useState("");
+  const [productId, setProductId] = React.useState(scopedProductId);
   const [tag, setTag] = React.useState("");
   const [sortOrder, setSortOrder] = React.useState("0");
   React.useEffect(() => {
@@ -147,17 +185,27 @@ export const ProductTagEditPage: React.FC = () => {
     setTag(String(row.tag ?? ""));
     setSortOrder(String(row.sortOrder ?? 0));
   }, [get.data]);
+  React.useEffect(() => {
+    if (scopedProductId) setProductId(scopedProductId);
+  }, [scopedProductId]);
   const submit = async () => {
     if (!id) return;
     const parsed = validateOrToast(tagSchema, { productId, tag, sortOrder }, toast);
     if (!parsed) return;
     await update.mutateAsync({ id, dto: parsed });
-    navigate("/dashboard/product-tags");
+    navigate(
+      scopedProductId
+        ? `/dashboard/product-tags?productId=${encodeURIComponent(scopedProductId)}&productName=${encodeURIComponent(scopedProductName || "")}`
+        : "/dashboard/product-tags",
+    );
   };
   return (
-    <PageLayout title="Edit Product Tag" subtitle="Update tag details.">
+    <PageLayout
+      title="Edit Product Tag"
+      subtitle={scopedProductName ? `Update tags for ${scopedProductName}.` : "Update tag details."}
+    >
       <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
+        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
         <input className={input} placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
         <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Update Tag</button>
       </div>
@@ -168,9 +216,17 @@ export const ProductTagEditPage: React.FC = () => {
 export const ProductAttributesPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
+  const productId = readQueryParam(searchParams, "productId");
+  const productName = readQueryParam(searchParams, "productName");
 
-  const q = catalogApi.productAttributes.hooks.useList({ page: state.page, limit: state.limit, search: debouncedSearch || undefined });
+  const q = catalogApi.productAttributes.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+    productId: productId || undefined,
+  });
   const del = catalogApi.productAttributes.hooks.useSoftDelete();
 
   const rows: ReadonlyArray<AttrRow> = React.useMemo(() =>
@@ -184,6 +240,17 @@ export const ProductAttributesPage: React.FC = () => {
   );
 
   const totalPages = q.data?.totalPages ?? 1;
+  const pageTitle = productName ? `${productName} Attributes` : "Product Attributes";
+  const pageSubtitle = productName
+    ? "Manage attributes attached to this product."
+    : "Custom attribute key-value pairs for products.";
+  const createPath = productId
+    ? `/dashboard/product-attributes/create?productId=${encodeURIComponent(productId)}&productName=${encodeURIComponent(productName || "")}`
+    : "/dashboard/product-attributes/create";
+  const editPath = (id: string) =>
+    productId
+      ? `/dashboard/product-attributes/${id}/edit?productId=${encodeURIComponent(productId)}&productName=${encodeURIComponent(productName || "")}`
+      : `/dashboard/product-attributes/${id}/edit`;
 
   const handleDelete = async (id: string) => {
     const ok = await confirmAction("Delete this attribute?");
@@ -208,9 +275,9 @@ export const ProductAttributesPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Product Attributes"
-      subtitle="Custom attribute key-value pairs for products."
-      onNew={() => navigate("/dashboard/product-attributes/create")}
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      onNew={() => navigate(createPath)}
       newButtonLabel="New Attribute"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
@@ -221,7 +288,7 @@ export const ProductAttributesPage: React.FC = () => {
         columns={columns}
         data={rows}
         searchValue={state.search}
-        onEdit={(r) => navigate(`/dashboard/product-attributes/${r.id}/edit`)}
+        onEdit={(r) => navigate(editPath(r.id))}
         onDelete={(r) => void handleDelete(r.id)}
         emptyMessage={q.isLoading ? "Loading attributes..." : "No product attributes found."}
         showPagination={true}
@@ -236,21 +303,34 @@ export const ProductAttributesPage: React.FC = () => {
 export const ProductAttributeCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
+  const scopedProductId = readQueryParam(searchParams, "productId");
+  const scopedProductName = readQueryParam(searchParams, "productName");
   const create = catalogApi.productAttributes.hooks.useCreate();
-  const [productId, setProductId] = React.useState("");
+  const [productId, setProductId] = React.useState(scopedProductId);
   const [name, setName] = React.useState("");
   const [value, setValue] = React.useState("");
   const [sortOrder] = React.useState("0");
+  React.useEffect(() => {
+    if (scopedProductId) setProductId(scopedProductId);
+  }, [scopedProductId]);
   const submit = async () => {
     const parsed = validateOrToast(attributeSchema, { productId, name, value, sortOrder }, toast);
     if (!parsed) return;
     await create.mutateAsync(parsed);
-    navigate("/dashboard/product-attributes");
+    navigate(
+      scopedProductId
+        ? `/dashboard/product-attributes?productId=${encodeURIComponent(scopedProductId)}&productName=${encodeURIComponent(scopedProductName || "")}`
+        : "/dashboard/product-attributes",
+    );
   };
   return (
-    <PageLayout title="New Product Attribute" subtitle="Add a custom attribute to a product.">
+    <PageLayout
+      title="New Product Attribute"
+      subtitle={scopedProductName ? `Add a custom attribute to ${scopedProductName}.` : "Add a custom attribute to a product."}
+    >
       <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
+        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
         <input className={input} placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
         <input className={input} placeholder="value" value={value} onChange={(e) => setValue(e.target.value)} />
         <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Create Attribute</button>
@@ -263,9 +343,12 @@ export const ProductAttributeEditPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const scopedProductId = readQueryParam(searchParams, "productId");
+  const scopedProductName = readQueryParam(searchParams, "productName");
   const get = catalogApi.productAttributes.hooks.useGet(id);
   const update = catalogApi.productAttributes.hooks.useUpdate();
-  const [productId, setProductId] = React.useState("");
+  const [productId, setProductId] = React.useState(scopedProductId);
   const [name, setName] = React.useState("");
   const [value, setValue] = React.useState("");
   const [sortOrder, setSortOrder] = React.useState("0");
@@ -277,17 +360,27 @@ export const ProductAttributeEditPage: React.FC = () => {
     setValue(String(row.value ?? ""));
     setSortOrder(String(row.sortOrder ?? 0));
   }, [get.data]);
+  React.useEffect(() => {
+    if (scopedProductId) setProductId(scopedProductId);
+  }, [scopedProductId]);
   const submit = async () => {
     if (!id) return;
     const parsed = validateOrToast(attributeSchema, { productId, name, value, sortOrder }, toast);
     if (!parsed) return;
     await update.mutateAsync({ id, dto: parsed });
-    navigate("/dashboard/product-attributes");
+    navigate(
+      scopedProductId
+        ? `/dashboard/product-attributes?productId=${encodeURIComponent(scopedProductId)}&productName=${encodeURIComponent(scopedProductName || "")}`
+        : "/dashboard/product-attributes",
+    );
   };
   return (
-    <PageLayout title="Edit Product Attribute" subtitle="Update attribute details.">
+    <PageLayout
+      title="Edit Product Attribute"
+      subtitle={scopedProductName ? `Update attributes for ${scopedProductName}.` : "Update attribute details."}
+    >
       <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} />
+        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
         <input className={input} placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
         <input className={input} placeholder="value" value={value} onChange={(e) => setValue(e.target.value)} />
         <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Update Attribute</button>

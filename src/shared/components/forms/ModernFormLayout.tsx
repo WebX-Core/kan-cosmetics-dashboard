@@ -3,7 +3,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 
 type ModernFormLayoutProps = Readonly<{
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   eyebrow?: string;
   onBack?: () => void;
   titleMeta?: React.ReactNode;
@@ -33,11 +33,13 @@ export const ModernFormLayout: React.FC<ModernFormLayoutProps> = ({
                 Back
               </button>
             )}
-            <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+            <h1 className="text-[16px] font-semibold tracking-[-0.02em] text-[#2f3437]">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-[3px] text-[11px] text-[#6e6e73]">{subtitle}</p>
+              <div className="mt-[4px] flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[#6e6e73]">
+                {subtitle}
+              </div>
             )}
           </div>
 
