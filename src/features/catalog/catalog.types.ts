@@ -57,6 +57,7 @@ export type ProductDto = Readonly<{
   sortOrder?: number;
   coverImage?: File | null;
   hoverImage?: File | null;
+  pdf?: File | null;
   gallery?: ReadonlyArray<File>;
 }>;
 

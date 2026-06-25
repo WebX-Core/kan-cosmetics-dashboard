@@ -235,6 +235,8 @@ const StringListInput: React.FC<{
 
 const isValidImageFile = (file: File): boolean =>
   file.type.startsWith("image/") && file.size <= MAX_IMAGE_SIZE_BYTES;
+const isValidPdfFile = (file: File): boolean =>
+  file.type === "application/pdf" && file.size <= MAX_IMAGE_SIZE_BYTES;
 const isValidGalleryMediaFile = (file: File): boolean => {
   if (file.type.startsWith("image/")) return file.size <= MAX_IMAGE_SIZE_BYTES;
   if (file.type.startsWith("video/")) return file.size <= MAX_VIDEO_SIZE_BYTES;
@@ -416,6 +418,7 @@ export const ProductCreatePage: React.FC = () => {
 
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
   const [hoverImageFile, setHoverImageFile] = React.useState<File | null>(null);
+  const [pdfFile, setPdfFile] = React.useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = React.useState<
     ReadonlyArray<MediaUpload>
   >([]);
@@ -424,6 +427,7 @@ export const ProductCreatePage: React.FC = () => {
     React.useState<string>("");
   const [existingHoverImage, setExistingHoverImage] =
     React.useState<string>("");
+  const [existingPdf, setExistingPdf] = React.useState<string>("");
   const [existingGallery, setExistingGallery] = React.useState<
     ReadonlyArray<ExistingMedia>
   >([]);
@@ -533,11 +537,13 @@ export const ProductCreatePage: React.FC = () => {
     setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
     setExistingHoverImage(read(row.hoverImage));
+    setExistingPdf(read(row.pdf));
     setExistingGallery(gallery);
     setRemovedUrls([]);
     setRemovedMediaAssetIds([]);
     setCoverImageFile(null);
     setHoverImageFile(null);
+    setPdfFile(null);
     setGalleryFiles([]);
 
     setManualSlug(Boolean(read(row.slug)));
@@ -570,6 +576,18 @@ export const ProductCreatePage: React.FC = () => {
     },
     [toast],
   );
+  const pdfFileErrors = React.useCallback(
+    (files: FileList | null): ReadonlyArray<File> => {
+      if (!files?.length) return [];
+      const all = Array.from(files);
+      const valid = all.filter(isValidPdfFile);
+      if (valid.length !== all.length) {
+        toast.error("Only PDF files up to 5MB are allowed.");
+      }
+      return valid;
+    },
+    [toast],
+  );
   const galleryFileErrors = React.useCallback(
     (files: FileList | null): ReadonlyArray<File> => {
       if (!files?.length) return [];
@@ -596,6 +614,7 @@ export const ProductCreatePage: React.FC = () => {
   const previewHover = hoverImageFile
     ? URL.createObjectURL(hoverImageFile)
     : "";
+  const previewPdf = pdfFile ? URL.createObjectURL(pdfFile) : "";
   const previewGallery = React.useMemo(
     () =>
       galleryFiles.map((item) => ({
@@ -606,6 +625,7 @@ export const ProductCreatePage: React.FC = () => {
   );
   const hasCoverImage = Boolean(coverImageFile || existingCoverImage);
   const hasHoverImage = Boolean(hoverImageFile || existingHoverImage);
+  const hasPdf = Boolean(pdfFile || existingPdf);
   const totalGalleryImages = previewGallery.length + existingGallery.length;
   const canAddGalleryImage = totalGalleryImages < MAX_GALLERY_IMAGES;
 
@@ -613,9 +633,10 @@ export const ProductCreatePage: React.FC = () => {
     () => () => {
       if (previewCover) URL.revokeObjectURL(previewCover);
       if (previewHover) URL.revokeObjectURL(previewHover);
+      if (previewPdf) URL.revokeObjectURL(previewPdf);
       previewGallery.forEach((item) => URL.revokeObjectURL(item.preview));
     },
-    [previewCover, previewHover, previewGallery],
+    [previewCover, previewHover, previewPdf, previewGallery],
   );
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
@@ -663,6 +684,7 @@ export const ProductCreatePage: React.FC = () => {
       })(),
       coverImage: coverImageFile ?? undefined,
       hoverImage: hoverImageFile ?? undefined,
+      pdf: pdfFile ?? undefined,
       gallery: galleryFiles.length
         ? galleryFiles.map((item) => item.file)
         : undefined,
@@ -869,6 +891,52 @@ export const ProductCreatePage: React.FC = () => {
                         }}
                       />
                     )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 text-[13px] font-medium text-[#1d1d1f]">
+                  PDF Document
+                </p>
+                {!hasPdf ? (
+                  <DropArea
+                    label="PDF document"
+                    accept="application/pdf"
+                    helperText="Only PDF files, up to 5MB"
+                    promptText="Choose PDF file or drag and drop it here."
+                    onFiles={(files) => {
+                      const valid = pdfFileErrors(files);
+                      setPdfFile(valid[0] ?? null);
+                    }}
+                  />
+                ) : (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-[#d2d2d7] bg-[#f5f5f7] p-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[13px] font-medium text-[#1d1d1f]">
+                        {pdfFile ? pdfFile.name : existingPdf.split('/').pop()}
+                      </p>
+                      <p className="text-[12px] text-[#86868b]">
+                        {pdfFile ? `${(pdfFile.size / 1024).toFixed(1)} KB` : 'PDF document'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (pdfFile) {
+                          setPdfFile(null);
+                        } else {
+                          markRemovedUrl(existingPdf);
+                          setExistingPdf("");
+                        }
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 )}
               </div>
