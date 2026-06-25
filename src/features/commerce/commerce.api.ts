@@ -80,6 +80,9 @@ export const commerceApi = {
   customers: {
     getAll: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/customer/get-all", { params: q })),
   },
-  customerBans: makeStandardCrud<Record<string, unknown>, CustomerBanDto, CustomerBanDto>({ key: "customerBans", basePath: "/customer-ban" }),
+  customerBans: {
+    ...makeStandardCrud<Record<string, unknown>, CustomerBanDto, CustomerBanDto>({ key: "customerBans", basePath: "/customer-ban" }),
+    lift: async (payload: { ids: ReadonlyArray<string> }) => unwrap<unknown>(await api.put("/customer-ban/lift", payload)),
+  },
   customerAddresses: makeStandardCrud<Record<string, unknown>, CustomerAddressDto, CustomerAddressDto>({ key: "customerAddresses", basePath: "/customer-address" }),
 };

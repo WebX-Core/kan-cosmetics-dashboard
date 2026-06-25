@@ -1,8 +1,7 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
-import { gsap } from "gsap";
 import { useAuth } from "../app/providers/AuthContext";
 import { useSignin, type User, type SigninResponse } from "@/features/auth";
 import { parseApiError } from "@/shared/utils/apiError";
@@ -47,26 +46,6 @@ export const LoginPage: React.FC = () => {
     return st?.from ?? "/dashboard";
   }, [location.state]);
   const { setAuthenticated } = useAuth();
-
-  /* ── form stagger entrance ──────────────────────────────────── */
-  const wrapRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const mm = gsap.matchMedia();
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
-      const ctx = gsap.context(() => {
-        gsap.from(Array.from(wrapRef.current?.children ?? []), {
-          y: 12,
-          opacity: 0,
-          stagger: 0.07,
-          duration: 0.4,
-          ease: "power3.out",
-          delay: 0.5,
-        });
-      }, wrapRef);
-      return () => ctx.revert();
-    });
-    return () => mm.revert();
-  }, []);
 
   /* ── helpers ─────────────────────────────────────────────────── */
   const asUser = (response: SigninResponse, email: string): User => {
@@ -121,7 +100,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div ref={wrapRef}>
+    <div>
       {/* Heading */}
       <div className="mb-7">
         <h2 className="text-[20px] font-bold tracking-tight text-gray-900">

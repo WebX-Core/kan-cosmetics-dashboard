@@ -247,7 +247,7 @@ export const CategoriesPage: React.FC = () => {
           {row.coverImage ? (
             <img src={row.coverImage} alt={row.name} className="max-h-8 w-auto object-contain" />
           ) : (
-            <FolderTree size={14} className="text-brand" />
+            <FolderTree size={14} className="text-blue-500" />
           )}
         </div>
         <div>

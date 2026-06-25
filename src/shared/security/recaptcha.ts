@@ -9,6 +9,7 @@ const toPublicPathPattern = (path: string): RegExp => {
 
 const publicGetRoutes = [
   "/auth/signin",
+  "/auth/session",
   "/auth/forgot-password",
   "/auth/reset-password",
   "/customer-auth/signin",

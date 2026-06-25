@@ -1,12 +1,20 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, UserCheck, ShieldOff, Eye } from "lucide-react";
+import { Users, UserCheck, ShieldOff, Eye, MoreHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useCustomers } from "@/features/commerce";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const fmt = (v: string): string => {
@@ -116,25 +124,6 @@ export const CustomersPage: React.FC = () => {
       label: "Joined",
       render: (row: CustomerRow) => <span className="text-xs text-gray-500">{fmt(row.createdAt)}</span>,
     },
-    {
-      key: "actions",
-      label: "",
-      render: (row: CustomerRow) => (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/dashboard/customers/${row.id}`, { state: { customer: row } });
-            }}
-            className="flex items-center gap-1.5 rounded-full border border-[#d2d2d7] bg-white px-3 py-1 text-[12px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Eye size={12} strokeWidth={2} />
-            View
-          </button>
-        </div>
-      ),
-    },
   ];
 
   return (
@@ -169,6 +158,43 @@ export const CustomersPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        rowActions={(row) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <MoreHorizontal size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/customers/${row.id}`, { state: { customer: row } });
+                }}
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                View
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-[#b42318] focus:text-[#b42318]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate("/dashboard/customers/bans/create", { state: { customer: row } });
+                }}
+              >
+                <ShieldOff className="mr-2 h-4 w-4" />
+                Ban customer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       />
     </PageLayout>
   );

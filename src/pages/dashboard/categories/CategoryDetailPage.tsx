@@ -268,7 +268,7 @@ export const CategoryDetailPage: React.FC = () => {
             {row.coverImage ? (
               <img src={row.coverImage} alt={row.name} className="max-h-8 w-auto object-contain" />
             ) : (
-              <FolderOpen size={14} className="text-brand" />
+              <FolderOpen size={14} className="text-blue-500" />
             )}
           </div>
           <div>

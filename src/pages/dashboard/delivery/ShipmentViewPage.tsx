@@ -9,6 +9,11 @@ import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { getOrderDetail, normalizeOrderRow } from "@/shared/utils/orderMapping";
+import {
+  formatShipmentStatusLabel,
+  getShipmentStatusBadgeStatus,
+  normalizeShipmentStatus,
+} from "@/shared/utils/shipmentStatus";
 
 type ShipmentRecord = Readonly<Record<string, unknown>>;
 
@@ -78,7 +83,7 @@ export const ShipmentViewPage: React.FC = () => {
   const orderId = text(shipment.orderId);
   const courierId = text(shipment.courierId);
   const trackingNumber = text(shipment.trackingNumber);
-  const status = text(shipment.status, "Pending");
+  const status = normalizeShipmentStatus(shipment.status);
 
   const orderQuery = useQuery({
     queryKey: ["commerce", "order", orderId],
@@ -190,7 +195,10 @@ export const ShipmentViewPage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={status} />
+            <StatusBadge
+              status={getShipmentStatusBadgeStatus(status)}
+              label={formatShipmentStatusLabel(status)}
+            />
             <Button
               type="button"
               variant="outline"
@@ -237,7 +245,15 @@ export const ShipmentViewPage: React.FC = () => {
             <SectionTitle title="Shipment" description="Only the fields staff need at a glance." />
             <div>
               <FieldRow label="Tracking number" value={trackingNumber || "—"} />
-              <FieldRow label="Shipment status" value={status} />
+              <FieldRow
+                label="Shipment status"
+                value={
+                  <StatusBadge
+                    status={getShipmentStatusBadgeStatus(status)}
+                    label={formatShipmentStatusLabel(status)}
+                  />
+                }
+              />
               <FieldRow label="Courier" value={text(courier.name, "—")} />
               <FieldRow label="Updated" value={formatDateTime(shipment.updatedAt ?? shipment.createdAt)} />
             </div>
@@ -263,7 +279,14 @@ export const ShipmentViewPage: React.FC = () => {
             {latestTracking ? (
               <div className="flex flex-col gap-2 text-[13px] leading-6 text-[#1d1d1f] sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge status={text(latestTracking.providerStatus ?? latestTracking.status, "Pending")} />
+                  <StatusBadge
+                    status={getShipmentStatusBadgeStatus(
+                      latestTracking.providerStatus ?? latestTracking.status,
+                    )}
+                    label={formatShipmentStatusLabel(
+                      latestTracking.providerStatus ?? latestTracking.status,
+                    )}
+                  />
                   <span>{text(latestTracking.message ?? latestTracking.comments, "Tracking update available")}</span>
                 </div>
                 <span className="text-[#6e6e73]">

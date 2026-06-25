@@ -13,6 +13,10 @@ export const PermissionGuard: React.FC<Props> = ({ permission, redirectTo = "/da
   const { state } = useAuth();
   const canAccess = usePermission(permission);
 
+  if (state.sessionStatus === "checking") {
+    return null;
+  }
+
   if (!state.isAuthenticated) {
     return <Navigate to="/login" replace />;
   }

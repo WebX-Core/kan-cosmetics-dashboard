@@ -16,6 +16,7 @@ import { useOrders } from "@/features/commerce";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
 import { formatOrderStatusLabel, orderStatusOptions } from "./orderStore";
+import { formatPaymentStatusLabel, normalizePaymentStatus } from "@/shared/utils/paymentStatus";
 
 type OrderRow = Readonly<{
   id: string;
@@ -162,7 +163,12 @@ export const OrdersPage: React.FC = () => {
       render: (row: OrderRow) => (
         <div>
           <div className="text-gray-700">{row.paymentMethod}</div>
-          <div className="text-xs text-gray-400">{row.paymentStatus}</div>
+          <div className="mt-1">
+            <StatusBadge
+              status={normalizePaymentStatus(row.paymentStatus)}
+              label={formatPaymentStatusLabel(row.paymentStatus)}
+            />
+          </div>
         </div>
       ),
     },

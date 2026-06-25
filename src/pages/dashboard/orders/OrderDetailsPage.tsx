@@ -39,6 +39,12 @@ import { commerceApi } from "@/features/commerce";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { resolveProfileImageUrl } from "@/shared/utils/profileImage";
 import { parseApiError } from "@/shared/utils/apiError";
+import {
+  formatPaymentStatusLabel,
+  formatSettlementStatusLabel,
+  normalizePaymentStatus,
+  normalizeSettlementStatus,
+} from "@/shared/utils/paymentStatus";
 import { validateOrToast } from "@/shared/utils/validation";
 import { ModernFormLayout } from "@/shared/components/forms/ModernFormLayout";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
@@ -51,7 +57,7 @@ import {
 } from "./orderStore";
 
 const orderStatusSchema = z.enum(orderStatuses);
-const paymentStatusOptions = ["Pending", "Completed", "Failed", "Refunded"];
+const paymentStatusOptions = ["UNPAID", "PAID", "FAILED"] as const;
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
@@ -361,7 +367,7 @@ export const OrderDetailsPage: React.FC = () => {
   const syncDelivery = useSyncOrderDelivery();
 
   const [orderStatus, setOrderStatus] = React.useState("PENDING");
-  const [paymentStatus, setPaymentStatus] = React.useState("Pending");
+  const [paymentStatus, setPaymentStatus] = React.useState("UNPAID");
   const [paymentId, setPaymentId] = React.useState<string | null>(null);
   const [syncingPickup, setSyncingPickup] = React.useState(false);
 
@@ -382,14 +388,16 @@ export const OrderDetailsPage: React.FC = () => {
 
   React.useEffect(() => {
     if (!record) return;
-    setOrderStatus(text(orderDetail.status, "PENDING"));
+    setOrderStatus(text(orderDetail.orderStatus ?? order.status, order.status));
     const payments = toArray(record.payments);
     if (payments.length > 0) {
       const pm = firstItemRecord(payments);
-      setPaymentStatus(text(pm.status ?? pm.paymentStatus, "Pending"));
+      setPaymentStatus(
+        normalizePaymentStatus(pm.paymentStatus ?? pm.status ?? order.paymentStatus),
+      );
       setPaymentId(text(pm.id, null as unknown as string) || null);
     }
-  }, [record, orderDetail.status]);
+  }, [order.paymentStatus, order.status, orderDetail.orderStatus, record]);
 
   if (!id) {
     return (
@@ -457,7 +465,9 @@ export const OrderDetailsPage: React.FC = () => {
   ]);
   const customerAddress = text(customer.address, "—");
   const orderSource = text(orderDetail.orderSource, "");
-  const paymentStatusValue = text(payment.paymentStatus, order.paymentStatus);
+  const paymentStatusValue = normalizePaymentStatus(
+    payment.paymentStatus ?? payment.status ?? order.paymentStatus ?? paymentStatus,
+  );
 
   return (
     <ModernFormLayout
@@ -544,7 +554,7 @@ export const OrderDetailsPage: React.FC = () => {
                 >
                   {paymentStatusOptions.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {formatPaymentStatusLabel(s)}
                     </option>
                   ))}
                 </select>
@@ -662,16 +672,34 @@ export const OrderDetailsPage: React.FC = () => {
                 <IconFieldList
                   fields={[
                     { label: "Method", value: text(payment.paymentMethod, order.paymentMethod), icon: <CreditCard size={13} /> },
+                    { label: "Source", value: text(payment.paymentSource, "—"), icon: <Building2 size={13} /> },
                     {
                       label: "Status",
-                      value: <StatusBadge status={paymentStatusValue} />,
+                      value: (
+                        <StatusBadge
+                          status={paymentStatusValue}
+                          label={formatPaymentStatusLabel(paymentStatusValue)}
+                        />
+                      ),
                       icon: <CheckCircle size={13} />,
                     },
+                    {
+                      label: "Settlement",
+                      value: (
+                        <StatusBadge
+                          status={normalizeSettlementStatus(payment.settlementStatus)}
+                          label={formatSettlementStatusLabel(payment.settlementStatus)}
+                        />
+                      ),
+                      icon: <Wallet size={13} />,
+                    },
                     { label: "Amount", value: formatMoney(payment.amount ?? order.total), icon: <Banknote size={13} /> },
-                    { label: "Source", value: text(payment.paymentSource, "—"), icon: <Building2 size={13} /> },
                     { label: "Provider", value: text(payment.providerName, "—"), icon: <Building2 size={13} /> },
                     { label: "Transaction ID", value: text(payment.transactionId, "—"), icon: <Hash size={13} /> },
                     { label: "Paid at", value: formatDateTime(payment.paidAt), icon: <CalendarCheck size={13} /> },
+                    { label: "Settlement Due", value: formatDateTime(payment.settlementDueAt), icon: <Calendar size={13} /> },
+                    { label: "Settled At", value: formatDateTime(payment.settledAt), icon: <CalendarCheck size={13} /> },
+                    { label: "Reference", value: text(payment.settlementReference, "—"), icon: <Hash size={13} /> },
                   ]}
                 />
               </div>

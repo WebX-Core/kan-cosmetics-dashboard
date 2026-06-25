@@ -5,6 +5,7 @@ import type {
   ResetPasswordDto,
   SigninDto,
   SigninResponse,
+  SessionResponse,
   SignupPayload,
   SignupResponse,
   SuccessResponse,
@@ -30,6 +31,11 @@ export const authApi = {
   signin: async (dto: SigninDto): Promise<SigninResponse> => {
     const res = await api.post("/auth/signin", dto);
     return unwrap<SigninResponse>(res);
+  },
+
+  session: async (): Promise<SessionResponse> => {
+    const res = await api.get("/auth/session");
+    return unwrap<SessionResponse>(res);
   },
 
   forgotPassword: async (dto: ForgotPasswordDto): Promise<SuccessResponse> => {

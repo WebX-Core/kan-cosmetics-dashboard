@@ -155,7 +155,7 @@ export const PermissionsPage: React.FC = () => {
       key: "module",
       label: "Module",
       render: (r: PermRow) => (
-        <span className="inline-flex rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
+        <span className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
           {r.module}
         </span>
       ),

@@ -161,20 +161,15 @@ export const UsersPage: React.FC = () => {
   };
 
   const handleBanCustomer = async (row: CombinedRow) => {
-    const reason = window.prompt("Enter ban reason:");
-    if (!reason || reason.trim().length === 0) {
-      toast.error("Ban reason is required.");
-      return;
-    }
-    try {
-      await api.post("/customer-ban/create", {
-        customerId: row.id,
-        reason: reason.trim(),
-      });
-      toast.success("Customer banned.");
-    } catch {
-      toast.error("Failed to ban customer.");
-    }
+    navigate("/dashboard/customers/bans/create", {
+      state: {
+        customer: {
+          id: row.id,
+          name: `${row.firstname} ${row.middlename ? `${row.middlename} ` : ""}${row.lastname}`.trim(),
+          email: row.email,
+        },
+      },
+    });
   };
 
   const columns = [
@@ -198,7 +193,7 @@ export const UsersPage: React.FC = () => {
         (() => { const role = resolveRole(u); return (
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
           role === "SUDOADMIN" ? "bg-[var(--primary)]/10 text-[var(--primary)]" :
-          role === "ADMIN" ? "bg-brand/10 text-brand" : "bg-gray-50 text-gray-600"
+          role === "ADMIN" ? "bg-blue-500/10 text-blue-500" : "bg-gray-50 text-gray-600"
         }`}>
           {role}
         </span>

@@ -6,6 +6,10 @@ export const ProtectedRoute: React.FC = () => {
   const { state } = useAuth();
   const location = useLocation();
 
+  if (state.sessionStatus === "checking") {
+    return null;
+  }
+
   if (!state.isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }

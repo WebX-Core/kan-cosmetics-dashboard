@@ -20,19 +20,6 @@ export const orderFlowStages = [
   "COMPLETED",
 ] as const;
 
-export const shipmentStatuses = [
-  "Pending",
-  "Confirmed",
-  "Packed",
-  "Processing",
-  "Shipped",
-  "Out for Delivery",
-  "Delivered",
-  "Cancelled",
-  "Returned",
-  "Failed",
-] as const;
-
 export const orderStatusLabels: Record<OrderStatus, string> = {
   PENDING: "Pending",
   PROCESSING: "Processing",

@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
           target: devProxyTarget,
           changeOrigin: true,
           secure: devProxyTarget.startsWith("https://"),
+          cookieDomainRewrite: "",
           configure: (proxy) => {
             proxy.on("error", (err) => {
               console.error("Proxy error:", err.message);

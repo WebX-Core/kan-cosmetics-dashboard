@@ -90,12 +90,27 @@ export type PaymentUpdateDto = Readonly<{
   paymentStatus: string;
   transactionId?: string;
   paymentMethod?: string;
+  paymentSource?: string;
+  providerName?: string;
+  providerTransactionId?: string;
+  providerStatusRaw?: string;
+  settlementStatus?: string;
+  settlementDueAt?: string;
+  settledAt?: string;
+  settlementReference?: string;
+  settlementNote?: string;
 }>;
 
 export type CustomerBanDto = Readonly<{
-  customerId: string;
-  reason?: string;
-  bannedUntil?: string;
+  customerId?: string;
+  email?: string;
+  phone?: string;
+  reason: string;
+  notes?: string;
+}>;
+
+export type CustomerBanLiftDto = Readonly<{
+  ids: ReadonlyArray<string>;
 }>;
 
 export type CustomerAddressDto = Readonly<{

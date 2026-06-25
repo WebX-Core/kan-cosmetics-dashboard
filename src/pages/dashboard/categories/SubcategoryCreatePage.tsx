@@ -12,7 +12,7 @@ import { validateOrToast } from "@/shared/utils/validation";
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10";
+  "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10";
 
 const subcategoryFormSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
@@ -60,7 +60,7 @@ const DropArea: React.FC<{
         onClick={() => inputRef.current?.click()}
         className={
           compact
-            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[16px] font-semibold leading-none text-white hover:bg-brand-hover"
+            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-[16px] font-semibold leading-none text-white hover:bg-blue-600"
             : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
         }
       >
@@ -212,7 +212,7 @@ export const SubcategoryCreatePage: React.FC = () => {
             placeholder="Describe this subcategory..."
             onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
             rows={5}
-            className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
+            className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
           />
         </FormSection>
 

@@ -10,9 +10,16 @@ import { ModernFormLayout, FormActions, FormField } from "@/shared/components/fo
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
+import { formatPaymentStatusLabel, normalizePaymentStatus } from "@/shared/utils/paymentStatus";
+import {
+  formatShipmentStatusLabel,
+  getShipmentStatusBadgeStatus,
+  normalizeShipmentStatus,
+  shipmentStatusOptions,
+} from "@/shared/utils/shipmentStatus";
 import { validateOrToast } from "@/shared/utils/validation";
 import { getOrderDetail, normalizeOrderRow } from "@/shared/utils/orderMapping";
-import { shipmentStatuses } from "@/pages/dashboard/orders/orderStore";
+import { formatOrderStatusLabel } from "@/pages/dashboard/orders/orderStore";
 
 type ShipmentRecord = Readonly<Record<string, unknown>>;
 
@@ -62,7 +69,7 @@ const SectionTitle: React.FC<Readonly<{ title: string; description?: string }>> 
   </div>
 );
 
-const KeyValue: React.FC<Readonly<{ label: string; value: string }>> = ({ label, value }) => (
+const KeyValue: React.FC<Readonly<{ label: string; value: React.ReactNode }>> = ({ label, value }) => (
   <div className="flex items-start justify-between gap-4 border-b border-[#e7e5e4] py-3 last:border-b-0">
     <span className="text-[11px] font-medium text-[#787774]">{label}</span>
     <span className="text-right text-[12px] font-medium text-[#1d1d1f]">{value}</span>
@@ -79,7 +86,7 @@ export const ShipmentDetailPage: React.FC = () => {
   const orderId = text(shipment.orderId);
   const courierId = text(shipment.courierId);
   const trackingNumber = text(shipment.trackingNumber);
-  const currentStatus = text(shipment.status, "Pending");
+  const currentStatus = normalizeShipmentStatus(shipment.status);
 
   const orderQuery = useQuery({
     queryKey: ["commerce", "order", orderId],
@@ -95,7 +102,7 @@ export const ShipmentDetailPage: React.FC = () => {
     orderId: "",
     courierId: "",
     trackingNumber: "",
-    status: "Pending",
+    status: "PENDING",
   });
 
   React.useEffect(() => {
@@ -114,7 +121,15 @@ export const ShipmentDetailPage: React.FC = () => {
 
   const shipmentMeta = [
     { label: "Shipment ID", value: text(shipment.id, id ?? "—") },
-    { label: "Status", value: currentStatus || "Pending" },
+    {
+      label: "Status",
+      value: (
+        <StatusBadge
+          status={getShipmentStatusBadgeStatus(currentStatus)}
+          label={formatShipmentStatusLabel(currentStatus)}
+        />
+      ),
+    },
     { label: "Tracking Number", value: trackingNumber || "—" },
     { label: "Provider Payload", value: shipment.providerPayload ? "Available" : "None" },
   ];
@@ -175,9 +190,12 @@ export const ShipmentDetailPage: React.FC = () => {
           <span className="inline-flex min-h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245]">
             {text(shipment.id, id)}
           </span>
-          <StatusBadge status={currentStatus} />
+          <StatusBadge
+            status={getShipmentStatusBadgeStatus(currentStatus)}
+            label={formatShipmentStatusLabel(currentStatus)}
+          />
         </div>
-      }
+        }
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -228,9 +246,9 @@ export const ShipmentDetailPage: React.FC = () => {
                     onChange={(event) => setFormValues((prev) => ({ ...prev, status: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
                   >
-                    {shipmentStatuses.map((status) => (
+                    {shipmentStatusOptions.map((status) => (
                       <option key={status} value={status}>
-                        {status}
+                        {formatShipmentStatusLabel(status)}
                       </option>
                     ))}
                   </select>
@@ -254,11 +272,27 @@ export const ShipmentDetailPage: React.FC = () => {
                 <KeyValue label="Order Number" value={normalizedOrder.orderNumber} />
                 <KeyValue label="Customer" value={normalizedOrder.customerName} />
                 <KeyValue label="Email" value={normalizedOrder.customerEmail} />
-                <KeyValue label="Payment Status" value={normalizedOrder.paymentStatus} />
+                <KeyValue
+                  label="Payment Status"
+                  value={
+                    <StatusBadge
+                      status={normalizePaymentStatus(normalizedOrder.paymentStatus)}
+                      label={formatPaymentStatusLabel(normalizedOrder.paymentStatus)}
+                    />
+                  }
+                />
                 <KeyValue label="Payment Method" value={normalizedOrder.paymentMethod} />
                 <KeyValue label="Order Total" value={`Rs ${numberText(normalizedOrder.total)}`} />
                 <KeyValue label="Placed At" value={normalizedOrder.placedAt} />
-                <KeyValue label="Order Status" value={normalizedOrder.status} />
+                <KeyValue
+                  label="Order Status"
+                  value={
+                    <StatusBadge
+                      status={normalizedOrder.status}
+                      label={formatOrderStatusLabel(normalizedOrder.status)}
+                    />
+                  }
+                />
               </div>
             </section>
 

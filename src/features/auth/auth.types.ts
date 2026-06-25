@@ -89,4 +89,16 @@ export type SigninResponse = Readonly<{
   permissionDetails: ReadonlyArray<PermissionDetail>;
 }>;
 
+export type SessionResponse = Readonly<{
+  status: number;
+  message: string;
+  authenticated: boolean;
+  user?: Readonly<{
+    id: UUID;
+    role?: Role | null;
+    isVerified?: boolean | null;
+    name?: string | null;
+  }>;
+}>;
+
 export type SignupResponse = User;

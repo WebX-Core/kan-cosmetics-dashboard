@@ -5,6 +5,7 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { getOrderRows } from "@/shared/utils/orderMapping";
 import { commerceApi } from "./commerce.api";
+import type { CustomerBanLiftDto } from "./commerce.types";
 
 const keys = {
   orders: (q?: ApiListQuery) => ["commerce", "orders", q] as const,
@@ -63,7 +64,10 @@ export const usePaymentUpdate = () => {
     mutationFn: ({ id, payload }: { id: UUID; payload: Parameters<typeof commerceApi.payments.update>[1] }) =>
       commerceApi.payments.update(id, payload),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["commerce", "orders"] });
+      void qc.invalidateQueries({ queryKey: ["commerce", "order"] });
       void qc.invalidateQueries({ queryKey: keys.paymentsAggregate() });
+      void qc.invalidateQueries({ queryKey: ["commerce", "payments", "order"] });
       toast.success("Payment updated.");
     },
     onError: (error) => toast.error(parseApiError(error).message),
@@ -76,7 +80,10 @@ export const usePaymentSyncProvider = () => {
   return useMutation({
     mutationFn: (id: UUID) => commerceApi.payments.syncProvider(id),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["commerce", "orders"] });
+      void qc.invalidateQueries({ queryKey: ["commerce", "order"] });
       void qc.invalidateQueries({ queryKey: keys.paymentsAggregate() });
+      void qc.invalidateQueries({ queryKey: ["commerce", "payments", "order"] });
       toast.success("Payment synced with provider.");
     },
     onError: (error) => toast.error(parseApiError(error).message),
@@ -149,7 +156,23 @@ export const usePurchaseHistoryByCustomer = (customerId?: UUID, enabled = true) 
     enabled: enabled && Boolean(customerId),
   });
 
-export const usePaymentsAggregate = () =>
+export const useCustomerBanLift = () => {
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: (payload: CustomerBanLiftDto) => commerceApi.customerBans.lift(payload),
+    onSuccess: (_data, payload) => {
+      void qc.invalidateQueries({ queryKey: ["customerBans"] });
+      void qc.invalidateQueries({ queryKey: ["customerBans", "get"] });
+      void qc.invalidateQueries({ queryKey: ["customerBans", "list"] });
+      toast.success(payload.ids.length > 1 ? "Customers unbanned." : "Customer unbanned.");
+    },
+    onError: (error) => toast.error(parseApiError(error).message),
+  });
+};
+
+export const usePaymentsAggregate = (enabled = true) =>
   useQuery({
     queryKey: keys.paymentsAggregate(),
     queryFn: async () => {
@@ -166,4 +189,5 @@ export const usePaymentsAggregate = () =>
         }),
       );
     },
+    enabled,
   });

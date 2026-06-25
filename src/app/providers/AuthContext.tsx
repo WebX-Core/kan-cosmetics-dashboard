@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useMemo, useRef, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 import { queryClient } from "../../shared/api/queryClient";
 import { registerLogoutHandler } from "./authEvents";
+import { authApi } from "../../features/auth";
 import type { Role, User } from "../../features/auth/auth.types";
 import { clearSessionToken } from "@/shared/auth/sessionToken";
 import { useUserStore } from "@/store/UserStore";
@@ -13,6 +14,7 @@ export type AuthState = Readonly<{
   user: User | null;
   role: Role | null;
   permissions: ReadonlyArray<string>;
+  sessionStatus: "checking" | "authenticated" | "unauthenticated";
 }>;
 
 type AuthContextValue = Readonly<{
@@ -26,12 +28,24 @@ const AUTH_STORAGE_KEY = "dashboard_auth_state";
 
 function readInitialAuthState(): AuthState {
   if (typeof window === "undefined") {
-    return { isAuthenticated: false, user: null, role: null, permissions: [] };
+    return {
+      isAuthenticated: false,
+      user: null,
+      role: null,
+      permissions: [],
+      sessionStatus: "checking",
+    };
   }
 
   const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
   if (!raw) {
-    return { isAuthenticated: false, user: null, role: null, permissions: [] };
+    return {
+      isAuthenticated: false,
+      user: null,
+      role: null,
+      permissions: [],
+      sessionStatus: "checking",
+    };
   }
 
   try {
@@ -43,9 +57,16 @@ function readInitialAuthState(): AuthState {
       permissions: Array.isArray(parsed.permissions)
         ? parsed.permissions.filter((item): item is string => typeof item === "string")
         : [],
+      sessionStatus: "checking",
     };
   } catch {
-    return { isAuthenticated: false, user: null, role: null, permissions: [] };
+    return {
+      isAuthenticated: false,
+      user: null,
+      role: null,
+      permissions: [],
+      sessionStatus: "checking",
+    };
   }
 }
 
@@ -53,13 +74,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const navigate = useNavigate();
 
   const [state, setState] = useState<AuthState>(readInitialAuthState);
+  const authVersionRef = useRef(0);
 
-  const setAuthenticated = (user: User | null, permissions: ReadonlyArray<string> = []) => {
+  const setAuthenticated = React.useCallback((user: User | null, permissions: ReadonlyArray<string> = []) => {
+    authVersionRef.current += 1;
     setState({
       isAuthenticated: true,
       user,
       role: user?.role ?? null,
       permissions,
+      sessionStatus: "authenticated",
     });
     if (user) {
       useUserStore.getState().saveInfo({
@@ -80,18 +104,80 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         },
       });
     }
-  };
+  }, []);
 
-  const clearAuth = () => {
+  const clearAuth = React.useCallback(() => {
+    authVersionRef.current += 1;
     clearSessionToken();
+    queryClient.clear();
     setState({
       isAuthenticated: false,
       user: null,
       role: null,
       permissions: [],
+      sessionStatus: "unauthenticated",
     });
     useUserStore.getState().logout();
-  };
+  }, []);
+
+  const verifySession = React.useCallback(async () => {
+    const requestVersion = authVersionRef.current;
+
+    try {
+      const session = await authApi.session();
+
+      if (requestVersion !== authVersionRef.current) {
+        return;
+      }
+
+      if (!session.authenticated) {
+        clearAuth();
+        return;
+      }
+
+      setState((previous) => {
+        if (requestVersion !== authVersionRef.current) {
+          return previous;
+        }
+
+        return {
+          isAuthenticated: true,
+          user: previous.user,
+          role: previous.role ?? session.user?.role ?? null,
+          permissions: previous.permissions,
+          sessionStatus: "authenticated",
+        };
+      });
+    } catch {
+      if (requestVersion !== authVersionRef.current) {
+        return;
+      }
+
+      clearAuth();
+    }
+  }, [clearAuth]);
+
+  React.useEffect(() => {
+    void verifySession();
+
+    const handleFocus = () => {
+      void verifySession();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void verifySession();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [verifySession]);
 
   React.useEffect(() => {
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state));
@@ -103,11 +189,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       queryClient,
       navigateToLogin: () => navigate("/login", { replace: true }),
     });
-  }, [navigate]);
+  }, [clearAuth, navigate]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ state, setAuthenticated, clearAuth }),
-    [state]
+    [clearAuth, setAuthenticated, state]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

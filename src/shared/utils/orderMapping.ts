@@ -78,6 +78,22 @@ const extractCustomerRecord = (row: OrderRecord): OrderRecord =>
   ]);
 
 const collectOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> => {
+  const orderRecord = extractOrderRecord(payload);
+  if (Object.keys(orderRecord).length > 0) {
+    const keys = Object.keys(orderRecord);
+    if (
+      keys.some(
+        (key) =>
+          key === "orderNumber" ||
+          key === "orderStatus" ||
+          key === "customer" ||
+          key === "totalAmount",
+      )
+    ) {
+      return [orderRecord];
+    }
+  }
+
   if (Array.isArray(payload)) {
     return payload.filter(
       (item): item is OrderRecord => typeof item === "object" && item !== null,
@@ -89,12 +105,7 @@ const collectOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> => {
   }
 
   const record = toRecord(payload);
-  const nestedCandidates = [
-    record.orders,
-    record.items,
-    record.results,
-    record.data,
-  ];
+  const nestedCandidates = [record.orders, record.results, record.data, record.items];
 
   for (const candidate of nestedCandidates) {
     const rows = collectOrderRows(candidate);

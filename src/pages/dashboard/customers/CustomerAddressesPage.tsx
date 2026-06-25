@@ -91,7 +91,7 @@ export const CustomerAddressesPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="font-medium text-gray-900">{r.fullName}</span>
           {r.isDefault && (
-            <span className="rounded-full bg-brand/10 px-2 py-px text-[10px] font-semibold text-brand">Default</span>
+            <span className="rounded-full bg-blue-500/10 px-2 py-px text-[10px] font-semibold text-blue-500">Default</span>
           )}
         </div>
       ),

@@ -921,7 +921,7 @@ export const RolePermissionsPage: React.FC = () => {
       key: "permModule",
       label: "Module",
       render: (r: (typeof rows)[number]) => (
-        <span className="inline-flex rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
+        <span className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
           {r.permModule}
         </span>
       ),
@@ -1160,7 +1160,7 @@ export const UserPermissionsPage: React.FC = () => {
       key: "permModule",
       label: "Module",
       render: (r: (typeof rows)[number]) => (
-        <span className="inline-flex rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
+        <span className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
           {r.permModule}
         </span>
       ),

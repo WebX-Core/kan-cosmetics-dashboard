@@ -16,7 +16,7 @@ const buttonVariants = cva(
         outline: "border-[var(--line)] bg-white px-4 text-[var(--text)] hover:bg-[var(--surface-soft)] active:scale-[0.985]",
         secondary: "border-transparent bg-[var(--surface-soft)] px-4 text-[var(--text)] hover:bg-[var(--surface-strong)] active:scale-[0.985]",
         ghost: "border-transparent bg-transparent px-3 text-[var(--text)] hover:bg-[var(--surface-soft)] active:scale-[0.985]",
-        link: "h-auto border-transparent bg-transparent px-1 py-0 text-brand underline-offset-4 hover:underline",
+        link: "h-auto border-transparent bg-transparent px-1 py-0 text-blue-500 underline-offset-4 hover:underline",
         contrast: "border-[#1d1d1f] bg-[#1d1d1f] px-4 text-white hover:bg-black active:scale-[0.985]",
       },
       size: {

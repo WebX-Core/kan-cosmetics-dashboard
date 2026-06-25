@@ -36,6 +36,7 @@ type Props<T> = {
   onSearchChange?: (value: string) => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  rowActions?: (row: T) => React.ReactNode;
   onRowClick?: (row: T) => void;
   actions?: React.ReactNode;
   emptyMessage?: React.ReactNode;
@@ -65,6 +66,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
   onSearchChange,
   onEdit,
   onDelete,
+  rowActions,
   onRowClick,
   actions,
   emptyMessage = "No records found.",
@@ -322,7 +324,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   {col.label}
                 </th>
               ))}
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || rowActions) && (
                 <th className="px-[21px] py-[10px] text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">
                   Action
                 </th>
@@ -345,7 +347,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                       <div className="h-[14px] w-full animate-pulse rounded bg-[#f3f3f5]" />
                     </td>
                   ))}
-                  {(onEdit || onDelete) && (
+                  {(onEdit || onDelete || rowActions) && (
                     <td className="px-[21px] py-[13px]">
                       <div className="ml-auto h-[14px] w-[42px] animate-pulse rounded bg-[#f3f3f5]" />
                     </td>
@@ -355,7 +357,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
             ) : effectiveData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (onEdit || onDelete ? 1 : 0) + (isSelectable ? 1 : 0)}
+                  colSpan={columns.length + (onEdit || onDelete || rowActions ? 1 : 0) + (isSelectable ? 1 : 0)}
                   className="px-[21px] py-[55px] text-center text-[14px] text-[#86868b]"
                 >
                   {emptyMessage}
@@ -401,32 +403,36 @@ export function DataTableV2<T extends Record<string, unknown>>({
                       )}
                     </td>
                   ))}
-                  {(onEdit || onDelete) && (
+                  {(onEdit || onDelete || rowActions) && (
                     <td className="px-[21px] py-[13px] text-right">
-                      <div className="flex items-center justify-end gap-[5px]">
-                        {onEdit && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(row);
-                            }}
-                            className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
-                          >
-                            <Edit size={13} strokeWidth={2} />
-                          </button>
-                        )}
-                        {onDelete && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(row);
-                            }}
-                            className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-red-50 hover:text-red-500"
-                          >
-                            <Trash2 size={13} strokeWidth={2} />
-                          </button>
-                        )}
-                      </div>
+                      {rowActions ? (
+                        <div className="flex items-center justify-end">{rowActions(row)}</div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-[5px]">
+                          {onEdit && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(row);
+                              }}
+                              className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                            >
+                              <Edit size={13} strokeWidth={2} />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(row);
+                              }}
+                              className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-red-50 hover:text-red-500"
+                            >
+                              <Trash2 size={13} strokeWidth={2} />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>

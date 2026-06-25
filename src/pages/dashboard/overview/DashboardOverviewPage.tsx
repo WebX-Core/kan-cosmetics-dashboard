@@ -1,10 +1,11 @@
 import React from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   ArrowRight,
+  ChevronDown,
   MoreHorizontal,
   TrendingUp,
   TrendingDown,
-  Users,
   Package,
   Truck,
   FileText,
@@ -27,7 +28,19 @@ import {
   toText,
   uniqueTextCount,
 } from "@/features/telemetry/telemetry.utils";
-import { getListRows, getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
+import {
+  getListRows,
+  getOrderRows,
+  normalizeOrderRow,
+} from "@/shared/utils/orderMapping";
+import FunnelChart from "@/shared/components/charts/FunnelChart";
+
+const USE_FAKE_OVERVIEW_DATA = true;
+
+type CategorySalesStat = Readonly<{
+  name: string;
+  count: number;
+}>;
 
 // ──────────────────────────────────────────────
 // Sales Overview interactive line chart
@@ -231,11 +244,7 @@ const SalesLineChart: React.FC<{ months: string[]; values: number[] }> = ({
 // Stat card top icons (small SVG icons)
 // ──────────────────────────────────────────────
 const CoinIcon = () => (
-  <img
-    src="/logo/nrs.png"
-    alt="NRS"
-    className="h-[18px] w-[18px] object-contain"
-  />
+  <img src="/logo/nrs.png" alt="NRS" className="h-4.5 w-4.5 object-contain" />
 );
 
 const toNum = (value: unknown): number => {
@@ -292,11 +301,111 @@ const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
   return now - 30 * day;
 };
 
+const getCategoryName = (row: Record<string, unknown>): string =>
+  toText(
+    toRecord(toRecord(row.subcategory).category).title ??
+      toRecord(row.subcategory).title ??
+      row.title ??
+      row.name,
+    "Uncategorized",
+  );
+
+const getProductSalesCategories = (
+  orders: ReadonlyArray<Record<string, unknown>>,
+  products: ReadonlyArray<Record<string, unknown>>,
+): ReadonlyArray<CategorySalesStat> => {
+  const categoryCounts = new Map<string, number>();
+  const productCategoryById = new Map(
+    products.map((row) => [toText(row.id), getCategoryName(toRecord(row))]),
+  );
+
+  orders.forEach((order) => {
+    const orderItemsRaw =
+      (Array.isArray(order.items) && order.items) ||
+      (Array.isArray(order.orderItems) && order.orderItems) ||
+      (Array.isArray(order.products) && order.products) ||
+      [];
+
+    orderItemsRaw.forEach((item) => {
+      const row = toRecord(item);
+      const nestedProduct = toRecord(row.product);
+      const productId = readFirstText({ ...nestedProduct, ...row }, [
+        "productId",
+        "id",
+      ]);
+      const category =
+        (productId && productCategoryById.get(productId)) ||
+        getCategoryName(nestedProduct);
+      if (!category || category === "Uncategorized") return;
+      categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
+    });
+  });
+
+  if (categoryCounts.size === 0) {
+    products.forEach((row) => {
+      const category = getCategoryName(toRecord(row));
+      if (category === "Uncategorized") return;
+      categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
+    });
+  }
+
+  return [...categoryCounts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 6);
+};
+
 const viewAllButtonClassName =
-  "inline-flex h-[24px] items-center  rounded-full  px-2 py-2 bg-white border border-zinc-200 text-[13px] font-medium text-[var(--primary)] transition-colors hover:bg-[#f5f5f7] hover:border-[var(--primary)]/25 hover:text-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25 active:scale-[0.98]";
+  "inline-flex h-[24px] items-center  rounded-4xl  px-2 py-2 text-[13px] font-medium text-[var(--primary)] transition-colors hover:bg-[#f5f5f7] hover:border-[var(--primary)]/25 hover:text-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/25 active:scale-[0.98]";
+
+const statCardTones: ReadonlyArray<StatCardTone> = [
+  {
+    iconBg: "bg-blue-100",
+    iconColor: "text-blue-600",
+    labelClassName: "text-blue-950",
+    valueClassName: "text-slate-950",
+    badgeClassName: "text-blue-700",
+    cardClassName: "border-blue-200 bg-blue-50",
+    glowClassName: "bg-transparent",
+  },
+  {
+    iconBg: "bg-violet-100",
+    iconColor: "text-violet-600",
+    labelClassName: "text-violet-950",
+    valueClassName: "text-slate-950",
+    badgeClassName: "text-violet-700",
+    cardClassName: "border-violet-200 bg-violet-50",
+    glowClassName: "bg-transparent",
+  },
+  {
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+    labelClassName: "text-amber-950",
+    valueClassName: "text-slate-950",
+    badgeClassName: "text-amber-700",
+    cardClassName: "border-amber-200 bg-amber-50",
+    glowClassName: "bg-transparent",
+  },
+  {
+    iconBg: "bg-emerald-100",
+    iconColor: "text-emerald-600",
+    labelClassName: "text-emerald-950",
+    valueClassName: "text-slate-950",
+    badgeClassName: "text-emerald-700",
+    cardClassName: "border-emerald-200 bg-emerald-50",
+    glowClassName: "bg-transparent",
+  },
+];
 
 const orderStatusStyle: Record<
-  "PENDING" | "PROCESSING" | "READY_FOR_SHIPMENT" | "SHIPPED" | "DELIVERED" | "COMPLETED" | "CANCELLED" | "RETURNED",
+  | "PENDING"
+  | "PROCESSING"
+  | "READY_FOR_SHIPMENT"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "RETURNED",
   string
 > = {
   PENDING: "bg-amber-100 text-amber-800",
@@ -309,23 +418,45 @@ const orderStatusStyle: Record<
   RETURNED: "bg-red-100 text-red-800",
 };
 
-const inquiryStatusStyle: Record<"New" | "Resolved", string> = {
-  New: "bg-amber-100 text-amber-800",
-  Resolved: "bg-emerald-100 text-emerald-800",
+type OrderStatus = keyof typeof orderStatusStyle;
+
+const orderStatusIndicatorStyle: Record<OrderStatus, string> = {
+  PENDING: "bg-amber-400",
+  PROCESSING: "bg-sky-400",
+  READY_FOR_SHIPMENT: "bg-indigo-400",
+  SHIPPED: "bg-blue-400",
+  DELIVERED: "bg-emerald-400",
+  COMPLETED: "bg-emerald-500",
+  CANCELLED: "bg-red-400",
+  RETURNED: "bg-red-500",
 };
 
+const orderStatusOptions: ReadonlyArray<OrderStatus> = [
+  "PENDING",
+  "PROCESSING",
+  "READY_FOR_SHIPMENT",
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
+  "CANCELLED",
+  "RETURNED",
+];
+
 const inquiryTypeStyle: Record<"Product" | "Site", string> = {
-  Product: "bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[var(--badge-primary-text)]",
+  Product:
+    "bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[var(--badge-primary-text)]",
   Site: "bg-slate-100 text-slate-700",
 };
 
-const formatOrderStatusLabel = (
-  status: string,
-): keyof typeof orderStatusStyle => {
+const formatOrderStatusLabel = (status: string): OrderStatus => {
   const normalized = status.trim().toUpperCase().replace(/\s+/g, "_");
-  if (normalized in orderStatusStyle) return normalized as keyof typeof orderStatusStyle;
+  if (normalized in orderStatusStyle) return normalized as OrderStatus;
   return "PENDING";
 };
+
+const formatOrderStatusLabelText = (status: OrderStatus): string =>
+  status.replace(/_/g, " ");
+
 type PaymentRow = Readonly<{
   amount: number;
   status: "Completed" | "Pending" | "Failed" | "Refunded";
@@ -367,12 +498,18 @@ const toPaymentRows = (payload: unknown): ReadonlyArray<PaymentRow> => {
 };
 
 const textOrFallback = (value: unknown, fallback: string): string =>
-  typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+  typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : fallback;
 
 const isHandledValue = (row: Record<string, unknown>): boolean => {
   if (row.isHandled === true) return true;
   const status = textOrFallback(row.status, "New").toLowerCase();
-  return status.includes("resolve") || status.includes("handled") || status.includes("close");
+  return (
+    status.includes("resolve") ||
+    status.includes("handled") ||
+    status.includes("close")
+  );
 };
 
 const normalizeInquiryRow = (
@@ -382,11 +519,17 @@ const normalizeInquiryRow = (
   const row = toRecord(entry);
   return {
     id: textOrFallback(row.id ?? row._id, crypto.randomUUID()),
-    customerName: textOrFallback(row.customerName ?? row.fullname ?? row.fullName ?? row.name, "Unknown"),
+    customerName: textOrFallback(
+      row.customerName ?? row.fullname ?? row.fullName ?? row.name,
+      "Unknown",
+    ),
     email: textOrFallback(row.email, "—"),
     subject:
       type === "Product"
-        ? textOrFallback(row.subject ?? row.targetName ?? row.targetType ?? row.inquiryType, "Inquiry")
+        ? textOrFallback(
+            row.subject ?? row.targetName ?? row.targetType ?? row.inquiryType,
+            "Inquiry",
+          )
         : textOrFallback(row.subject ?? row.inquiryType, "Site Inquiry"),
     message:
       type === "Product"
@@ -399,7 +542,10 @@ const normalizeInquiryRow = (
   };
 };
 
-const toInquiryRows = (payload: unknown, type: InquiryRow["type"]): ReadonlyArray<InquiryRow> =>
+const toInquiryRows = (
+  payload: unknown,
+  type: InquiryRow["type"],
+): ReadonlyArray<InquiryRow> =>
   getListRows(payload).map((entry) => normalizeInquiryRow(entry, type));
 const useCountUp = (value: number, durationMs = 900): number => {
   const [display, setDisplay] = React.useState(0);
@@ -427,6 +573,470 @@ const useCountUp = (value: number, durationMs = 900): number => {
   return display;
 };
 
+type StatCardTone = Readonly<{
+  iconBg: string;
+  iconColor: string;
+  labelClassName: string;
+  valueClassName: string;
+  badgeClassName: string;
+  cardClassName: string;
+  glowClassName: string;
+}>;
+
+type StatCardItem = Readonly<{
+  label: string;
+  value: string;
+  trend: string;
+  trendPositive: boolean;
+  tone: StatCardTone;
+  icon: React.ReactNode;
+}>;
+
+type MockDashboardData = Readonly<{
+  orders: ReadonlyArray<Record<string, unknown>>;
+  products: ReadonlyArray<Record<string, unknown>>;
+  categories: ReadonlyArray<Record<string, unknown>>;
+  users: ReadonlyArray<Record<string, unknown>>;
+  inquiries: ReadonlyArray<Record<string, unknown>>;
+  siteInquiries: ReadonlyArray<Record<string, unknown>>;
+  visitorRecords: ReadonlyArray<Record<string, unknown>>;
+  payments: ReadonlyArray<
+    Readonly<{
+      paymentPayload: ReadonlyArray<
+        Readonly<{ amount: number; status: string; date: string }>
+      >;
+    }>
+  >;
+}>;
+
+const daysAgo = (days: number): string =>
+  new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+const createMockDashboardData = (): MockDashboardData => {
+  const products = [
+    {
+      id: "prod-velvet-tint",
+      title: "Velvet Lip Tint",
+      sku: "KLT-01",
+      subcategory: { title: "Lips", category: { title: "Face" } },
+    },
+    {
+      id: "prod-radiance-base",
+      title: "Radiance Base Cream",
+      sku: "KBC-02",
+      subcategory: { title: "Skincare", category: { title: "Skincare" } },
+    },
+    {
+      id: "prod-cream-blush",
+      title: "Cream Blush",
+      sku: "KCB-03",
+      subcategory: { title: "Face", category: { title: "Face" } },
+    },
+    {
+      id: "prod-kajal",
+      title: "Precision Kajal",
+      sku: "KPK-04",
+      subcategory: { title: "Eyes", category: { title: "Eyes" } },
+    },
+    {
+      id: "prod-brush",
+      title: "Blend Brush Set",
+      sku: "KBS-05",
+      subcategory: { title: "Tools", category: { title: "Tools" } },
+    },
+  ];
+  const categories = [
+    { id: "cat-face", title: "Face" },
+    { id: "cat-lips", title: "Lips" },
+    { id: "cat-eyes", title: "Eyes" },
+    { id: "cat-skin", title: "Skincare" },
+    { id: "cat-tools", title: "Tools" },
+  ];
+
+  const makeOrder = (
+    id: string,
+    orderNumber: string,
+    customerName: string,
+    customerEmail: string,
+    status: string,
+    total: number,
+    daysOffset: number,
+    items: ReadonlyArray<Readonly<Record<string, unknown>>>,
+  ): Record<string, unknown> => ({
+    id,
+    orderNumber,
+    customerName,
+    customerEmail,
+    paymentMethod: "Cash on Delivery",
+    paymentStatus:
+      status === "DELIVERED" || status === "COMPLETED" ? "PAID" : "PENDING",
+    total: total.toFixed(2),
+    placedAt: daysAgo(daysOffset),
+    createdAt: daysAgo(daysOffset),
+    status,
+    items,
+  });
+
+  const featuredOrders = [
+    makeOrder(
+      "order-1001",
+      "KAN-1001",
+      "Sofia Shah",
+      "sofia@example.com",
+      "DELIVERED",
+      2800,
+      1,
+      [
+        {
+          productId: "prod-velvet-tint",
+          quantity: 1,
+          price: 2800,
+          lineTotal: 2800,
+          product: products[0],
+        },
+      ],
+    ),
+    makeOrder(
+      "order-1002",
+      "KAN-1002",
+      "Anita Karki",
+      "anita@example.com",
+      "SHIPPED",
+      2450,
+      3,
+      [
+        {
+          productId: "prod-radiance-base",
+          quantity: 1,
+          price: 2450,
+          lineTotal: 2450,
+          product: products[1],
+        },
+      ],
+    ),
+    makeOrder(
+      "order-1003",
+      "KAN-1003",
+      "Mira Gurung",
+      "mira@example.com",
+      "PROCESSING",
+      2600,
+      5,
+      [
+        {
+          productId: "prod-kajal",
+          quantity: 1,
+          price: 2600,
+          lineTotal: 2600,
+          product: products[3],
+        },
+      ],
+    ),
+    makeOrder(
+      "order-1004",
+      "KAN-1004",
+      "Priya Rana",
+      "priya@example.com",
+      "PENDING",
+      2350,
+      8,
+      [
+        {
+          productId: "prod-velvet-tint",
+          quantity: 1,
+          price: 2350,
+          lineTotal: 2350,
+          product: products[0],
+        },
+      ],
+    ),
+    makeOrder(
+      "order-1005",
+      "KAN-1005",
+      "Nisha Thapa",
+      "nisha@example.com",
+      "COMPLETED",
+      2950,
+      12,
+      [
+        {
+          productId: "prod-cream-blush",
+          quantity: 1,
+          price: 2950,
+          lineTotal: 2950,
+          product: products[2],
+        },
+      ],
+    ),
+    makeOrder(
+      "order-1006",
+      "KAN-1006",
+      "Kabir Lama",
+      "kabir@example.com",
+      "DELIVERED",
+      2700,
+      18,
+      [
+        {
+          productId: "prod-brush",
+          quantity: 1,
+          price: 2700,
+          lineTotal: 2700,
+          product: products[4],
+        },
+      ],
+    ),
+  ];
+
+  const orderStatusCycle = [
+    "DELIVERED",
+    "DELIVERED",
+    "DELIVERED",
+    "DELIVERED",
+    "DELIVERED",
+    "DELIVERED",
+    "SHIPPED",
+    "SHIPPED",
+    "PROCESSING",
+    "PENDING",
+  ] as const;
+
+  const generatedOrders = Array.from({ length: 394 }, (_, index) => {
+    const product = products[index % products.length];
+    const orderNumber = 1007 + index;
+    const total = 2200 + (index % 6) * 140;
+    const status = orderStatusCycle[index % orderStatusCycle.length];
+
+    return makeOrder(
+      `order-${orderNumber}`,
+      `KAN-${orderNumber}`,
+      `Customer ${orderNumber}`,
+      `customer${orderNumber}@example.com`,
+      status,
+      total,
+      19 + index,
+      [
+        {
+          productId: product.id,
+          quantity: 1,
+          price: total,
+          lineTotal: total,
+          product,
+        },
+      ],
+    );
+  });
+
+  const orders = [...featuredOrders, ...generatedOrders];
+
+  const currentUsers = Array.from({ length: 60 }, (_, index) => ({
+    id: `user-current-${index + 1}`,
+    role: "USER",
+    createdAt: daysAgo(index % 30),
+  }));
+  const previousUsers = Array.from({ length: 48 }, (_, index) => ({
+    id: `user-previous-${index + 1}`,
+    role: "USER",
+    createdAt: daysAgo(31 + (index % 29)),
+  }));
+  const admins = [
+    { id: "user-admin-1", role: "ADMIN", createdAt: daysAgo(12) },
+    { id: "user-admin-2", role: "ADMIN", createdAt: daysAgo(44) },
+  ];
+  const users = [...currentUsers, ...previousUsers, ...admins];
+
+  const inquiries = [
+    {
+      id: "inq-1",
+      customerName: "Sita",
+      email: "sita@example.com",
+      subject: "Need shade recommendation",
+      message: "Looking for a daily nude lip tint.",
+      status: "New",
+      createdAt: daysAgo(0),
+    },
+    {
+      id: "inq-2",
+      customerName: "Aarav",
+      email: "aarav@example.com",
+      subject: "Order delayed",
+      message: "My order has not arrived yet.",
+      status: "Resolved",
+      createdAt: daysAgo(1),
+    },
+    {
+      id: "inq-3",
+      customerName: "Nirjala",
+      email: "nirjala@example.com",
+      subject: "Product ingredients",
+      message: "Is this fragrance-free?",
+      status: "New",
+      createdAt: daysAgo(2),
+    },
+    {
+      id: "inq-4",
+      customerName: "Rohan",
+      email: "rohan@example.com",
+      subject: "Exchange request",
+      message: "I received the wrong shade.",
+      status: "New",
+      createdAt: daysAgo(4),
+    },
+    {
+      id: "inq-5",
+      customerName: "Deepa",
+      email: "deepa@example.com",
+      subject: "Bulk order",
+      message: "Need 20 sets for an event.",
+      status: "Resolved",
+      createdAt: daysAgo(5),
+    },
+  ];
+
+  const siteInquiries = [
+    {
+      id: "site-1",
+      customerName: "Maya",
+      email: "maya@example.com",
+      subject: "Website feedback",
+      message: "Checkout is smooth.",
+      status: "New",
+      createdAt: daysAgo(1),
+    },
+    {
+      id: "site-2",
+      customerName: "Tara",
+      email: "tara@example.com",
+      subject: "Broken link",
+      message: "Footer contact link 404s.",
+      status: "Resolved",
+      createdAt: daysAgo(3),
+    },
+    {
+      id: "site-3",
+      customerName: "Suresh",
+      email: "suresh@example.com",
+      subject: "Mobile issue",
+      message: "Menu overlaps on smaller phones.",
+      status: "New",
+      createdAt: daysAgo(4),
+    },
+  ];
+
+  const visitorRecords = [
+    {
+      sessionId: "sess-1",
+      userId: "user-1",
+      country: "Nepal",
+      region: "Bagmati",
+      city: "Kathmandu",
+      createdAt: daysAgo(0),
+    },
+    {
+      sessionId: "sess-2",
+      userId: "user-2",
+      country: "Nepal",
+      region: "Bagmati",
+      city: "Lalitpur",
+      createdAt: daysAgo(0),
+    },
+    {
+      sessionId: "sess-3",
+      userId: "user-3",
+      country: "Nepal",
+      region: "Gandaki",
+      city: "Pokhara",
+      createdAt: daysAgo(1),
+    },
+    {
+      sessionId: "sess-4",
+      userId: "user-4",
+      country: "India",
+      region: "Delhi",
+      city: "New Delhi",
+      createdAt: daysAgo(1),
+    },
+    {
+      sessionId: "sess-5",
+      userId: "user-5",
+      country: "UAE",
+      region: "Dubai",
+      city: "Dubai",
+      createdAt: daysAgo(2),
+    },
+    {
+      sessionId: "sess-6",
+      userId: "user-6",
+      country: "Nepal",
+      region: "Lumbini",
+      city: "Butwal",
+      createdAt: daysAgo(3),
+    },
+    {
+      sessionId: "sess-7",
+      userId: "user-7",
+      country: "Nepal",
+      region: "Koshi",
+      city: "Biratnagar",
+      createdAt: daysAgo(5),
+    },
+    {
+      sessionId: "sess-8",
+      userId: "user-8",
+      country: "Bangladesh",
+      region: "Dhaka",
+      city: "Dhaka",
+      createdAt: daysAgo(6),
+    },
+  ];
+
+  const payments = [
+    {
+      paymentPayload: [
+        { amount: 200000, status: "Completed", date: daysAgo(1) },
+        { amount: 18000, status: "Pending", date: daysAgo(2) },
+      ],
+    },
+    {
+      paymentPayload: [
+        { amount: 180000, status: "Completed", date: daysAgo(4) },
+        { amount: 6000, status: "Refunded", date: daysAgo(5) },
+      ],
+    },
+    {
+      paymentPayload: [
+        { amount: 170000, status: "Completed", date: daysAgo(8) },
+        { amount: 12000, status: "Pending", date: daysAgo(9) },
+      ],
+    },
+    {
+      paymentPayload: [
+        { amount: 220000, status: "Completed", date: daysAgo(12) },
+        { amount: 15000, status: "Pending", date: daysAgo(13) },
+      ],
+    },
+    {
+      paymentPayload: [
+        { amount: 230000, status: "Completed", date: daysAgo(18) },
+        { amount: 9000, status: "Refunded", date: daysAgo(19) },
+      ],
+    },
+  ];
+
+  return {
+    orders,
+    products,
+    categories,
+    users,
+    inquiries,
+    siteInquiries,
+    visitorRecords,
+    payments,
+  };
+};
+
+const MOCK_OVERVIEW_DATA = createMockDashboardData();
+
 // ──────────────────────────────────────────────
 // Main page
 // ──────────────────────────────────────────────
@@ -437,53 +1047,84 @@ export const DashboardOverviewPage: React.FC = () => {
   const [topProductsRange, setTopProductsRange] = React.useState<"7d" | "30d">(
     "7d",
   );
-  const [categoryRange, setCategoryRange] = React.useState<
-    "7d" | "1m" | "6m" | "12m"
-  >("6m");
-  const [activeCategoryBand, setActiveCategoryBand] = React.useState<
-    number | null
-  >(null);
   const [animateRows, setAnimateRows] = React.useState(false);
   const [visitorsRange, setVisitorsRange] = React.useState<
     "today" | "7d" | "30d"
   >("today");
-  const ordersQuery = useOrders({ page: 1, limit: 200 });
-  const categoriesQuery = catalogApi.categories.hooks.useList({
-    page: 1,
-    limit: 200,
-  });
-  const productsQuery = catalogApi.products.hooks.useList({
-    page: 1,
-    limit: 200,
-  });
-  const paymentsQuery = usePaymentsAggregate();
-  const usersQuery = useAdminUsersList({ page: 1, limit: 500 });
-  const inquiryQuery = useInquiryList({ page: 1, limit: 100 });
-  const siteInquiryQuery = useSiteInquiryList({ page: 1, limit: 100 });
-  const userMetadataQuery = useUserMetadataList({ page: 1, limit: 200 });
+  const ordersQuery = useOrders(
+    { page: 1, limit: 200 },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
+  const productsQuery = catalogApi.products.hooks.useList(
+    {
+      page: 1,
+      limit: 200,
+    },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
+  const categoriesQuery = catalogApi.categories.hooks.useList(
+    {
+      page: 1,
+      limit: 200,
+    },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
+  const paymentsQuery = usePaymentsAggregate(!USE_FAKE_OVERVIEW_DATA);
+  const usersQuery = useAdminUsersList(
+    { page: 1, limit: 500 },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
+  const inquiryQuery = useInquiryList(
+    { page: 1, limit: 100 },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
+  const siteInquiryQuery = useSiteInquiryList(
+    { page: 1, limit: 100 },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
+  const userMetadataQuery = useUserMetadataList(
+    { page: 1, limit: 200 },
+    !USE_FAKE_OVERVIEW_DATA,
+  );
 
   const orders = React.useMemo(() => {
-    return getOrderRows(ordersQuery.data);
+    return USE_FAKE_OVERVIEW_DATA
+      ? MOCK_OVERVIEW_DATA.orders
+      : getOrderRows(ordersQuery.data);
   }, [ordersQuery.data]);
 
   const products = React.useMemo(
     () =>
-      getListRows(productsQuery.data),
+      USE_FAKE_OVERVIEW_DATA
+        ? MOCK_OVERVIEW_DATA.products
+        : getListRows(productsQuery.data),
     [productsQuery.data],
   );
   const categories = React.useMemo(
     () =>
-      getListRows(categoriesQuery.data),
+      USE_FAKE_OVERVIEW_DATA
+        ? MOCK_OVERVIEW_DATA.categories
+        : getListRows(categoriesQuery.data),
     [categoriesQuery.data],
   );
   const users = React.useMemo(
     () =>
-      getListRows(usersQuery.data),
+      USE_FAKE_OVERVIEW_DATA
+        ? MOCK_OVERVIEW_DATA.users
+        : getListRows(usersQuery.data),
     [usersQuery.data],
   );
   const inquiries = React.useMemo(() => {
-    const productRows = toInquiryRows(inquiryQuery.data, "Product");
-    const siteRows = toInquiryRows(siteInquiryQuery.data, "Site");
+    const productRows = USE_FAKE_OVERVIEW_DATA
+      ? MOCK_OVERVIEW_DATA.inquiries.map((entry) =>
+          normalizeInquiryRow(entry, "Product"),
+        )
+      : toInquiryRows(inquiryQuery.data, "Product");
+    const siteRows = USE_FAKE_OVERVIEW_DATA
+      ? MOCK_OVERVIEW_DATA.siteInquiries.map((entry) =>
+          normalizeInquiryRow(entry, "Site"),
+        )
+      : toInquiryRows(siteInquiryQuery.data, "Site");
     return [...productRows, ...siteRows]
       .filter((row) => row.createdAt > 0 || row.id.length > 0)
       .sort((a, b) => b.createdAt - a.createdAt)
@@ -492,13 +1133,17 @@ export const DashboardOverviewPage: React.FC = () => {
 
   const payments = React.useMemo(
     () =>
-      (paymentsQuery.data ?? []).flatMap((entry) => {
-        if (!entry || typeof entry !== "object" || Array.isArray(entry))
-          return [];
-        return toPaymentRows(
-          (entry as { paymentPayload?: unknown }).paymentPayload,
-        );
-      }),
+      USE_FAKE_OVERVIEW_DATA
+        ? MOCK_OVERVIEW_DATA.payments.flatMap((entry) =>
+            toPaymentRows(entry.paymentPayload),
+          )
+        : (paymentsQuery.data ?? []).flatMap((entry) => {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry))
+              return [];
+            return toPaymentRows(
+              (entry as { paymentPayload?: unknown }).paymentPayload,
+            );
+          }),
     [paymentsQuery.data],
   );
 
@@ -689,85 +1334,57 @@ export const DashboardOverviewPage: React.FC = () => {
       }));
   }, [orders, products, topProductsRange]);
 
-  const productSalesCategories = React.useMemo(() => {
-    const cutoff = getCutoffTime(categoryRange);
-    const soldProductIdsByCategory = new Map<string, Set<string>>();
-    const allCategoryNames = [
-      ...new Set(
-        categories
-          .map((row) => toText(row.title ?? row.name))
-          .filter((name) => name.length > 0),
+  const categorySalesCategories = React.useMemo(
+    () => getProductSalesCategories(orders, products),
+    [orders, products],
+  );
+  const categorySalesCountByName = React.useMemo(
+    () =>
+      new Map(
+        categorySalesCategories.map((category) => [
+          category.name,
+          category.count,
+        ]),
       ),
-    ];
-    const productCategoryById = new Map(
-      products.map((row) => [
-        toText(row.id),
-        toText(
-          toRecord(toRecord(row.subcategory).category).title ??
-            toRecord(row.subcategory).title,
-          "Uncategorized",
-        ),
-      ]),
-    );
-
-    orders.forEach((order) => {
-      const created = new Date(
-        toText(order.createdAt ?? order.placedAt),
-      ).getTime();
-      if (Number.isNaN(created) || created < cutoff) return;
-      const orderItemsRaw =
-        (Array.isArray(order.items) && order.items) ||
-        (Array.isArray(order.orderItems) && order.orderItems) ||
-        (Array.isArray(order.products) && order.products) ||
-        [];
-      orderItemsRaw.forEach((item) => {
-        const row = toRecord(item);
-        const nestedProduct = toRecord(row.product);
-        const id = readFirstText({ ...nestedProduct, ...row }, [
-          "productId",
-          "id",
-        ]);
-        const fallbackCategory = toText(
-          toRecord(toRecord(nestedProduct.subcategory).category).title ??
-            toRecord(nestedProduct.subcategory).title,
-          "Uncategorized",
-        );
-        const category =
-          (id && productCategoryById.get(id)) || fallbackCategory;
-        if (!category || !id) return;
-        if (!allCategoryNames.includes(category))
-          allCategoryNames.push(category);
-        const set = soldProductIdsByCategory.get(category) ?? new Set<string>();
-        set.add(id);
-        soldProductIdsByCategory.set(category, set);
-      });
-    });
-
-    const categoryCounts = new Map<string, number>(
-      allCategoryNames.map((category) => [category, 0]),
-    );
-    soldProductIdsByCategory.forEach((ids, category) => {
-      categoryCounts.set(category, ids.size);
-    });
-
-    const total = [...categoryCounts.values()].reduce(
-      (sum, value) => sum + value,
-      0,
-    );
-    return [...categoryCounts.entries()].map(([name, count]) => ({
-      name,
-      count,
-      pct: total > 0 ? Math.round((count / total) * 100) : 0,
-    }));
-  }, [categories, products, orders, categoryRange]);
+    [categorySalesCategories],
+  );
+  const currentCategories = React.useMemo(
+    () =>
+      (Array.isArray(categories) ? categories : [])
+        .map((row) => ({
+          name: toText(row.title ?? row.name, "Category"),
+          count:
+            categorySalesCountByName.get(
+              toText(row.title ?? row.name, "Category"),
+            ) ?? 0,
+        }))
+        .filter((category) => category.name.length > 0)
+        .slice(0, 5),
+    [categories, categorySalesCountByName],
+  );
+  const funnelStages = React.useMemo(
+    () =>
+      currentCategories.length > 0
+        ? currentCategories.map((category) => ({
+            label: category.name,
+            value: category.count,
+          }))
+        : [{ label: "Category", value: 0 }],
+    [currentCategories],
+  );
 
   const visitorRecords = React.useMemo(
-    () => toTelemetryRows(userMetadataQuery.data),
+    () =>
+      USE_FAKE_OVERVIEW_DATA
+        ? MOCK_OVERVIEW_DATA.visitorRecords
+        : toTelemetryRows(userMetadataQuery.data),
     [userMetadataQuery.data],
   );
 
   const visibleVisitorRecords = React.useMemo(() => {
-    const hasTimeData = visitorRecords.some((row) => readTimestamp(row) !== null);
+    const hasTimeData = visitorRecords.some(
+      (row) => readTimestamp(row) !== null,
+    );
     if (!hasTimeData) return visitorRecords;
 
     const now = currentTime;
@@ -788,35 +1405,28 @@ export const DashboardOverviewPage: React.FC = () => {
   }, [currentTime, visitorRecords, visitorsRange]);
 
   const visitorRows = React.useMemo(
-    () => groupRowsByField(visibleVisitorRecords, ["country", "region", "city"], "Unknown"),
+    () =>
+      groupRowsByField(
+        visibleVisitorRecords,
+        ["country", "region", "city"],
+        "Unknown",
+      ),
     [visibleVisitorRecords],
   );
 
   const visitorMetrics = React.useMemo(() => {
     const sessions = uniqueTextCount(visibleVisitorRecords, ["sessionId"]);
-    const usersCount = uniqueTextCount(visibleVisitorRecords, ["userId", "customerId"]);
-    const locations = uniqueTextCount(visibleVisitorRecords, ["country", "region", "city"]);
+    const usersCount = uniqueTextCount(visibleVisitorRecords, [
+      "userId",
+      "customerId",
+    ]);
+    const locations = uniqueTextCount(visibleVisitorRecords, [
+      "country",
+      "region",
+      "city",
+    ]);
     return { sessions, usersCount, locations };
   }, [visibleVisitorRecords]);
-  const categoryBandPaths = React.useMemo(() => {
-    const total = productSalesCategories.reduce(
-      (sum, item) => sum + item.count,
-      0,
-    );
-    if (total <= 0) return [] as ReadonlyArray<{ d: string; share: number }>;
-    let startLeft = 0;
-    let startRight = 0;
-    return productSalesCategories.map((item) => {
-      const share = item.count / total;
-      const bandHeight = share * 100;
-      const endLeft = startLeft + bandHeight;
-      const endRight = startRight + bandHeight;
-      const d = `M 0,${startLeft} C 189,${startLeft} 351,${endRight} 540,${endRight} L 540,${startRight} C 351,${startRight} 189,${startLeft} 0,${startLeft} Z`;
-      startLeft = endLeft;
-      startRight = endRight;
-      return { d, share };
-    });
-  }, [productSalesCategories]);
   const revenueCount = useCountUp(revenue);
   const totalOrdersCount = useCountUp(totalOrders);
   const deliveredCountAnimated = useCountUp(deliveredCount);
@@ -851,105 +1461,128 @@ export const DashboardOverviewPage: React.FC = () => {
         .slice(0, 6),
     [orders],
   );
+  const [recentOrderStatuses, setRecentOrderStatuses] = React.useState<
+    Record<string, OrderStatus>
+  >(
+    () =>
+      Object.fromEntries(
+        recentOrders.map((order) => [order.id, order.status]),
+      ) as Record<string, OrderStatus>,
+  );
+
+  React.useEffect(() => {
+    setRecentOrderStatuses((current) => {
+      const next = { ...current };
+      let changed = false;
+
+      recentOrders.forEach((order) => {
+        if (next[order.id]) return;
+        next[order.id] = order.status;
+        changed = true;
+      });
+
+      return changed ? next : current;
+    });
+  }, [recentOrders]);
+
+  const updateRecentOrderStatus = React.useCallback(
+    (orderId: string, status: OrderStatus) => {
+      setRecentOrderStatuses((current) => ({ ...current, [orderId]: status }));
+    },
+    [],
+  );
+
+  const statCards: ReadonlyArray<StatCardItem> = [
+    {
+      label: "Total Orders",
+      value: totalOrdersCount.toLocaleString(),
+      trend: "+2.34%",
+      trendPositive: true,
+      tone: statCardTones[0],
+      icon: <RotateCcw size={18} strokeWidth={2.25} />,
+    },
+    {
+      label: "Total Sales",
+      value: deliveredCountAnimated.toLocaleString(),
+      trend: "+8.12%",
+      trendPositive: true,
+      tone: statCardTones[1],
+      icon: <ShoppingCart size={18} strokeWidth={2.25} />,
+    },
+    {
+      label: "Customer Growth",
+      value: customerCount.toLocaleString(),
+      trend: `${growthPct >= 0 ? "+" : "-"}${Math.abs(growthPct)}%`,
+      trendPositive: growthPct >= 0,
+      tone: statCardTones[2],
+      icon: <BarChart2 size={18} strokeWidth={2.25} />,
+    },
+    {
+      label: "Total Revenue",
+      value: formatNpr(revenueCount),
+      trend: "+2.34%",
+      trendPositive: true,
+      tone: statCardTones[3],
+      icon: <CoinIcon />,
+    },
+  ];
+
   return (
-    <div className="space-y-4 bg-(--bg) p-[34px] text-(--text)">
+    <div className="space-y-4 bg-(--bg) p-8.5 text-(--text)">
       {/* ── Row 1: 4 stat cards ── */}
       <div
-        className={`grid grid-cols-2 gap-4 lg:grid-cols-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
+        className={`grid grid-cols-2 items-stretch gap-4 lg:grid-cols-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
         style={rowAnimation(0)}
       >
-        {/* Total Orders */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10">
-              <RotateCcw size={15} className="text-brand" />
-            </div>
-            <span className="text-xs font-medium text-(--text-tertiary)">
-              Total Orders
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-semibold tabular-nums text-(--text)">
-              {totalOrdersCount.toLocaleString()}
-            </span>
-            <span className="flex items-center gap-0.5 rounded-full bg-(--badge-success-bg) px-1.5 py-0.5 text-[11px] font-semibold text-(--badge-success-text)">
-              <TrendingUp size={9} /> +2.34%
-            </span>
-          </div>
-        </div>
+        {statCards.map((card) => {
+          const trendBadgeClassName = card.trendPositive
+            ? card.tone.badgeClassName
+            : "text-red-700";
+          const TrendIcon = card.trendPositive ? TrendingUp : TrendingDown;
 
-        {/* Total Sales */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-50">
-              <ShoppingCart size={15} className="text-violet-600" />
-            </div>
-            <span className="text-xs font-medium text-(--text-tertiary)">
-              Total Sales
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-semibold tabular-nums text-(--text)">
-              {deliveredCountAnimated.toLocaleString()}
-            </span>
-            <span className="flex items-center gap-0.5 rounded-full bg-(--badge-success-bg) px-1.5 py-0.5 text-[11px] font-semibold text-(--badge-success-text)">
-              <TrendingUp size={9} /> +8.12%
-            </span>
-          </div>
-        </div>
-
-        {/* Customer Growth */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50">
-              <BarChart2 size={15} className="text-amber-600" />
-            </div>
-            <span className="text-xs font-medium text-(--text-tertiary)">
-              Customer Growth
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-semibold tabular-nums text-(--text)">
-              {customerCount.toLocaleString()}
-            </span>
-            <span
-              className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${growthPct >= 0 ? "bg-(--badge-success-bg) text-(--badge-success-text)" : "bg-(--badge-danger-bg) text-(--badge-danger-text)"}`}
+          return (
+            <div
+              key={card.label}
+              className={`relative min-h-34 overflow-hidden rounded-2xl border p-4 transition-transform duration-300 ease-out hover:-translate-y-0.5 ${card.tone.cardClassName}`}
             >
-              {growthPct >= 0 ? (
-                <TrendingUp size={9} />
-              ) : (
-                <TrendingDown size={9} />
-              )}
-              {growthPct >= 0 ? "+" : "-"}
-              {Math.abs(growthPct)}%
-            </span>
-          </div>
-        </div>
+              <div className="relative flex h-full flex-col justify-between gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full ${card.tone.iconBg}`}
+                    >
+                      <span className={card.tone.iconColor}>{card.icon}</span>
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${card.tone.labelClassName}`}
+                    >
+                      {card.label}
+                    </span>
+                  </div>
+                </div>
 
-        {/* Total Revenue */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50">
-              <CoinIcon />
+                <div className="flex items-end justify-between gap-3">
+                  <span
+                    className={`text-2xl font-semibold leading-none tabular-nums ${card.tone.valueClassName}`}
+                  >
+                    {card.value}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold  ${trendBadgeClassName}`}
+                  >
+                    <TrendIcon size={12} strokeWidth={2.4} />
+                    {card.trend}
+                  </span>
+                </div>
+              </div>
             </div>
-            <span className="text-xs font-medium text-(--text-tertiary)">
-              Total Revenue
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-semibold tabular-nums text-(--text)">
-              {formatNpr(revenueCount)}
-            </span>
-            <span className="flex items-center gap-0.5 rounded-full bg-(--badge-success-bg) px-1.5 py-0.5 text-[11px] font-semibold text-(--badge-success-text)">
-              <TrendingUp size={9} /> +2.34%
-            </span>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* ── Row 2: Recent Orders | Inquiries ── */}
       <div
-        className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
+        className={`grid grid-cols-12 gap-4 mt-8 ${animateRows ? "overview-rise" : "opacity-0"}`}
         style={rowAnimation(90)}
       >
         <div className="col-span-12 lg:col-span-7">
@@ -1005,11 +1638,44 @@ export const DashboardOverviewPage: React.FC = () => {
                         {o.amount}
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${orderStatusStyle[o.status]}`}
-                        >
-                          {o.status}
-                        </span>
+                        <DropdownMenu.Root>
+                          <DropdownMenu.Trigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex w-30 items-center justify-center gap-1 rounded-md px-3 py-1 font-medium leading-none ${orderStatusStyle[recentOrderStatuses[o.id] ?? o.status]}`}
+                              style={{ fontSize: "12px", lineHeight: 1 }}
+                            >
+                              <span className="truncate">
+                                {formatOrderStatusLabelText(
+                                  recentOrderStatuses[o.id] ?? o.status,
+                                )}
+                              </span>
+                              <ChevronDown size={11} />
+                            </button>
+                          </DropdownMenu.Trigger>
+                          <DropdownMenu.Portal>
+                            <DropdownMenu.Content
+                              align="center"
+                              sideOffset={6}
+                              className="z-50 min-w-35 rounded-xl border border-slate-200 bg-white p-1 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+                            >
+                              {orderStatusOptions.map((status) => (
+                                <DropdownMenu.Item
+                                  key={status}
+                                  onSelect={() =>
+                                    updateRecentOrderStatus(o.id, status)
+                                  }
+                                  className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50"
+                                >
+                                  <span
+                                    className={`h-2.5 w-2.5 rounded-full ${orderStatusIndicatorStyle[status]}`}
+                                  />
+                                  {formatOrderStatusLabelText(status)}
+                                </DropdownMenu.Item>
+                              ))}
+                            </DropdownMenu.Content>
+                          </DropdownMenu.Portal>
+                        </DropdownMenu.Root>
                       </td>
                       <td className="px-5 py-3.5 text-xs text-(--text-secondary)">
                         {o.date}
@@ -1025,9 +1691,7 @@ export const DashboardOverviewPage: React.FC = () => {
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
             <div className="flex items-center gap-2">
               <MessageSquare size={14} className="text-(--text-secondary)" />
-              <h2 className="text-sm font-semibold text-(--text)">
-                Inquiries
-              </h2>
+              <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
             </div>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
@@ -1040,64 +1704,45 @@ export const DashboardOverviewPage: React.FC = () => {
             </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50">
-            <div className="overflow-hidden">
-              <table className="w-full table-fixed text-sm">
-                <thead>
-                  <tr className="border-b border-(--line) bg-(--bg)">
-                    <th className="w-[31%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Customer
-                    </th>
-                    <th className="w-[34%] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Subject
-                    </th>
-                    <th className="w-[17%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Type
-                    </th>
-                    <th className="w-[18%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--line)">
-                  {inquiries.map((inq) => (
-                    <tr
-                      key={inq.id}
-                      className="transition-colors hover:bg-(--bg)"
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 border-b border-(--line) bg-(--bg) px-2 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                Customer
+              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                Subject
+              </div>
+              <div className="text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                Type
+              </div>
+            </div>
+            <div className="divide-y divide-(--line)">
+              {inquiries.map((inq) => (
+                <div
+                  key={inq.id}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 px-2 py-3 transition-colors hover:bg-(--bg)"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-(--text)">
+                      {inq.customerName}
+                    </p>
+                    <p className="truncate text-[10px] text-(--text-tertiary)">
+                      {inq.email}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-(--text-secondary)">
+                      {inq.subject}
+                    </p>
+                  </div>
+                  <div className="flex justify-end">
+                    <span
+                      className={`inline-flex w-18 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
                     >
-                      <td className="px-4 py-3">
-                        <p className="truncate text-xs font-medium text-(--text)">
-                          {inq.customerName}
-                        </p>
-                        <p className="truncate text-[10px] text-(--text-tertiary)">
-                          {inq.email}
-                        </p>
-                      </td>
-                      <td className="max-w-0 px-4 py-3">
-                        <p className="truncate text-xs text-(--text-secondary)">
-                          {inq.subject}
-                        </p>
-                        <p className="truncate text-[10px] text-(--text-tertiary)">
-                          {inq.date || "—"}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
-                        >
-                          {inq.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${inquiryStatusStyle[inq.status]}`}
-                        >
-                          {inq.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      {inq.type}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1180,139 +1825,45 @@ export const DashboardOverviewPage: React.FC = () => {
         style={rowAnimation(270)}
       >
         <div className="col-span-12">
-          <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <h2 className="text-sm font-semibold text-(--text)">
-              Product Sales Category
-            </h2>
-            <div className="flex items-center overflow-hidden rounded-lg border border-(--line) bg-(--surface-soft) text-xs">
-              <button
-                type="button"
-                onClick={() => setCategoryRange("7d")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${categoryRange === "7d" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                7D
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategoryRange("1m")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${categoryRange === "1m" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                1M
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategoryRange("6m")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${categoryRange === "6m" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                6M
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategoryRange("12m")}
-                className={`px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${categoryRange === "12m" ? "bg-primary text-white" : "text-(--text-secondary) hover:bg-(--surface)"}`}
-              >
-                12M
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-            {/* Category column headers */}
-            <div className="px-5">
-              <div
-                className="grid gap-0"
-                style={{
-                  gridTemplateColumns: `repeat(${Math.max(
-                    productSalesCategories.length,
-                    1,
-                  )}, minmax(0, 1fr))`,
-                }}
-              >
-                {productSalesCategories.map((item, index) => (
-                  <button
-                    type="button"
-                    key={item.name}
-                    onMouseEnter={() => setActiveCategoryBand(index)}
-                    onMouseLeave={() => setActiveCategoryBand(null)}
-                    onFocus={() => setActiveCategoryBand(index)}
-                    onBlur={() => setActiveCategoryBand(null)}
-                    className={`flex flex-col gap-0.5 px-2 py-2 text-left transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index > 0 ? "border-l border-(--line)" : ""} ${activeCategoryBand === index ? "bg-[color-mix(in_srgb,var(--primary)_10%,white)]" : "bg-transparent"}`}
-                  >
-                    <Users size={17} className="text-(--text-tertiary)" />
-                    <span
-                      className={`text-base font-bold leading-tight ${activeCategoryBand === index || index === 0 ? "text-primary" : "text-(--text)"}`}
-                    >
-                      {item.pct}%
-                    </span>
-                    <span className="text-[10px] leading-snug text-(--text-secondary)">
-                      {item.name}
-                    </span>
-                    <span className="mt-0.5 text-[10px] text-(--text-tertiary)">
-                      <span className="font-semibold text-(--text-secondary)">
-                        {item.count}
-                      </span>{" "}
-                      Products
-                    </span>
-                  </button>
-                ))}
-              </div>
+          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcfe_100%)] shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(currentCategories.length, 1)}, minmax(0, 1fr))`,
+              }}
+            >
+              {(currentCategories.length > 0
+                ? currentCategories
+                : [{ name: "Category", count: 0 }]
+              ).map((category) => (
+                <div
+                  key={category.name}
+                  className="flex min-h-25.5 flex-col justify-start px-6 pb-5 pt-5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-(--primary)/20 ring-1 ring-(--primary)/20" />
+                    <p className="text-[14px] font-medium leading-none text-slate-600">
+                      {category.name}
+                    </p>
+                  </div>
+                  <p className="mt-3 text-[32px] font-semibold leading-none tracking-[-0.045em] text-slate-950">
+                    {category.count.toLocaleString()}
+                  </p>
+                </div>
+              ))}
             </div>
 
-            <div className="px-5 pb-3">
-              <svg
-                viewBox="0 0 540 100"
+            <div className="pointer-events-none absolute inset-x-0 top-28 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent" />
+
+            <div className="border-t border-slate-200/70 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.04),transparent_50%)]">
+              <FunnelChart
+                data={funnelStages}
+                height={236}
                 className="w-full"
-                style={{ height: 100, display: "block" }}
-                preserveAspectRatio="none"
-                onMouseLeave={() => setActiveCategoryBand(null)}
-              >
-                {productSalesCategories.length > 1
-                  ? Array.from(
-                      { length: productSalesCategories.length - 1 },
-                      (_, idx) => (
-                        <line
-                          key={`divider-${idx}`}
-                          x1={((idx + 1) * 540) / productSalesCategories.length}
-                          y1={0}
-                          x2={((idx + 1) * 540) / productSalesCategories.length}
-                          y2={100}
-                          stroke="var(--line)"
-                          strokeWidth="1"
-                          opacity="0.9"
-                        />
-                      ),
-                    )
-                  : null}
-                {categoryBandPaths.length === 0 ? (
-                  <rect x={0} y={94} width={540} height={6} fill="#bfdbfe" />
-                ) : (
-                  categoryBandPaths.map((band, index) => {
-                    const brandBands = [
-                      "#161a4d",
-                      "#1d225f",
-                      "#283177",
-                      "#34409a",
-                      "#4b5ab8",
-                      "#5f6bd0",
-                      "#7380df",
-                      "#97a2ea",
-                    ];
-                    const isActive =
-                      activeCategoryBand === null ||
-                      activeCategoryBand === index;
-                    return (
-                      <path
-                        key={`band-${index}`}
-                        d={band.d}
-                        fill={brandBands[index % brandBands.length]}
-                        fillOpacity={isActive ? 0.95 : 0.35}
-                        className="cursor-pointer transition-opacity duration-200"
-                        onMouseEnter={() => setActiveCategoryBand(index)}
-                      />
-                    );
-                  })
-                )}
-              </svg>
+                startColor={[220, 237, 253]}
+                endColor={[31, 95, 229]}
+                showStageLabels={false}
+              />
             </div>
           </div>
         </div>
@@ -1430,7 +1981,7 @@ export const DashboardOverviewPage: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="flex min-h-[260px] flex-col items-center justify-center px-6 text-center">
+                <div className="flex min-h-65 flex-col items-center justify-center px-6 text-center">
                   <p className="text-sm font-medium text-(--text)">
                     No top products yet
                   </p>
@@ -1474,18 +2025,27 @@ export const DashboardOverviewPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-2xl bg-white px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-widest text-(--text-tertiary)">Sessions</p>
-                      <p className="mt-1 text-lg font-semibold text-(--text)">{visitorMetrics.sessions.toLocaleString()}</p>
+                      <p className="text-[11px] uppercase tracking-widest text-(--text-tertiary)">
+                        Sessions
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-(--text)">
+                        {visitorMetrics.sessions.toLocaleString()}
+                      </p>
                     </div>
                     <div className="rounded-2xl bg-white px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-widest text-(--text-tertiary)">Users</p>
-                      <p className="mt-1 text-lg font-semibold text-(--text)">{visitorMetrics.usersCount.toLocaleString()}</p>
+                      <p className="text-[11px] uppercase tracking-widest text-(--text-tertiary)">
+                        Users
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-(--text)">
+                        {visitorMetrics.usersCount.toLocaleString()}
+                      </p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     {visitorRows.map(({ label, count }) => {
                       const total = visibleVisitorRecords.length;
-                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      const pct =
+                        total > 0 ? Math.round((count / total) * 100) : 0;
                       return (
                         <div key={label}>
                           <div className="mb-1 flex items-center justify-between gap-4">
@@ -1519,7 +2079,7 @@ export const DashboardOverviewPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex min-h-[260px] flex-col items-center justify-center px-2 text-center">
+                <div className="flex min-h-65 flex-col items-center justify-center px-2 text-center">
                   <p className="text-sm font-medium text-(--text)">
                     No visitor data yet
                   </p>

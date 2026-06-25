@@ -11,6 +11,10 @@ type Props = Readonly<{
 export const RoleGuard: React.FC<Props> = ({ allow, redirectTo = "/dashboard" }) => {
   const { state } = useAuth();
 
+  if (state.sessionStatus === "checking") {
+    return null;
+  }
+
   if (!state.isAuthenticated || !state.role) {
     return <Navigate to="/login" replace />;
   }
