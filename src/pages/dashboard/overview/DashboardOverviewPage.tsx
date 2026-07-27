@@ -15,9 +15,9 @@ import {
   ShoppingCart,
   MessageSquare,
 } from "lucide-react";
-import { useOrders, usePaymentsAggregate } from "@/features/commerce";
+import { useOrders, usePaymentsAggregate, useUpdateOrderStatus } from "@/features/commerce";
+import { useDashboardOverview } from "@/features/dashboard";
 import { catalogApi } from "@/features/catalog";
-import { useInquiryList, useSiteInquiryList } from "@/features/engagement";
 import { useAdminUsersList } from "@/features/adminUsers";
 import { useUserMetadataList } from "@/features/telemetry";
 import {
@@ -28,11 +28,7 @@ import {
   toText,
   uniqueTextCount,
 } from "@/features/telemetry/telemetry.utils";
-import {
-  getListRows,
-  getOrderRows,
-  normalizeOrderRow,
-} from "@/shared/utils/orderMapping";
+import { getListRows, getOrderRows } from "@/shared/utils/orderMapping";
 import FunnelChart from "@/shared/components/charts/FunnelChart";
 
 const USE_FAKE_OVERVIEW_DATA = true;
@@ -291,6 +287,14 @@ const formatNpr = (value: number): string =>
     currency: "NPR",
     maximumFractionDigits: 0,
   }).format(value);
+
+const formatTrendPercent = (value: number): string => {
+  const rounded = Math.round(value * 100) / 100;
+  const formatted = Number.isInteger(rounded)
+    ? Math.abs(rounded).toLocaleString()
+    : Math.abs(rounded).toFixed(2);
+  return `${rounded >= 0 ? "+" : "-"}${formatted}%`;
+};
 const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
@@ -403,7 +407,6 @@ const orderStatusStyle: Record<
   | "READY_FOR_SHIPMENT"
   | "SHIPPED"
   | "DELIVERED"
-  | "COMPLETED"
   | "CANCELLED"
   | "RETURNED",
   string
@@ -413,7 +416,6 @@ const orderStatusStyle: Record<
   READY_FOR_SHIPMENT: "bg-indigo-100 text-indigo-800",
   SHIPPED: "bg-blue-100 text-blue-800",
   DELIVERED: "bg-emerald-100 text-emerald-800",
-  COMPLETED: "bg-emerald-100 text-emerald-800",
   CANCELLED: "bg-red-100 text-red-800",
   RETURNED: "bg-red-100 text-red-800",
 };
@@ -426,7 +428,6 @@ const orderStatusIndicatorStyle: Record<OrderStatus, string> = {
   READY_FOR_SHIPMENT: "bg-indigo-400",
   SHIPPED: "bg-blue-400",
   DELIVERED: "bg-emerald-400",
-  COMPLETED: "bg-emerald-500",
   CANCELLED: "bg-red-400",
   RETURNED: "bg-red-500",
 };
@@ -437,7 +438,6 @@ const orderStatusOptions: ReadonlyArray<OrderStatus> = [
   "READY_FOR_SHIPMENT",
   "SHIPPED",
   "DELIVERED",
-  "COMPLETED",
   "CANCELLED",
   "RETURNED",
 ];
@@ -542,11 +542,55 @@ const normalizeInquiryRow = (
   };
 };
 
-const toInquiryRows = (
-  payload: unknown,
-  type: InquiryRow["type"],
-): ReadonlyArray<InquiryRow> =>
-  getListRows(payload).map((entry) => normalizeInquiryRow(entry, type));
+
+const getDashboardCustomerName = (row: Record<string, unknown>): string => {
+  const customer = toRecord(row.customer);
+  const name = [toText(customer.firstname), toText(customer.lastname)]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  return textOrFallback(
+    name || row.customerName || row.fullName || row.fullname || row.name,
+    "Customer",
+  );
+};
+
+const getDashboardCustomerEmail = (row: Record<string, unknown>): string => {
+  const customer = toRecord(row.customer);
+  return textOrFallback(customer.email ?? row.customerEmail ?? row.email, "—");
+};
+
+type RecentOrderRow = Readonly<{
+  createdAt: number;
+  id: string;
+  orderNumber: string;
+  customer: string;
+  email: string;
+  amount: string;
+  status: OrderStatus;
+  date: string;
+}>;
+
+const toDashboardRecentOrderRow = (entry: unknown): RecentOrderRow => {
+  const row = toRecord(entry);
+  const createdAtText = toText(row.createdAt ?? row.updatedAt, "");
+  const createdAt = new Date(createdAtText).getTime();
+
+  return {
+    createdAt: Number.isNaN(createdAt) ? 0 : createdAt,
+    id: textOrFallback(row.id, ""),
+    orderNumber: textOrFallback(row.orderNumber ?? row.id, "—"),
+    customer: getDashboardCustomerName(row),
+    email: getDashboardCustomerEmail(row),
+    amount: formatNpr(toNum(row.totalAmount ?? row.total ?? row.grandTotal)),
+    status: formatOrderStatusLabel(toText(row.orderStatus ?? row.status, "PENDING")),
+    date: formatDate(createdAtText),
+  };
+};
+
+const toDashboardRecentInquiryRow = (entry: unknown): InquiryRow =>
+  normalizeInquiryRow(entry, "Product");
 const useCountUp = (value: number, durationMs = 900): number => {
   const [display, setDisplay] = React.useState(0);
 
@@ -669,7 +713,7 @@ const createMockDashboardData = (): MockDashboardData => {
     customerEmail,
     paymentMethod: "Cash on Delivery",
     paymentStatus:
-      status === "DELIVERED" || status === "COMPLETED" ? "PAID" : "PENDING",
+      status === "DELIVERED" ? "PAID" : "PENDING",
     total: total.toFixed(2),
     placedAt: daysAgo(daysOffset),
     createdAt: daysAgo(daysOffset),
@@ -755,7 +799,7 @@ const createMockDashboardData = (): MockDashboardData => {
       "KAN-1005",
       "Nisha Thapa",
       "nisha@example.com",
-      "COMPLETED",
+      "DELIVERED",
       2950,
       12,
       [
@@ -1051,6 +1095,8 @@ export const DashboardOverviewPage: React.FC = () => {
   const [visitorsRange, setVisitorsRange] = React.useState<
     "today" | "7d" | "30d"
   >("today");
+  const dashboardOverviewQuery = useDashboardOverview();
+  const dashboardOverview = dashboardOverviewQuery.data;
   const ordersQuery = useOrders(
     { page: 1, limit: 200 },
     !USE_FAKE_OVERVIEW_DATA,
@@ -1072,14 +1118,6 @@ export const DashboardOverviewPage: React.FC = () => {
   const paymentsQuery = usePaymentsAggregate(!USE_FAKE_OVERVIEW_DATA);
   const usersQuery = useAdminUsersList(
     { page: 1, limit: 500 },
-    !USE_FAKE_OVERVIEW_DATA,
-  );
-  const inquiryQuery = useInquiryList(
-    { page: 1, limit: 100 },
-    !USE_FAKE_OVERVIEW_DATA,
-  );
-  const siteInquiryQuery = useSiteInquiryList(
-    { page: 1, limit: 100 },
     !USE_FAKE_OVERVIEW_DATA,
   );
   const userMetadataQuery = useUserMetadataList(
@@ -1115,21 +1153,12 @@ export const DashboardOverviewPage: React.FC = () => {
     [usersQuery.data],
   );
   const inquiries = React.useMemo(() => {
-    const productRows = USE_FAKE_OVERVIEW_DATA
-      ? MOCK_OVERVIEW_DATA.inquiries.map((entry) =>
-          normalizeInquiryRow(entry, "Product"),
-        )
-      : toInquiryRows(inquiryQuery.data, "Product");
-    const siteRows = USE_FAKE_OVERVIEW_DATA
-      ? MOCK_OVERVIEW_DATA.siteInquiries.map((entry) =>
-          normalizeInquiryRow(entry, "Site"),
-        )
-      : toInquiryRows(siteInquiryQuery.data, "Site");
-    return [...productRows, ...siteRows]
+    return (dashboardOverviewQuery.data?.recentInquiries ?? [])
+      .map((entry) => toDashboardRecentInquiryRow(entry))
       .filter((row) => row.createdAt > 0 || row.id.length > 0)
       .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 6);
-  }, [inquiryQuery.data, siteInquiryQuery.data]);
+      .slice(0, 10);
+  }, [dashboardOverviewQuery.data]);
 
   const payments = React.useMemo(
     () =>
@@ -1147,14 +1176,22 @@ export const DashboardOverviewPage: React.FC = () => {
     [paymentsQuery.data],
   );
 
-  const paymentRevenue = React.useMemo(
-    () =>
-      payments
-        .filter((p) => p.status === "Completed")
-        .reduce((sum, p) => sum + p.amount, 0),
-    [payments],
-  );
+  const paymentRevenue = React.useMemo(() => {
+    if (dashboardOverview?.summary) return dashboardOverview.summary.totalRevenue;
+
+    return payments
+      .filter((p) => p.status === "Completed")
+      .reduce((sum, p) => sum + p.amount, 0);
+  }, [dashboardOverview?.summary, payments]);
   const paymentMonthly = React.useMemo(() => {
+    const apiPoints = dashboardOverview?.salesOverview?.[salesRange];
+    if (apiPoints && apiPoints.length > 0) {
+      return apiPoints.map((point) => ({
+        label: point.label,
+        value: point.value,
+      }));
+    }
+
     const now = new Date();
     const months =
       salesRange === "12m"
@@ -1200,36 +1237,42 @@ export const DashboardOverviewPage: React.FC = () => {
       points[idx] = { ...points[idx], value: points[idx].value + p.amount };
     });
     return points;
-  }, [payments, salesRange]);
+  }, [dashboardOverview?.salesOverview, payments, salesRange]);
 
   const revenue = React.useMemo(() => paymentRevenue, [paymentRevenue]);
-  const totalOrders = orders.length;
-  const shippedCount = React.useMemo(
-    () =>
-      orders.filter((row) => toText(row.status).toLowerCase() === "shipped")
-        .length,
-    [orders],
-  );
-  const deliveredCount = React.useMemo(
-    () =>
-      orders.filter((row) => toText(row.status).toLowerCase() === "delivered")
-        .length,
-    [orders],
-  );
-  const pendingCount = React.useMemo(
-    () =>
-      orders.filter((row) => toText(row.status).toLowerCase() === "pending")
-        .length,
-    [orders],
-  );
-  const customerCount = React.useMemo(
-    () =>
-      users.filter((row) => toText(row.role).toUpperCase() === "USER").length,
-    [users],
-  );
+  const totalOrders = dashboardOverview?.summary.totalOrders ?? orders.length;
+  const totalSales =
+    dashboardOverview?.summary.totalSales ??
+    orders.filter((row) =>
+      toText(row.status).toLowerCase() === "delivered",
+    ).length;
+  const shippedCount =
+    dashboardOverview?.salesActivity.shipped ??
+    orders.filter((row) =>
+      ["shipped", "in_transit"].includes(toText(row.status).toLowerCase()),
+    ).length;
+  const deliveredCount =
+    dashboardOverview?.salesActivity.delivered ??
+    orders.filter((row) =>
+      toText(row.status).toLowerCase() === "delivered",
+    ).length;
+  const pendingCount =
+    dashboardOverview?.salesActivity.packed ??
+    orders.filter((row) =>
+      ["processing", "ready_for_shipment"].includes(
+        toText(row.status).toLowerCase(),
+      ),
+    ).length;
+  const customerCount =
+    dashboardOverview?.summary.customerGrowth ??
+    users.filter((row) => toText(row.role).toUpperCase() === "USER").length;
   const [currentTime] = React.useState(() => Date.now());
 
   const growthPct = React.useMemo(() => {
+    if (dashboardOverview?.summary) {
+      return dashboardOverview.summary.customerGrowthPercent;
+    }
+
     const now = currentTime;
     const day = 24 * 60 * 60 * 1000;
     const currentStart = now - 30 * day;
@@ -1247,9 +1290,19 @@ export const DashboardOverviewPage: React.FC = () => {
     }).length;
     if (previous <= 0) return current > 0 ? 100 : 0;
     return Math.round(((current - previous) / previous) * 100);
-  }, [users, currentTime]);
+  }, [dashboardOverview?.summary, users, currentTime]);
 
   const topProducts = React.useMemo(() => {
+    const apiProducts = dashboardOverview?.topProducts?.[topProductsRange] ?? [];
+    if (apiProducts.length > 0) {
+      return apiProducts.map((item) => ({
+        name: item.name,
+        category: item.category,
+        revenue: `${item.orderCount.toLocaleString()} orders`,
+        img: item.image ?? "",
+      }));
+    }
+
     const productMeta = new Map(
       products.map((row) => {
         const id = toText(row.id);
@@ -1332,7 +1385,7 @@ export const DashboardOverviewPage: React.FC = () => {
         revenue: `${item.qty} orders`,
         img: "🧴",
       }));
-  }, [orders, products, topProductsRange]);
+  }, [dashboardOverview?.topProducts, orders, products, topProductsRange]);
 
   const categorySalesCategories = React.useMemo(
     () => getProductSalesCategories(orders, products),
@@ -1348,20 +1401,26 @@ export const DashboardOverviewPage: React.FC = () => {
       ),
     [categorySalesCategories],
   );
-  const currentCategories = React.useMemo(
-    () =>
-      (Array.isArray(categories) ? categories : [])
-        .map((row) => ({
-          name: toText(row.title ?? row.name, "Category"),
-          count:
-            categorySalesCountByName.get(
-              toText(row.title ?? row.name, "Category"),
-            ) ?? 0,
-        }))
+  const currentCategories = React.useMemo(() => {
+    const apiCategories = dashboardOverview?.categorySales ?? [];
+    if (apiCategories.length > 0) {
+      return apiCategories
+        .map((category) => ({ name: category.name, count: category.count }))
         .filter((category) => category.name.length > 0)
-        .slice(0, 5),
-    [categories, categorySalesCountByName],
-  );
+        .slice(0, 5);
+    }
+
+    return (Array.isArray(categories) ? categories : [])
+      .map((row) => ({
+        name: toText(row.title ?? row.name, "Category"),
+        count:
+          categorySalesCountByName.get(
+            toText(row.title ?? row.name, "Category"),
+          ) ?? 0,
+      }))
+      .filter((category) => category.name.length > 0)
+      .slice(0, 5);
+  }, [categories, categorySalesCountByName, dashboardOverview?.categorySales]);
   const funnelStages = React.useMemo(
     () =>
       currentCategories.length > 0
@@ -1404,17 +1463,33 @@ export const DashboardOverviewPage: React.FC = () => {
     });
   }, [currentTime, visitorRecords, visitorsRange]);
 
-  const visitorRows = React.useMemo(
-    () =>
-      groupRowsByField(
-        visibleVisitorRecords,
-        ["country", "region", "city"],
-        "Unknown",
-      ),
-    [visibleVisitorRecords],
-  );
+  const visitorRows = React.useMemo(() => {
+    const apiVisitors = dashboardOverview?.visitors?.[visitorsRange];
+    if (apiVisitors) {
+      return apiVisitors.countries.map((country) => ({
+        label: country.country,
+        count: country.sessions,
+        percentage: country.percentage,
+      }));
+    }
+
+    return groupRowsByField(
+      visibleVisitorRecords,
+      ["country", "region", "city"],
+      "Unknown",
+    ).map((row) => ({ ...row, percentage: undefined }));
+  }, [dashboardOverview?.visitors, visibleVisitorRecords, visitorsRange]);
 
   const visitorMetrics = React.useMemo(() => {
+    const apiVisitors = dashboardOverview?.visitors?.[visitorsRange];
+    if (apiVisitors) {
+      return {
+        sessions: apiVisitors.sessions,
+        usersCount: apiVisitors.users,
+        locations: apiVisitors.countries.length,
+      };
+    }
+
     const sessions = uniqueTextCount(visibleVisitorRecords, ["sessionId"]);
     const usersCount = uniqueTextCount(visibleVisitorRecords, [
       "userId",
@@ -1426,10 +1501,10 @@ export const DashboardOverviewPage: React.FC = () => {
       "city",
     ]);
     return { sessions, usersCount, locations };
-  }, [visibleVisitorRecords]);
+  }, [dashboardOverview?.visitors, visibleVisitorRecords, visitorsRange]);
   const revenueCount = useCountUp(revenue);
   const totalOrdersCount = useCountUp(totalOrders);
-  const deliveredCountAnimated = useCountUp(deliveredCount);
+  const totalSalesCount = useCountUp(totalSales);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => setAnimateRows(true), 30);
@@ -1444,23 +1519,16 @@ export const DashboardOverviewPage: React.FC = () => {
 
   const recentOrders = React.useMemo(
     () =>
-      orders
-        .map((row) => {
-          const order = normalizeOrderRow(row);
-          return {
-            createdAt: new Date(toText(order.placedAt)).getTime(),
-            id: toText(order.orderNumber ?? order.id, "—"),
-            customer: toText(order.customerName, "Customer"),
-            email: toText(order.customerEmail, "—"),
-            amount: formatNpr(toNum(order.total)),
-            status: formatOrderStatusLabel(order.status),
-            date: formatDate(order.placedAt),
-          };
-        })
+      (dashboardOverviewQuery.data?.recentOrders ?? [])
+        .map((row) => toDashboardRecentOrderRow(row))
+        .filter((order) => order.id.length > 0)
         .sort((a, b) => b.createdAt - a.createdAt)
-        .slice(0, 6),
-    [orders],
+        .slice(0, 20),
+    [dashboardOverviewQuery.data],
   );
+  const updateOrderStatus = useUpdateOrderStatus();
+  const [updatingRecentOrderId, setUpdatingRecentOrderId] =
+    React.useState<string | null>(null);
   const [recentOrderStatuses, setRecentOrderStatuses] = React.useState<
     Record<string, OrderStatus>
   >(
@@ -1472,47 +1540,82 @@ export const DashboardOverviewPage: React.FC = () => {
 
   React.useEffect(() => {
     setRecentOrderStatuses((current) => {
-      const next = { ...current };
-      let changed = false;
+      const next = Object.fromEntries(
+        recentOrders.map((order) => [
+          order.id,
+          updatingRecentOrderId === order.id
+            ? (current[order.id] ?? order.status)
+            : order.status,
+        ]),
+      ) as Record<string, OrderStatus>;
 
-      recentOrders.forEach((order) => {
-        if (next[order.id]) return;
-        next[order.id] = order.status;
-        changed = true;
-      });
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(next);
+      const hasChanged =
+        currentKeys.length !== nextKeys.length ||
+        nextKeys.some((key) => current[key] !== next[key]);
 
-      return changed ? next : current;
+      return hasChanged ? next : current;
     });
-  }, [recentOrders]);
+  }, [recentOrders, updatingRecentOrderId]);
 
   const updateRecentOrderStatus = React.useCallback(
-    (orderId: string, status: OrderStatus) => {
+    async (orderId: string, status: OrderStatus) => {
+      const previousStatus =
+        recentOrderStatuses[orderId] ??
+        recentOrders.find((order) => order.id === orderId)?.status;
+
+      if (!orderId || status === previousStatus) return;
+
+      setUpdatingRecentOrderId(orderId);
       setRecentOrderStatuses((current) => ({ ...current, [orderId]: status }));
+
+      try {
+        await updateOrderStatus.mutateAsync({
+          id: orderId,
+          payload: { orderStatus: status },
+        });
+        await dashboardOverviewQuery.refetch();
+      } catch {
+        if (previousStatus) {
+          setRecentOrderStatuses((current) => ({
+            ...current,
+            [orderId]: previousStatus,
+          }));
+        }
+      } finally {
+        setUpdatingRecentOrderId(null);
+      }
     },
-    [],
+    [
+      dashboardOverviewQuery,
+      recentOrderStatuses,
+      recentOrders,
+      updateOrderStatus,
+    ],
   );
 
   const statCards: ReadonlyArray<StatCardItem> = [
     {
       label: "Total Orders",
       value: totalOrdersCount.toLocaleString(),
-      trend: "+2.34%",
-      trendPositive: true,
+      trend: formatTrendPercent(dashboardOverview?.summary.orderTrendPercent ?? 0),
+      trendPositive: (dashboardOverview?.summary.orderTrendPercent ?? 0) >= 0,
       tone: statCardTones[0],
       icon: <RotateCcw size={18} strokeWidth={2.25} />,
     },
     {
       label: "Total Sales",
-      value: deliveredCountAnimated.toLocaleString(),
-      trend: "+8.12%",
-      trendPositive: true,
+      value: totalSalesCount.toLocaleString(),
+      trend: formatTrendPercent(dashboardOverview?.summary.salesTrendPercent ?? 0),
+      trendPositive: (dashboardOverview?.summary.salesTrendPercent ?? 0) >= 0,
       tone: statCardTones[1],
       icon: <ShoppingCart size={18} strokeWidth={2.25} />,
     },
     {
       label: "Customer Growth",
       value: customerCount.toLocaleString(),
-      trend: `${growthPct >= 0 ? "+" : "-"}${Math.abs(growthPct)}%`,
+      trend: formatTrendPercent(growthPct),
       trendPositive: growthPct >= 0,
       tone: statCardTones[2],
       icon: <BarChart2 size={18} strokeWidth={2.25} />,
@@ -1520,8 +1623,8 @@ export const DashboardOverviewPage: React.FC = () => {
     {
       label: "Total Revenue",
       value: formatNpr(revenueCount),
-      trend: "+2.34%",
-      trendPositive: true,
+      trend: formatTrendPercent(dashboardOverview?.summary.revenueTrendPercent ?? 0),
+      trendPositive: (dashboardOverview?.summary.revenueTrendPercent ?? 0) >= 0,
       tone: statCardTones[3],
       icon: <CoinIcon />,
     },
@@ -1618,13 +1721,45 @@ export const DashboardOverviewPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-(--line)">
-                  {recentOrders.map((o) => (
+                  {dashboardOverviewQuery.isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)"
+                      >
+                        Loading recent orders...
+                      </td>
+                    </tr>
+                  ) : dashboardOverviewQuery.isError ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-5 py-8 text-center text-xs font-medium text-red-600"
+                      >
+                        Unable to load recent orders.
+                      </td>
+                    </tr>
+                  ) : recentOrders.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)"
+                      >
+                        No recent orders found.
+                      </td>
+                    </tr>
+                  ) : (
+                    recentOrders.map((o) => {
+                      const currentStatus = recentOrderStatuses[o.id] ?? o.status;
+                      const isUpdatingStatus = updatingRecentOrderId === o.id;
+
+                      return (
                     <tr
                       key={o.id}
                       className="transition-colors hover:bg-(--bg)"
                     >
                       <td className="px-5 py-3.5 font-mono text-xs font-medium text-(--text-secondary)">
-                        {o.id}
+                        {o.orderNumber}
                       </td>
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-(--text)">
@@ -1642,13 +1777,14 @@ export const DashboardOverviewPage: React.FC = () => {
                           <DropdownMenu.Trigger asChild>
                             <button
                               type="button"
-                              className={`inline-flex w-30 items-center justify-center gap-1 rounded-md px-3 py-1 font-medium leading-none ${orderStatusStyle[recentOrderStatuses[o.id] ?? o.status]}`}
+                              disabled={isUpdatingStatus}
+                              className={`inline-flex w-30 items-center justify-center gap-1 rounded-md px-3 py-1 font-medium leading-none transition-opacity disabled:cursor-not-allowed disabled:opacity-60 ${orderStatusStyle[currentStatus]}`}
                               style={{ fontSize: "12px", lineHeight: 1 }}
                             >
                               <span className="truncate">
-                                {formatOrderStatusLabelText(
-                                  recentOrderStatuses[o.id] ?? o.status,
-                                )}
+                                {isUpdatingStatus
+                                  ? "UPDATING"
+                                  : formatOrderStatusLabelText(currentStatus)}
                               </span>
                               <ChevronDown size={11} />
                             </button>
@@ -1662,9 +1798,10 @@ export const DashboardOverviewPage: React.FC = () => {
                               {orderStatusOptions.map((status) => (
                                 <DropdownMenu.Item
                                   key={status}
-                                  onSelect={() =>
-                                    updateRecentOrderStatus(o.id, status)
-                                  }
+                                  disabled={isUpdatingStatus}
+                                  onSelect={() => {
+                                    void updateRecentOrderStatus(o.id, status);
+                                  }}
                                   className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50"
                                 >
                                   <span
@@ -1681,7 +1818,9 @@ export const DashboardOverviewPage: React.FC = () => {
                         {o.date}
                       </td>
                     </tr>
-                  ))}
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1716,7 +1855,20 @@ export const DashboardOverviewPage: React.FC = () => {
               </div>
             </div>
             <div className="divide-y divide-(--line)">
-              {inquiries.map((inq) => (
+              {dashboardOverviewQuery.isLoading ? (
+                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
+                  Loading inquiries...
+                </div>
+              ) : dashboardOverviewQuery.isError ? (
+                <div className="px-2 py-8 text-center text-xs font-medium text-red-600">
+                  Unable to load inquiries.
+                </div>
+              ) : inquiries.length === 0 ? (
+                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
+                  No recent inquiries found.
+                </div>
+              ) : (
+                inquiries.map((inq) => (
                 <div
                   key={inq.id}
                   className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 px-2 py-3 transition-colors hover:bg-(--bg)"
@@ -1742,7 +1894,8 @@ export const DashboardOverviewPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1797,9 +1950,25 @@ export const DashboardOverviewPage: React.FC = () => {
                 <p className="text-2xl font-bold text-(--text)">
                   {formatNpr(paymentRevenue)}
                 </p>
-                <p className="flex items-center gap-0.5 text-xs font-medium text-(--badge-success-text)">
-                  <TrendingUp size={10} /> +2.34%
-                </p>
+                {(() => {
+                  const revenueTrend =
+                    dashboardOverview?.summary.revenueTrendPercent ?? 0;
+                  const RevenueTrendIcon =
+                    revenueTrend >= 0 ? TrendingUp : TrendingDown;
+
+                  return (
+                    <p
+                      className={`flex items-center gap-0.5 text-xs font-medium ${
+                        revenueTrend >= 0
+                          ? "text-(--badge-success-text)"
+                          : "text-red-700"
+                      }`}
+                    >
+                      <RevenueTrendIcon size={10} />
+                      {formatTrendPercent(revenueTrend)}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="ml-auto flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 text-xs text-(--text-secondary)">
@@ -1965,7 +2134,18 @@ export const DashboardOverviewPage: React.FC = () => {
                       <span className="w-4 shrink-0 text-xs text-(--text-tertiary)">
                         {i + 1}
                       </span>
-                      <span className="text-lg leading-none">{p.img}</span>
+                      {p.img && /^https?:\/\//.test(p.img) ? (
+                        <img
+                          src={p.img}
+                          alt=""
+                          className="h-6 w-6 rounded-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="text-lg leading-none">
+                          {p.img || "🧴"}
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-(--text)">
                           {p.name}
@@ -2042,10 +2222,14 @@ export const DashboardOverviewPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {visitorRows.map(({ label, count }) => {
+                    {visitorRows.map(({ label, count, percentage }) => {
                       const total = visibleVisitorRecords.length;
                       const pct =
-                        total > 0 ? Math.round((count / total) * 100) : 0;
+                        typeof percentage === "number"
+                          ? percentage
+                          : total > 0
+                            ? Math.round((count / total) * 100)
+                            : 0;
                       return (
                         <div key={label}>
                           <div className="mb-1 flex items-center justify-between gap-4">

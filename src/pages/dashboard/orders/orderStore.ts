@@ -4,7 +4,6 @@ export const orderStatuses = [
   "READY_FOR_SHIPMENT",
   "SHIPPED",
   "DELIVERED",
-  "COMPLETED",
   "CANCELLED",
   "RETURNED",
 ] as const;
@@ -17,7 +16,6 @@ export const orderFlowStages = [
   "READY_FOR_SHIPMENT",
   "SHIPPED",
   "DELIVERED",
-  "COMPLETED",
 ] as const;
 
 export const orderStatusLabels: Record<OrderStatus, string> = {
@@ -26,7 +24,6 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   READY_FOR_SHIPMENT: "Ready for Shipment",
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
-  COMPLETED: "Completed",
   CANCELLED: "Cancelled",
   RETURNED: "Returned",
 };

@@ -150,7 +150,7 @@ const normalizeStatus = (value: unknown): string => {
   if (!raw) return "PENDING";
 
   const lower = raw.toLowerCase();
-  if (lower.includes("complete")) return "COMPLETED";
+  if (lower.includes("complete")) return "DELIVERED";
   if (lower.includes("deliver")) return "DELIVERED";
   if (lower.includes("ship")) return "SHIPPED";
   if (lower.includes("ready")) return "READY_FOR_SHIPMENT";

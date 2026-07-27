@@ -97,7 +97,7 @@ export const OrdersPage: React.FC = () => {
       total: totalOrders,
       pending: orders.filter((o) => o.status === "PENDING").length,
       shipped: orders.filter((o) => o.status === "SHIPPED").length,
-      delivered: orders.filter((o) => o.status === "DELIVERED" || o.status === "COMPLETED").length,
+      delivered: orders.filter((o) => o.status === "DELIVERED").length,
     }),
     [orders, totalOrders],
   );

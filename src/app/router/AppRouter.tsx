@@ -88,6 +88,7 @@ import {
 import { SeoListPage, SeoFormPage } from "@/pages/dashboard/seo/SeoPage";
 import { AdvertisementsPage } from "@/pages/dashboard/marketing/AdvertisementsPage";
 import { AdvertisementFormPage } from "@/pages/dashboard/marketing/AdvertisementFormPage";
+import { ReadyForPickupPage } from "@/pages/dashboard/delivery/ReadyForPickupPage";
 import { PermissionsPage } from "@/pages/dashboard/permissions/PermissionsPage";
 import { PermissionFormPage } from "@/pages/dashboard/permissions/PermissionFormPage";
 import { RolesCreatePage } from "@/pages/dashboard/system/RolesCreatePage";
@@ -366,7 +367,11 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/customers/:id" element={<CustomerDetailsPage />} />
           <Route
             path="/dashboard/delivery"
-            element={<Navigate to="/dashboard/delivery/shipments" replace />}
+            element={<Navigate to="/dashboard/delivery/ready-for-pickup" replace />}
+          />
+          <Route
+            path="/dashboard/delivery/ready-for-pickup"
+            element={<ReadyForPickupPage />}
           />
           <Route
             path="/dashboard/delivery/shipments"

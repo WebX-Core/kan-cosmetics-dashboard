@@ -64,9 +64,19 @@ export type OrderCreateAddressDto = Readonly<{
   type: string;
   fullName: string;
   phone: string;
+  secondaryPhone?: string;
+  destinationBranch?: string;
+  destinationBranchCode?: string;
+  destinationCityArea?: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
+  district?: string;
+  area?: string;
+  landmark?: string;
+  municipality?: string;
+  ward?: string;
+  tole?: string;
   state: string;
   postalCode: string;
   country: string;
@@ -84,6 +94,10 @@ export type OrderCreateDto = Readonly<{
 
 export type OrderStatusUpdateDto = Readonly<{
   orderStatus: string;
+}>;
+
+export type OrderBulkPickupNotificationDto = Readonly<{
+  orderIds: ReadonlyArray<string>;
 }>;
 
 export type PaymentUpdateDto = Readonly<{
@@ -118,9 +132,19 @@ export type CustomerAddressDto = Readonly<{
   type?: string;
   fullName?: string;
   phone?: string;
+  secondaryPhone?: string;
+  destinationBranch?: string;
+  destinationBranchCode?: string;
+  destinationCityArea?: string;
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
+  district?: string;
+  area?: string;
+  landmark?: string;
+  municipality?: string;
+  ward?: string;
+  tole?: string;
   state?: string;
   postalCode?: string;
   country?: string;

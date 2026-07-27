@@ -12,6 +12,7 @@ import type {
   CouponApplyDto,
   OrderCreateDto,
   OrderStatusUpdateDto,
+  OrderBulkPickupNotificationDto,
   PaymentUpdateDto,
   CustomerBanDto,
   CustomerAddressDto,
@@ -58,6 +59,7 @@ export const commerceApi = {
     myById: async (id: UUID) => unwrap<unknown>(await api.get(`/order/my/${id}`)),
     cancel: async (id: UUID) => unwrap<unknown>(await api.patch(`/order/cancel/${id}`)),
     all: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/get-all", { params: q })),
+    readyForPickup: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/ready-for-pickup", { params: q })),
     salesAnalytics: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/sales-analytics", { params: q })),
     get: async (id: UUID) => unwrap<unknown>(await api.get(`/order/get/${id}`)),
     updateStatus: async (id: UUID, payload: OrderStatusUpdateDto) => unwrap<unknown>(await api.patch(`/order/status/${id}`, payload)),
@@ -65,6 +67,7 @@ export const commerceApi = {
     deliveryWebhook: async (payload: Record<string, unknown>) => unwrap<unknown>(await api.post("/order/delivery-webhook", payload)),
     syncBranches: async () => unwrap<unknown>(await api.post("/order/sync-branches")),
     pickupNotification: async (id: UUID) => unwrap<unknown>(await api.post(`/order/pickup-notification/${id}`)),
+    bulkPickupNotification: async (payload: OrderBulkPickupNotificationDto) => unwrap<unknown>(await api.post("/order/pickup-notification/bulk", payload)),
   },
   payments: {
     byOrder: async (orderId: UUID) => unwrap<unknown>(await api.get(`/payment/order/${orderId}`)),

@@ -9,6 +9,7 @@ import type { CustomerBanLiftDto } from "./commerce.types";
 
 const keys = {
   orders: (q?: ApiListQuery) => ["commerce", "orders", q] as const,
+  readyForPickup: (q?: ApiListQuery) => ["commerce", "orders", "ready-for-pickup", q] as const,
   order: (id?: UUID) => ["commerce", "order", id] as const,
   paymentsByOrder: (orderId?: UUID) => ["commerce", "payments", "order", orderId] as const,
   cartsAggregate: () => ["commerce", "carts", "aggregate"] as const,
@@ -38,6 +39,33 @@ export const useOrders = (q?: ApiListQuery, enabled = true) => {
   }, [enabled, q, query.data, qc]);
 
   return query;
+};
+
+export const useReadyForPickupOrders = (q?: ApiListQuery, enabled = true) =>
+  useQuery({
+    queryKey: keys.readyForPickup(q),
+    queryFn: () => commerceApi.orders.readyForPickup(q),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+
+export const useBulkPickupNotification = () => {
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: (orderIds: ReadonlyArray<UUID>) =>
+      commerceApi.orders.bulkPickupNotification({ orderIds }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["commerce", "orders"] });
+      void qc.invalidateQueries({ queryKey: ["commerce", "order"] });
+      void qc.invalidateQueries({ queryKey: ["delivery", "pickupRequests"] });
+      void qc.invalidateQueries({ queryKey: ["delivery", "shipments"] });
+      toast.success("Pickup notification requested.");
+    },
+    onError: (error) => toast.error(parseApiError(error).message),
+  });
 };
 
 export const useOrderGet = (id?: UUID, enabled = true) =>
@@ -103,6 +131,7 @@ export const useUpdateOrderStatus = () => {
       void qc.invalidateQueries({ queryKey: keys.cartsAggregate() });
       void qc.invalidateQueries({ queryKey: keys.wishlistsAggregate() });
       void qc.invalidateQueries({ queryKey: keys.paymentsAggregate() });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "overview"] });
       toast.success("Order status updated successfully.");
     },
     onError: (error) => toast.error(parseApiError(error).message),

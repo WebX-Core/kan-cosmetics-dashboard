@@ -252,7 +252,7 @@ const statusColors = (
   status: string,
 ): { border: string; bg: string; text: string; dot: string } => {
   const key = status.toLowerCase().replace(/[\s_]+/g, "");
-  if (["completed", "delivered", "shipped", "paid", "fulfilled", "active"].includes(key))
+  if (["delivered", "shipped", "paid", "fulfilled", "active"].includes(key))
     return { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" };
   if (["pending", "processing", "readyforshipment", "unpaid", "partial", "scheduled"].includes(key))
     return { border: "border-amber-200", bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400" };
@@ -296,8 +296,7 @@ const getStageIcon = (stage: string): React.ReactNode => {
     case "PROCESSING":         return <Cog size={14} strokeWidth={2.25} />;
     case "READY_FOR_SHIPMENT": return <Package size={14} strokeWidth={2.25} />;
     case "SHIPPED":            return <Truck size={14} strokeWidth={2.25} />;
-    case "DELIVERED":
-    case "COMPLETED":          return <BadgeCheck size={14} strokeWidth={2.25} />;
+    case "DELIVERED":          return <BadgeCheck size={14} strokeWidth={2.25} />;
     default:                   return <CircleDot size={14} strokeWidth={2.25} />;
   }
 };

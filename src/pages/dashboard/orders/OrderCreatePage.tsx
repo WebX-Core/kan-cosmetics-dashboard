@@ -7,6 +7,7 @@ import { commerceApi } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
+import { api, unwrap } from "@/shared/api/api";
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = React.useState<T>(value);
   React.useEffect(() => {
@@ -30,19 +31,51 @@ type LineItem = {
 type AddressForm = {
   fullName: string;
   phone: string;
+  secondaryPhone: string;
+  destinationBranch: string;
+  destinationBranchCode: string;
+  destinationCityArea: string;
   addressLine1: string;
   addressLine2: string;
   city: string;
+  district: string;
+  area: string;
+  landmark: string;
+  municipality: string;
+  ward: string;
+  tole: string;
   state: string;
   postalCode: string;
   country: string;
 };
 
+type DeliveryBranch = {
+  name: string;
+  code: string;
+  areas: string[];
+};
+
 type SelectedCustomer = { id: string; name: string; email: string; phone: string };
 
 const EMPTY_ADDRESS: AddressForm = {
-  fullName: "", phone: "", addressLine1: "", addressLine2: "",
-  city: "", state: "", postalCode: "", country: "Nepal",
+  fullName: "",
+  phone: "",
+  secondaryPhone: "",
+  destinationBranch: "",
+  destinationBranchCode: "",
+  destinationCityArea: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  district: "",
+  area: "",
+  landmark: "",
+  municipality: "",
+  ward: "",
+  tole: "",
+  state: "",
+  postalCode: "",
+  country: "Nepal",
 };
 
 const PAYMENT_METHODS = [
@@ -393,10 +426,18 @@ const AddressForm: React.FC<{
   label: string;
   value: AddressForm;
   onChange: (v: AddressForm) => void;
+  branches: ReadonlyArray<DeliveryBranch>;
   disabled?: boolean;
-}> = ({ label, value, onChange, disabled }) => {
+}> = ({ label, value, onChange, branches, disabled }) => {
   const set = (field: keyof AddressForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...value, [field]: e.target.value });
+
+  const branchOptions = React.useMemo(() => branches.map((branch) => branch.name), [branches]);
+  const matchedBranch = React.useMemo(
+    () => branches.find((branch) => branch.name.toLowerCase() === value.destinationBranch.trim().toLowerCase()),
+    [branches, value.destinationBranch],
+  );
+  const areaOptions = React.useMemo(() => matchedBranch?.areas ?? [], [matchedBranch]);
 
   return (
     <div className="space-y-3">
@@ -409,6 +450,56 @@ const AddressForm: React.FC<{
         <div>
           <label className="mb-1 block text-xs font-medium text-[#86868b]">Phone *</label>
           <input type="text" value={value.phone} onChange={set("phone")} placeholder="Phone number" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Secondary Phone</label>
+          <input type="text" value={value.secondaryPhone} onChange={set("secondaryPhone")} placeholder="Secondary phone (optional)" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Destination Branch *</label>
+          <input
+            list={`${label}-branch-list`}
+            type="text"
+            value={value.destinationBranch}
+            onChange={(e) => {
+              const nextBranch = e.target.value;
+              const branch = branches.find((item) => item.name.toLowerCase() === nextBranch.trim().toLowerCase());
+              onChange({
+                ...value,
+                destinationBranch: nextBranch,
+                destinationBranchCode: branch?.code ?? "",
+                destinationCityArea:
+                  branch && !branch.areas.some((item) => item.toLowerCase() === value.destinationCityArea.trim().toLowerCase())
+                    ? ""
+                    : value.destinationCityArea,
+              });
+            }}
+            placeholder="Select destination branch"
+            className={inputCls}
+            disabled={disabled}
+          />
+          <datalist id={`${label}-branch-list`}>
+            {branchOptions.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Delivery Area *</label>
+          <input
+            list={`${label}-area-list`}
+            type="text"
+            value={value.destinationCityArea}
+            onChange={set("destinationCityArea")}
+            placeholder={matchedBranch ? "Select delivery area" : "Select branch first"}
+            className={inputCls}
+            disabled={disabled || !matchedBranch}
+          />
+          <datalist id={`${label}-area-list`}>
+            {areaOptions.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-[#86868b]">Country</label>
@@ -425,6 +516,26 @@ const AddressForm: React.FC<{
         <div>
           <label className="mb-1 block text-xs font-medium text-[#86868b]">City *</label>
           <input type="text" value={value.city} onChange={set("city")} placeholder="City" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">District</label>
+          <input type="text" value={value.district} onChange={set("district")} placeholder="District" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Municipality / City</label>
+          <input type="text" value={value.municipality} onChange={set("municipality")} placeholder="Municipality / city" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Ward</label>
+          <input type="text" value={value.ward} onChange={set("ward")} placeholder="Ward" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Tole</label>
+          <input type="text" value={value.tole} onChange={set("tole")} placeholder="Street / tole" className={inputCls} disabled={disabled} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[#86868b]">Landmark</label>
+          <input type="text" value={value.landmark} onChange={set("landmark")} placeholder="Landmark" className={inputCls} disabled={disabled} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-[#86868b]">State / Province</label>
@@ -455,11 +566,46 @@ export const OrderCreatePage: React.FC = () => {
   const [shippingAmount, setShippingAmount] = React.useState("");
   const [syncDelivery, setSyncDelivery] = React.useState(false);
 
+  const branchesQuery = useQuery({
+    queryKey: ["pickndrop", "branches"],
+    queryFn: async () => unwrap<DeliveryBranch[]>(await api.get("/delivery/pickndrop/branches")),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
+  const deliveryBranches = React.useMemo(
+    () => (Array.isArray(branchesQuery.data) ? branchesQuery.data : []),
+    [branchesQuery.data],
+  );
+
   const createOrder = useMutation({
     mutationFn: () => {
+      const normalizeAddress = (address: AddressForm) => {
+        const branch = deliveryBranches.find(
+          (item) => item.name.toLowerCase() === address.destinationBranch.trim().toLowerCase(),
+        );
+        if (!branch) {
+          throw new Error(`Select a valid destination branch for ${address.fullName || "the address"}`);
+        }
+        const area = branch.areas.find(
+          (item) => item.toLowerCase() === address.destinationCityArea.trim().toLowerCase(),
+        );
+        if (!area) {
+          throw new Error(`Select a valid delivery area for branch ${branch.name}`);
+        }
+        return {
+          ...address,
+          destinationBranch: branch.name,
+          destinationBranchCode: branch.code,
+          destinationCityArea: area,
+          area,
+        };
+      };
+
+      const normalizedShipping = normalizeAddress(shipping);
+      const normalizedBilling = sameAsBilling ? { ...normalizedShipping } : normalizeAddress(billing);
       const addresses = [
-        { ...shipping, type: "shipping" },
-        ...(sameAsBilling ? [{ ...shipping, type: "billing" }] : [{ ...billing, type: "billing" }]),
+        { ...normalizedShipping, type: "shipping" },
+        { ...normalizedBilling, type: "billing" },
       ];
       return commerceApi.orders.create({
         items: items.map((i) => ({
@@ -483,14 +629,22 @@ export const OrderCreatePage: React.FC = () => {
     onError: (error) => toast.error(parseApiError(error).message),
   });
 
-  const canSubmit = customer !== null && items.length > 0 && shipping.fullName && shipping.phone && shipping.addressLine1 && shipping.city;
+  const canSubmit =
+    customer !== null &&
+    items.length > 0 &&
+    Boolean(shipping.fullName) &&
+    Boolean(shipping.phone) &&
+    Boolean(shipping.addressLine1) &&
+    Boolean(shipping.city) &&
+    Boolean(shipping.destinationBranch) &&
+    Boolean(shipping.destinationCityArea);
 
   const validationMessage = !customer
     ? "Select a customer to continue."
     : items.length === 0
     ? "Add at least one product."
-    : !shipping.fullName || !shipping.phone || !shipping.addressLine1 || !shipping.city
-    ? "Complete the shipping address."
+    : !shipping.fullName || !shipping.phone || !shipping.addressLine1 || !shipping.city || !shipping.destinationBranch || !shipping.destinationCityArea
+    ? "Complete the shipping address, destination branch, and delivery area."
     : null;
 
   return (
@@ -521,7 +675,7 @@ export const OrderCreatePage: React.FC = () => {
           {/* Addresses */}
           <div className={sectionCls}>
             <SectionHeader icon={<MapPin size={16} />} title="Addresses" subtitle="Shipping and billing information" />
-            <AddressForm label="Shipping Address" value={shipping} onChange={setShipping} />
+            <AddressForm label="Shipping Address" value={shipping} onChange={setShipping} branches={deliveryBranches} />
 
             <div className="flex items-center gap-2 pt-1">
               <input
@@ -537,7 +691,7 @@ export const OrderCreatePage: React.FC = () => {
             </div>
 
             {!sameAsBilling && (
-              <AddressForm label="Billing Address" value={billing} onChange={setBilling} />
+              <AddressForm label="Billing Address" value={billing} onChange={setBilling} branches={deliveryBranches} />
             )}
           </div>
 
@@ -601,6 +755,12 @@ export const OrderCreatePage: React.FC = () => {
                 Sync delivery now
               </label>
             </div>
+
+            {branchesQuery.isError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                Delivery branches could not be loaded. Refresh and try again.
+              </p>
+            )}
           </div>
 
           {/* Summary */}
