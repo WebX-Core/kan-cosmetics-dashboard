@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../app/providers/AuthContext";
 import { useSignin, type User, type SigninResponse } from "@/features/auth";
 import { parseApiError } from "@/shared/utils/apiError";
@@ -186,9 +186,17 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="h-11 w-full rounded-lg bg-brand text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
+            className="relative h-11 w-full overflow-hidden rounded-lg bg-brand text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-80"
           >
-            {submitting ? "Signing in…" : "Sign in"}
+            <span className="relative z-10 inline-flex items-center justify-center gap-2">
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : null}
+              {submitting ? "Signing in…" : "Sign in"}
+            </span>
+            {submitting ? (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden bg-white/15">
+                <span className="absolute inset-y-0 left-0 w-1/3 animate-pulse rounded-full bg-white/80" />
+              </span>
+            ) : null}
           </button>
         </div>
       </form>

@@ -11,6 +11,7 @@ import type {
   CouponValidateDto,
   CouponApplyDto,
   OrderCreateDto,
+  OrderCreateByAdminDto,
   OrderStatusUpdateDto,
   OrderBulkPickupNotificationDto,
   PaymentUpdateDto,
@@ -55,6 +56,7 @@ export const commerceApi = {
   },
   orders: {
     create: async (payload: OrderCreateDto) => unwrap<unknown>(await api.post("/order/create", payload)),
+    createDashboard: async (payload: OrderCreateByAdminDto) => unwrap<unknown>(await api.post("/order/create-dashboard", payload)),
     my: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/my", { params: q })),
     myById: async (id: UUID) => unwrap<unknown>(await api.get(`/order/my/${id}`)),
     cancel: async (id: UUID) => unwrap<unknown>(await api.patch(`/order/cancel/${id}`)),

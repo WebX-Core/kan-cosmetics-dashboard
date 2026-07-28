@@ -72,13 +72,8 @@ export type OrderCreateAddressDto = Readonly<{
   addressLine2?: string;
   city: string;
   district?: string;
-  area?: string;
   landmark?: string;
-  municipality?: string;
-  ward?: string;
-  tole?: string;
-  state: string;
-  postalCode: string;
+  postalCode?: string;
   country: string;
 }>;
 
@@ -89,7 +84,12 @@ export type OrderCreateDto = Readonly<{
   paymentMethod: string;
   couponCode?: string;
   orderSource?: string;
+  guestEmail?: string | null;
   syncDeliveryNow?: boolean;
+}>;
+
+export type OrderCreateByAdminDto = OrderCreateDto & Readonly<{
+  customerId?: string;
 }>;
 
 export type OrderStatusUpdateDto = Readonly<{

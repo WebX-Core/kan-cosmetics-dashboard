@@ -1,6 +1,7 @@
 export const orderStatuses = [
   "PENDING",
   "PROCESSING",
+  "PACKED",
   "READY_FOR_SHIPMENT",
   "SHIPPED",
   "DELIVERED",
@@ -13,6 +14,7 @@ export type OrderStatus = (typeof orderStatuses)[number];
 export const orderFlowStages = [
   "PENDING",
   "PROCESSING",
+  "PACKED",
   "READY_FOR_SHIPMENT",
   "SHIPPED",
   "DELIVERED",
@@ -21,6 +23,7 @@ export const orderFlowStages = [
 export const orderStatusLabels: Record<OrderStatus, string> = {
   PENDING: "Pending",
   PROCESSING: "Processing",
+  PACKED: "Packed",
   READY_FOR_SHIPMENT: "Ready for Shipment",
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",

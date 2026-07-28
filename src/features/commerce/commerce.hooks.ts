@@ -4,6 +4,7 @@ import type { ApiListQuery, UUID } from "@/shared/types/common.types";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { getOrderRows } from "@/shared/utils/orderMapping";
+import { normalizePaymentStatus } from "@/shared/utils/paymentStatus";
 import { commerceApi } from "./commerce.api";
 import type { CustomerBanLiftDto } from "./commerce.types";
 
@@ -206,7 +207,9 @@ export const usePaymentsAggregate = (enabled = true) =>
     queryKey: keys.paymentsAggregate(),
     queryFn: async () => {
       const orderPayload = await commerceApi.orders.all();
-      const orders = getOrderRows(orderPayload);
+      const orders = getOrderRows(orderPayload).filter(
+        (order) => normalizePaymentStatus(order.paymentStatus) === "PAID",
+      );
       return Promise.all(
         orders.map(async (order) => {
           if (!order || typeof order !== "object") return [];

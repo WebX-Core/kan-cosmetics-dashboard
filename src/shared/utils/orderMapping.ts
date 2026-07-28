@@ -153,8 +153,8 @@ const normalizeStatus = (value: unknown): string => {
   if (lower.includes("complete")) return "DELIVERED";
   if (lower.includes("deliver")) return "DELIVERED";
   if (lower.includes("ship")) return "SHIPPED";
+  if (lower.includes("packed") || lower === "pack") return "PACKED";
   if (lower.includes("ready")) return "READY_FOR_SHIPMENT";
-  if (lower.includes("pack")) return "READY_FOR_SHIPMENT";
   if (lower.includes("confirm")) return "PROCESSING";
   if (lower.includes("process")) return "PROCESSING";
   if (lower.includes("return")) return "RETURNED";
@@ -186,7 +186,7 @@ export const getOrderCustomerEmail = (record: unknown): string => {
   const row = extractOrderRecord(record);
   const customer = extractCustomerRecord(row);
   return text(
-    customer.email ?? row.customerEmail ?? row.email ?? "",
+    customer.email ?? row.customerEmail ?? row.guestEmail ?? row.email ?? "",
     "—",
   );
 };

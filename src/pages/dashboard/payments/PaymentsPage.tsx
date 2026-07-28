@@ -1,10 +1,11 @@
 import React from "react";
-import { CreditCard, CheckCircle, Clock, XCircle, DollarSign, Loader2, X } from "lucide-react";
+import { CreditCard, CheckCircle, Clock, XCircle, DollarSign, X } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
-import { usePaymentsAggregate, usePaymentUpdate } from "@/features/commerce";
+import { usePaymentsAggregate } from "@/features/commerce";
 import {
   formatPaymentStatusLabel,
   formatSettlementStatusLabel,
@@ -26,6 +27,7 @@ type PaymentRow = Readonly<{
   providerName: string;
   providerTransactionId: string;
   providerStatusRaw: string;
+  paidAt: string;
   settlementDueAt: string;
   settledAt: string;
   settlementReference: string;
@@ -34,21 +36,71 @@ type PaymentRow = Readonly<{
 }>;
 
 const toText = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
-const toNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
+const toNumber = (value: unknown): number => {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
 const toOptionalText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
+const getOrderCustomer = (orderRef: Record<string, unknown>): Record<string, unknown> => {
+  const directCustomer = orderRef.customer;
+  if (directCustomer && typeof directCustomer === "object" && !Array.isArray(directCustomer)) {
+    return directCustomer as Record<string, unknown>;
+  }
+
+  const nestedData = orderRef.data;
+  if (nestedData && typeof nestedData === "object" && !Array.isArray(nestedData)) {
+    const nestedCustomer = (nestedData as Record<string, unknown>).customer;
+    if (nestedCustomer && typeof nestedCustomer === "object" && !Array.isArray(nestedCustomer)) {
+      return nestedCustomer as Record<string, unknown>;
+    }
+  }
+
+  return {};
+};
+
+const getCustomerName = (orderRef: Record<string, unknown>): string => {
+  const customer = getOrderCustomer(orderRef);
+  const firstName = toText(customer.firstname, "");
+  const lastName = toText(customer.lastname, "");
+  const directName = [firstName, lastName].filter(Boolean).join(" ");
+  if (directName) return directName;
+
+  return toText(
+    customer.fullname ?? customer.name ?? orderRef.customerName ?? orderRef.fullname ?? orderRef.name,
+    "Unknown",
+  );
+};
+
+const getCustomerEmail = (orderRef: Record<string, unknown>): string => {
+  const customer = getOrderCustomer(orderRef);
+  return toText(
+    customer.email ?? orderRef.customerEmail ?? orderRef.email,
+    "—",
+  );
+};
+
 const toPaymentRows = (payload: unknown, orderRef: Record<string, unknown>): ReadonlyArray<PaymentRow> => {
+  const record = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
   const rows = Array.isArray(payload)
     ? payload
-    : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
+    : Array.isArray(record.payments)
+      ? (record.payments as unknown[])
+      : Array.isArray((record.data as Record<string, unknown> | undefined)?.payments)
+        ? (((record.data as Record<string, unknown> | undefined)?.payments as unknown[]) ?? [])
+        : [];
 
   return rows.map((entry) => {
     const item = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
     return {
       id: toText(item.id, ""),
       transactionId: toText(item.transactionId ?? item.reference, "—"),
-      customerName: toText(orderRef.customerName ?? orderRef.fullname, "Unknown"),
-      customerEmail: toText(orderRef.customerEmail ?? orderRef.email, "—"),
+      customerName: getCustomerName(orderRef),
+      customerEmail: getCustomerEmail(orderRef),
       orderNumber: toText(orderRef.orderNumber ?? orderRef.orderId, "—"),
       amount: toNumber(item.amount ?? item.totalAmount),
       method: toText(item.method ?? item.paymentMethod, "—"),
@@ -58,6 +110,7 @@ const toPaymentRows = (payload: unknown, orderRef: Record<string, unknown>): Rea
       providerName: toOptionalText(item.providerName),
       providerTransactionId: toOptionalText(item.providerTransactionId),
       providerStatusRaw: toOptionalText(item.providerStatusRaw),
+      paidAt: toOptionalText(item.paidAt),
       settlementDueAt: toOptionalText(item.settlementDueAt),
       settledAt: toOptionalText(item.settledAt),
       settlementReference: toOptionalText(item.settlementReference),
@@ -66,41 +119,36 @@ const toPaymentRows = (payload: unknown, orderRef: Record<string, unknown>): Rea
     };
   });
 };
-
-const paymentStatusOptions = ["UNPAID", "PAID", "FAILED"] as const;
-const settlementStatusOptions = [
-  "NOT_REQUIRED",
-  "PENDING",
-  "DUE",
-  "SETTLED",
-  "FAILED",
-] as const;
-const paymentSourceOptions = ["COURIER", "IN_HOUSE"] as const;
 const LIMIT = 20;
 
+const formatDateTime = (value: string): string => {
+  if (!value || value === "—") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const DetailField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div className="space-y-1.5 border-t border-[#f0f0f2] pt-4 first:border-t-0 first:pt-0">
+    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a1a1aa]">{label}</p>
+    <div className="text-[14px] font-medium text-[#1d1d1f]">{value}</div>
+  </div>
+);
+
 export const PaymentsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id: paymentId } = useParams<{ id?: string }>();
   const [search, setSearch] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
   const [page, setPage] = React.useState(1);
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const [editRow, setEditRow] = React.useState<PaymentRow | null>(null);
-  const [editForm, setEditForm] = React.useState({
-    paymentStatus: "UNPAID",
-    paymentMethod: "",
-    transactionId: "",
-    paymentSource: "",
-    providerName: "",
-    providerTransactionId: "",
-    providerStatusRaw: "",
-    settlementStatus: "NOT_REQUIRED",
-    settlementDueAt: "",
-    settledAt: "",
-    settlementReference: "",
-    settlementNote: "",
-  });
-
   const query = usePaymentsAggregate();
-  const updatePayment = usePaymentUpdate();
 
   const payments = React.useMemo(
     () =>
@@ -160,45 +208,10 @@ export const PaymentsPage: React.FC = () => {
     totalAmount: payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0),
   }), [payments]);
 
-  const handleEdit = (row: PaymentRow) => {
-    setEditRow(row);
-    setEditForm({
-      paymentStatus: row.status,
-      paymentMethod: row.method,
-      transactionId: row.transactionId === "—" ? "" : row.transactionId,
-      paymentSource: row.paymentSource === "—" ? "" : row.paymentSource,
-      providerName: row.providerName,
-      providerTransactionId: row.providerTransactionId,
-      providerStatusRaw: row.providerStatusRaw,
-      settlementStatus: row.settlementStatus,
-      settlementDueAt: row.settlementDueAt,
-      settledAt: row.settledAt,
-      settlementReference: row.settlementReference,
-      settlementNote: row.settlementNote,
-    });
-  };
-
-  const handleUpdate = async () => {
-    if (!editRow?.id) return;
-    await updatePayment.mutateAsync({
-      id: editRow.id,
-      payload: {
-        paymentStatus: editForm.paymentStatus,
-        paymentMethod: editForm.paymentMethod.trim() || undefined,
-        transactionId: editForm.transactionId.trim() || undefined,
-        paymentSource: editForm.paymentSource.trim() || undefined,
-        providerName: editForm.providerName.trim() || undefined,
-        providerTransactionId: editForm.providerTransactionId.trim() || undefined,
-        providerStatusRaw: editForm.providerStatusRaw.trim() || undefined,
-        settlementStatus: editForm.settlementStatus.trim() || undefined,
-        settlementDueAt: editForm.settlementDueAt.trim() || undefined,
-        settledAt: editForm.settledAt.trim() || undefined,
-        settlementReference: editForm.settlementReference.trim() || undefined,
-        settlementNote: editForm.settlementNote.trim() || undefined,
-      },
-    });
-    setEditRow(null);
-  };
+  const selectedPayment = React.useMemo(
+    () => payments.find((payment) => payment.id === paymentId) ?? null,
+    [paymentId, payments],
+  );
 
   const tabs = [
     { key: "all", label: "All" },
@@ -262,6 +275,81 @@ export const PaymentsPage: React.FC = () => {
     },
   ];
 
+  if (paymentId) {
+    if (query.isLoading) {
+      return (
+        <PageLayout
+          title="Payment"
+          subtitle="Loading payment details..."
+          onBack={() => navigate("/dashboard/payments")}
+        >
+          <div className="rounded-2xl border border-[#e5e5e7] bg-white p-6 text-[#6e6e73]">
+            Loading payment...
+          </div>
+        </PageLayout>
+      );
+    }
+
+    if (!selectedPayment) {
+      return (
+        <PageLayout
+          title="Payment"
+          subtitle="Payment details"
+          onBack={() => navigate("/dashboard/payments")}
+        >
+          <div className="rounded-2xl border border-[#e5e5e7] bg-white p-6">
+            <p className="text-sm text-[#6e6e73]">No payment found for this record.</p>
+          </div>
+        </PageLayout>
+      );
+    }
+
+    return (
+      <PageLayout
+        title="Payment"
+        subtitle={`Order ${selectedPayment.orderNumber}`}
+        onBack={() => navigate("/dashboard/payments")}
+      >
+        <div className="rounded-[24px] border border-[#e5e5e7] bg-white p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <CreditCard size={18} />
+            </div>
+            <div>
+              <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">Payment</h2>
+              <p className="text-[13px] text-[#6e6e73]">
+                {selectedPayment.customerName} · {selectedPayment.orderNumber}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-0 md:grid-cols-2">
+            <DetailField label="Method" value={selectedPayment.method} />
+            <DetailField label="Source" value={selectedPayment.paymentSource} />
+            <DetailField label="Customer" value={selectedPayment.customerName} />
+            <DetailField label="Customer Email" value={selectedPayment.customerEmail} />
+            <DetailField
+              label="Status"
+              value={<StatusBadge status={selectedPayment.status} label={formatPaymentStatusLabel(selectedPayment.status)} />}
+            />
+            <DetailField
+              label="Settlement"
+              value={<StatusBadge status={selectedPayment.settlementStatus} label={formatSettlementStatusLabel(selectedPayment.settlementStatus)} />}
+            />
+            <DetailField label="Amount" value={`Rs ${selectedPayment.amount.toLocaleString()}`} />
+            <DetailField label="Provider" value={selectedPayment.providerName || "—"} />
+            <DetailField label="Transaction ID" value={selectedPayment.transactionId} />
+            <DetailField label="Paid At" value={formatDateTime(selectedPayment.paidAt || selectedPayment.date)} />
+            <DetailField label="Settlement Due" value={formatDateTime(selectedPayment.settlementDueAt)} />
+            <DetailField label="Settled At" value={formatDateTime(selectedPayment.settledAt)} />
+            <DetailField label="Reference" value={selectedPayment.settlementReference || "—"} />
+            <DetailField label="Settlement Note" value={selectedPayment.settlementNote || "—"} />
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout
       title="Payments"
@@ -278,161 +366,6 @@ export const PaymentsPage: React.FC = () => {
         <StatCardV2 label="Failed" value={stats.failed} icon={XCircle} colorVariant="red" />
         <StatCardV2 label="Total Revenue" value={`Rs ${stats.totalAmount.toFixed(2)}`} icon={DollarSign} colorVariant="blue" />
       </div>
-
-      {/* Inline edit panel */}
-      {editRow && (
-        <div className="rounded-xl border border-[var(--primary)]/20 bg-[var(--primary)]/5 p-5">
-          <p className="mb-3 text-sm font-medium text-gray-700">
-            Update payment <span className="font-mono text-gray-900">{editRow.transactionId}</span>
-          </p>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Payment Status</span>
-                <select
-                  value={editForm.paymentStatus}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, paymentStatus: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                >
-                  {paymentStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {formatPaymentStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Settlement Status</span>
-                <select
-                  value={editForm.settlementStatus}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, settlementStatus: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                >
-                  {settlementStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {formatSettlementStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Payment Source</span>
-                <select
-                  value={editForm.paymentSource}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, paymentSource: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                >
-                  <option value="">Select source</option>
-                  {paymentSourceOptions.map((source) => (
-                    <option key={source} value={source}>
-                      {source}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Payment Method</span>
-                <input
-                  value={editForm.paymentMethod}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, paymentMethod: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="COD, CARD, ESEWA, KHALTI"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Transaction ID</span>
-                <input
-                  value={editForm.transactionId}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, transactionId: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="Manual receipt or provider txn"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Provider Name</span>
-                <input
-                  value={editForm.providerName}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, providerName: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="PICKNDROP, WAREHOUSE..."
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Provider Txn ID</span>
-                <input
-                  value={editForm.providerTransactionId}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, providerTransactionId: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="Provider receipt/reference"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Provider Status Raw</span>
-                <input
-                  value={editForm.providerStatusRaw}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, providerStatusRaw: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="DELIVERED_PAID, PAYMENT_COLLECTED..."
-                />
-              </label>
-            </div>
-            <div className="grid gap-3">
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Settlement Due At</span>
-                <input
-                  type="datetime-local"
-                  value={editForm.settlementDueAt}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, settlementDueAt: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Settled At</span>
-                <input
-                  type="datetime-local"
-                  value={editForm.settledAt}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, settledAt: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Settlement Reference</span>
-                <input
-                  value={editForm.settlementReference}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, settlementReference: event.target.value }))}
-                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="Bank / ledger reference"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] font-medium text-[#6e6e73]">Settlement Note</span>
-                <textarea
-                  value={editForm.settlementNote}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, settlementNote: event.target.value }))}
-                  className="min-h-[88px] w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-[var(--primary)]"
-                  placeholder="Internal reconciliation notes"
-                />
-              </label>
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={() => void handleUpdate()}
-                  disabled={updatePayment.isPending}
-                  className="flex h-10 items-center gap-2 rounded-full bg-[var(--primary)] px-5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50"
-                >
-                  {updatePayment.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditRow(null)}
-                  className="flex h-10 items-center rounded-full border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <DataTableV2
         tabs={tabs}
@@ -456,12 +389,12 @@ export const PaymentsPage: React.FC = () => {
           </div>
         ) : undefined}
         searchValue={search}
-        onEdit={handleEdit}
         emptyMessage={query.isLoading ? "Loading payments..." : "No payments found."}
         showPagination={true}
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
+        onRowClick={(row) => navigate(`/dashboard/payments/${row.id}`)}
       />
     </PageLayout>
   );

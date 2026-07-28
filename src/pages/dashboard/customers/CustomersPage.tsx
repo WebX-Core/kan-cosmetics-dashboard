@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, UserCheck, ShieldOff, Eye, MoreHorizontal } from "lucide-react";
+import { CheckCircle2, Users, UserCheck, ShieldOff, Eye, MoreHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -33,7 +33,27 @@ type CustomerRow = Readonly<{
   isVerified: boolean;
   profilePicture: string;
   createdAt: string;
+  profileCompletion: number;
 }>;
+
+type CompletionItem = Readonly<{
+  filled: boolean;
+  weight: number;
+}>;
+
+const computeProfileCompletion = (row: Pick<CustomerRow, "name" | "email" | "phone" | "gender" | "address" | "profilePicture">): number => {
+  const items: ReadonlyArray<CompletionItem> = [
+    { filled: row.name.trim().length > 0 && row.name !== "—", weight: 20 },
+    { filled: row.email.trim().length > 0 && row.email !== "—", weight: 20 },
+    { filled: row.phone.trim().length > 0 && row.phone !== "—", weight: 15 },
+    { filled: row.gender.trim().length > 0 && row.gender !== "—", weight: 10 },
+    { filled: row.address.trim().length > 0 && row.address !== "—", weight: 20 },
+    { filled: row.profilePicture.trim().length > 0, weight: 15 },
+  ];
+  const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+  const completedWeight = items.reduce((sum, item) => sum + (item.filled ? item.weight : 0), 0);
+  return totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
+};
 
 const toRow = (entry: unknown): CustomerRow => {
   const r = (typeof entry === "object" && entry !== null ? entry : {}) as Record<string, unknown>;
@@ -51,6 +71,7 @@ const toRow = (entry: unknown): CustomerRow => {
     isVerified: Boolean(r.isVerified),
     profilePicture: text(r.profilePicture ?? "", ""),
     createdAt: text(r.createdAt, ""),
+    profileCompletion: 0,
   };
 };
 
@@ -59,7 +80,13 @@ const toRows = (payload: unknown): ReadonlyArray<CustomerRow> => {
   const items = Array.isArray(payload)
     ? payload
     : (envelope?.customers ?? envelope?.data ?? []);
-  return (items as unknown[]).map(toRow);
+  return (items as unknown[]).map((item) => {
+    const row = toRow(item);
+    return {
+      ...row,
+      profileCompletion: computeProfileCompletion(row),
+    };
+  });
 };
 
 export const CustomersPage: React.FC = () => {
@@ -112,6 +139,37 @@ export const CustomersPage: React.FC = () => {
       label: "Gender",
       render: (row: CustomerRow) => (
         <span className="capitalize text-gray-600">{row.gender !== "—" ? row.gender.toLowerCase() : "—"}</span>
+      ),
+    },
+    {
+      key: "profileCompletion",
+      label: "Profile",
+      render: (row: CustomerRow) => (
+        <div className="min-w-[170px] space-y-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-gray-700">{row.profileCompletion}%</span>
+            <span className="text-[11px] text-gray-500">
+              {row.profileCompletion === 100 ? "Complete" : "In progress"}
+            </span>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={`${row.name} profile completion`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={row.profileCompletion}
+            className="h-2 overflow-hidden rounded-full bg-[#ececf0]"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300 ease-out"
+              style={{ width: `${row.profileCompletion}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <CheckCircle2 size={11} className={row.profileCompletion === 100 ? "text-emerald-600" : "text-[#8e8e93]"} />
+            <span>{row.profileCompletion === 100 ? "Profile ready" : "Needs attention"}</span>
+          </div>
+        </div>
       ),
     },
     {

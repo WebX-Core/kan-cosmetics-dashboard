@@ -7,6 +7,7 @@ import {
   CircleDot,
   Cog,
   Package,
+  PackageCheck,
   Truck,
   BadgeCheck,
   Tag,
@@ -32,6 +33,8 @@ import {
 import { z } from "zod";
 import {
   useOrderGet,
+  usePaymentUpdate,
+  usePaymentsByOrder,
   useUpdateOrderStatus,
   useSyncOrderDelivery,
 } from "@/features/commerce";
@@ -254,7 +257,7 @@ const statusColors = (
   const key = status.toLowerCase().replace(/[\s_]+/g, "");
   if (["delivered", "shipped", "paid", "fulfilled", "active"].includes(key))
     return { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" };
-  if (["pending", "processing", "readyforshipment", "unpaid", "partial", "scheduled"].includes(key))
+  if (["pending", "processing", "packed", "readyforshipment", "unpaid", "partial", "scheduled"].includes(key))
     return { border: "border-amber-200", bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400" };
   if (["cancelled", "failed", "returned", "refunded", "expired"].includes(key))
     return { border: "border-red-200", bg: "bg-red-50", text: "text-red-700", dot: "bg-red-400" };
@@ -294,7 +297,8 @@ const getStageIcon = (stage: string): React.ReactNode => {
   switch (stage) {
     case "PENDING":            return <CircleDot size={14} strokeWidth={2.25} />;
     case "PROCESSING":         return <Cog size={14} strokeWidth={2.25} />;
-    case "READY_FOR_SHIPMENT": return <Package size={14} strokeWidth={2.25} />;
+    case "PACKED":             return <Package size={14} strokeWidth={2.25} />;
+    case "READY_FOR_SHIPMENT": return <PackageCheck size={14} strokeWidth={2.25} />;
     case "SHIPPED":            return <Truck size={14} strokeWidth={2.25} />;
     case "DELIVERED":          return <BadgeCheck size={14} strokeWidth={2.25} />;
     default:                   return <CircleDot size={14} strokeWidth={2.25} />;
@@ -364,6 +368,8 @@ export const OrderDetailsPage: React.FC = () => {
   const query = useOrderGet(id, Boolean(id));
   const updateOrderStatus = useUpdateOrderStatus();
   const syncDelivery = useSyncOrderDelivery();
+  const paymentQuery = usePaymentsByOrder(id, Boolean(id));
+  const updatePayment = usePaymentUpdate();
 
   const [orderStatus, setOrderStatus] = React.useState("PENDING");
   const [paymentStatus, setPaymentStatus] = React.useState("UNPAID");
@@ -388,6 +394,35 @@ export const OrderDetailsPage: React.FC = () => {
   React.useEffect(() => {
     if (!record) return;
     setOrderStatus(text(orderDetail.orderStatus ?? order.status, order.status));
+    const paymentPayload = paymentQuery.data;
+    const paymentRecord = Array.isArray(paymentPayload)
+      ? firstItemRecord(paymentPayload)
+      : toRecord(paymentPayload);
+    const paymentItems = toArray(paymentRecord.data ?? paymentRecord.payments);
+    const resolvedPayment = paymentItems.length > 0 ? firstItemRecord(paymentItems) : paymentRecord;
+    const resolvedPaymentWithNested = resolvedPayment as {
+      id?: unknown;
+      paymentId?: unknown;
+      payment?: { id?: unknown } | null;
+      paymentStatus?: unknown;
+      status?: unknown;
+    };
+    const resolvedPaymentId = text(
+      resolvedPaymentWithNested.id ??
+        resolvedPaymentWithNested.paymentId ??
+        resolvedPaymentWithNested.payment?.id ??
+        null,
+      null as unknown as string,
+    );
+    if (resolvedPaymentId) {
+      setPaymentId(resolvedPaymentId);
+      setPaymentStatus(
+        normalizePaymentStatus(
+          resolvedPayment.paymentStatus ?? resolvedPayment.status ?? order.paymentStatus,
+        ),
+      );
+      return;
+    }
     const payments = toArray(record.payments);
     if (payments.length > 0) {
       const pm = firstItemRecord(payments);
@@ -396,7 +431,7 @@ export const OrderDetailsPage: React.FC = () => {
       );
       setPaymentId(text(pm.id, null as unknown as string) || null);
     }
-  }, [order.paymentStatus, order.status, orderDetail.orderStatus, record]);
+  }, [order.paymentStatus, order.status, orderDetail.orderStatus, paymentQuery.data, record]);
 
   if (!id) {
     return (
@@ -538,11 +573,15 @@ export const OrderDetailsPage: React.FC = () => {
                       return;
                     }
                     try {
-                      await commerceApi.payments.update(paymentId, {
-                        paymentStatus: nextStatus,
+                      await updatePayment.mutateAsync({
+                        id: paymentId,
+                        payload: {
+                          paymentStatus: nextStatus,
+                        },
                       });
-                      toast.success("Payment status updated");
+                      await paymentQuery.refetch();
                       await query.refetch();
+                      toast.success("Payment status updated");
                     } catch (error) {
                       setPaymentStatus(previousStatus);
                       toast.error(parseApiError(error).message);

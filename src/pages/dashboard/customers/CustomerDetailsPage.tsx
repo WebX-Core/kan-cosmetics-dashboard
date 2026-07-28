@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingBag, Package, UserCheck, ShieldOff } from "lucide-react";
+import { CheckCircle2, ShoppingBag, Package, UserCheck, ShieldOff } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -24,6 +24,12 @@ type CustomerState = Readonly<{
   isVerified: boolean;
   profilePicture: string;
   createdAt: string;
+}>;
+
+type CompletionItem = Readonly<{
+  label: string;
+  filled: boolean;
+  weight: number;
 }>;
 
 type OrderRow = Readonly<{ id: string; orderNumber: string; total: string; status: string; date: string }>;
@@ -111,6 +117,29 @@ export const CustomerDetailsPage: React.FC = () => {
   const purchaseRows = React.useMemo(() => toPurchaseRows(purchaseQuery.data), [purchaseQuery.data]);
 
   const totalSpent = customerOrders.reduce((s, o) => s + parseFloat(o.total || "0"), 0);
+  const profileCompletion = React.useMemo(() => {
+    const completionItems: ReadonlyArray<CompletionItem> = [
+      { label: "Name", filled: Boolean(customer?.name?.trim()), weight: 20 },
+      { label: "Email", filled: Boolean(customer?.email?.trim()), weight: 20 },
+      { label: "Phone", filled: Boolean(customer?.phone?.trim() && customer.phone !== "—"), weight: 15 },
+      { label: "Gender", filled: Boolean(customer?.gender?.trim() && customer.gender !== "—"), weight: 10 },
+      { label: "Address", filled: Boolean(customer?.address?.trim() && customer.address !== "—"), weight: 20 },
+      { label: "Profile photo", filled: Boolean(customer?.profilePicture?.trim()), weight: 15 },
+    ];
+
+    const totalWeight = completionItems.reduce((sum, item) => sum + item.weight, 0);
+    const completedWeight = completionItems.reduce(
+      (sum, item) => sum + (item.filled ? item.weight : 0),
+      0,
+    );
+
+    return {
+      items: completionItems,
+      percent: totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0,
+      completedWeight,
+      totalWeight,
+    };
+  }, [customer]);
 
   const displayName = customer?.name ?? "Customer";
   const displaySub = customer ? `${customer.email}${customer.phone !== "—" ? ` · ${customer.phone}` : ""}` : (customerId ?? "");
@@ -131,6 +160,73 @@ export const CustomerDetailsPage: React.FC = () => {
           colorVariant={customer?.isVerified ? "emerald" : "amber"}
         />
       </div>
+
+      {customer && (
+        <div className="rounded-2xl border border-[#d2d2d7] bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-[56ch]">
+              <p className="text-[11px] font-medium tracking-[0.14em] text-[#6e6e73]">
+                Customer profile completion
+              </p>
+              <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+                {customer.name}
+              </h2>
+              <p className="mt-1 text-[13px] leading-5 text-[#424245]">
+                Calculated from the customer fields stored in the dashboard. Address counts only when a
+                real value is present, so blank or placeholder address data lowers the score.
+              </p>
+              <p className="mt-2 text-[11px] text-[#6e6e73]">
+                {profileCompletion.completedWeight} of {profileCompletion.totalWeight} weighted points filled
+              </p>
+            </div>
+
+            <div className="text-left md:text-right">
+              <div className="text-[28px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">
+                {profileCompletion.percent}%
+              </div>
+              <div className="text-[11px] text-[#6e6e73]">
+                {profileCompletion.percent === 100 ? "Complete" : "In progress"}
+              </div>
+            </div>
+          </div>
+
+          <div
+            role="progressbar"
+            aria-label="Customer profile completion"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={profileCompletion.percent}
+            className="mt-4 h-2 overflow-hidden rounded-full bg-[#ececf0]"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300 ease-out"
+              style={{ width: `${profileCompletion.percent}%` }}
+            />
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {profileCompletion.items.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-2 rounded-2xl border border-[#ececf0] bg-[#fafafa] px-3 py-2 text-[12px] text-[#424245]"
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                    item.filled ? "bg-emerald-50 text-emerald-600" : "bg-[#ececf0] text-[#8e8e93]"
+                  }`}
+                  aria-hidden="true"
+                >
+                  <CheckCircle2 size={13} strokeWidth={2.2} />
+                </span>
+                <span className="flex-1">{item.label}</span>
+                <span className="text-[11px] text-[#6e6e73]">
+                  {item.filled ? "Filled" : "Missing"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {customer && (
         <div className="rounded-2xl border border-[#d2d2d7] bg-white p-5">

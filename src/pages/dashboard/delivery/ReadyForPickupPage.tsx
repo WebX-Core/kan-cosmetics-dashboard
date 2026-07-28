@@ -170,7 +170,7 @@ export const ReadyForPickupPage: React.FC = () => {
   return (
     <PageLayout
       title="Ready for Pickup"
-      subtitle="Packed orders that are ready to be included in one Pick & Drop pickup request."
+      subtitle="Orders marked READY_FOR_SHIPMENT are ready to be included in one Pick & Drop pickup request."
       actions={
         <button
           type="button"
@@ -186,7 +186,7 @@ export const ReadyForPickupPage: React.FC = () => {
         <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-[18px]">
           <div className="flex items-center gap-[8px] text-[13px] font-semibold text-emerald-700">
             <PackageCheck size={16} />
-            Packed orders
+            Pickup-ready orders
           </div>
           <p className="mt-[12px] text-[28px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">{payload.total}</p>
         </div>
@@ -216,7 +216,7 @@ export const ReadyForPickupPage: React.FC = () => {
         searchValue={state.search}
         onSearchChange={(value) => setState((previous) => ({ ...previous, page: 1, search: value }))}
         searchPlaceholder="Search order, customer, phone..."
-        emptyMessage={query.isLoading ? "Loading packed orders..." : "No packed orders are ready for pickup."}
+        emptyMessage={query.isLoading ? "Loading pickup-ready orders..." : "No pickup-ready orders are available."}
         currentPage={state.page}
         totalPages={payload.totalPages}
         onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
