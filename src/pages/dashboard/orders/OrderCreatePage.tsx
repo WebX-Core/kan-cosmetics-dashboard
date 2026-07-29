@@ -97,8 +97,24 @@ const money = (value: string): number => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 };
 
+const normalizePhoneNumber = (value: string) => value.replace(/\D/g, "");
+
+const splitNepalPhoneValue = (value?: string | null) => {
+  const digits = normalizePhoneNumber(value ?? "");
+  return digits.startsWith("977") ? digits.slice(3) : digits;
+};
+
+const formatNepalPhoneValue = (phoneNumber: string) => {
+  const digits = normalizePhoneNumber(phoneNumber);
+  const localNumber = digits.startsWith("977") ? digits.slice(3) : digits;
+  return localNumber ? `+977${localNumber}` : "";
+};
+
 const inputCls =
   "h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
+
+const splitPhoneInputCls =
+  "h-10 rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
 
 const sectionCls = "rounded-2xl border border-[#d2d2d7] bg-white p-6 space-y-4";
 
@@ -788,6 +804,34 @@ const InputBlock: React.FC<{
   </label>
 );
 
+const PhoneInput: React.FC<{
+  value: string;
+  placeholder: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}> = ({ value, placeholder, disabled, onChange }) => {
+  const localNumber = splitNepalPhoneValue(value);
+
+  return (
+    <div className="grid grid-cols-[5.75rem_minmax(0,1fr)] gap-2">
+      <input
+        className={`${splitPhoneInputCls} w-full text-center font-medium`}
+        value="+977"
+        disabled={disabled}
+        readOnly
+        aria-label="Country code"
+      />
+      <input
+        className={`${splitPhoneInputCls} min-w-0 w-full`}
+        placeholder={placeholder}
+        value={localNumber}
+        disabled={disabled}
+        onChange={(event) => onChange(formatNepalPhoneValue(event.target.value))}
+      />
+    </div>
+  );
+};
+
 const AddressForm: React.FC<{
   title: string;
   value: AddressForm;
@@ -822,21 +866,19 @@ const AddressForm: React.FC<{
           />
         </InputBlock>
         <InputBlock label="Phone *">
-          <input
-            className={inputCls}
+          <PhoneInput
             placeholder="Phone number"
             value={value.phone}
             disabled={disabled}
-            onChange={(event) => set("phone", event.target.value)}
+            onChange={(nextValue) => set("phone", nextValue)}
           />
         </InputBlock>
         <InputBlock label="Secondary Phone">
-          <input
-            className={inputCls}
+          <PhoneInput
             placeholder="Secondary phone (optional)"
             value={value.secondaryPhone}
             disabled={disabled}
-            onChange={(event) => set("secondaryPhone", event.target.value)}
+            onChange={(nextValue) => set("secondaryPhone", nextValue)}
           />
         </InputBlock>
         <BranchAreaPicker
