@@ -308,9 +308,9 @@ const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
 const getCategoryName = (row: Record<string, unknown>): string =>
   toText(
     toRecord(toRecord(row.subcategory).category).title ??
-      toRecord(row.subcategory).title ??
-      row.title ??
-      row.name,
+    toRecord(row.subcategory).title ??
+    row.title ??
+    row.name,
     "Uncategorized",
   );
 
@@ -531,9 +531,9 @@ const normalizeInquiryRow = (
     subject:
       type === "Product"
         ? textOrFallback(
-            row.subject ?? row.targetName ?? row.targetType ?? row.inquiryType,
-            "Inquiry",
-          )
+          row.subject ?? row.targetName ?? row.targetType ?? row.inquiryType,
+          "Inquiry",
+        )
         : textOrFallback(row.subject ?? row.inquiryType, "Site Inquiry"),
     message:
       type === "Product"
@@ -1096,6 +1096,8 @@ export const DashboardOverviewPage: React.FC = () => {
     "7d",
   );
   const [animateRows, setAnimateRows] = React.useState(false);
+  const [showAllOrders, setShowAllOrders] = React.useState(false);
+  const [showAllInquiries, setShowAllInquiries] = React.useState(false);
   const [visitorsRange, setVisitorsRange] = React.useState<
     "today" | "7d" | "30d"
   >("today");
@@ -1168,15 +1170,15 @@ export const DashboardOverviewPage: React.FC = () => {
     () =>
       USE_FAKE_OVERVIEW_DATA
         ? MOCK_OVERVIEW_DATA.payments.flatMap((entry) =>
-            toPaymentRows(entry.paymentPayload),
-          )
+          toPaymentRows(entry.paymentPayload),
+        )
         : (paymentsQuery.data ?? []).flatMap((entry) => {
-            if (!entry || typeof entry !== "object" || Array.isArray(entry))
-              return [];
-            return toPaymentRows(
-              (entry as { paymentPayload?: unknown }).paymentPayload,
-            );
-          }),
+          if (!entry || typeof entry !== "object" || Array.isArray(entry))
+            return [];
+          return toPaymentRows(
+            (entry as { paymentPayload?: unknown }).paymentPayload,
+          );
+        }),
     [paymentsQuery.data],
   );
 
@@ -1210,13 +1212,13 @@ export const DashboardOverviewPage: React.FC = () => {
       const dt =
         salesRange === "7d"
           ? new Date(
-              now.getTime() - (dayWindow - 1 - offset) * 24 * 60 * 60 * 1000,
-            )
+            now.getTime() - (dayWindow - 1 - offset) * 24 * 60 * 60 * 1000,
+          )
           : new Date(
-              now.getFullYear(),
-              now.getMonth() - (months - 1 - offset),
-              1,
-            );
+            now.getFullYear(),
+            now.getMonth() - (months - 1 - offset),
+            1,
+          );
       const key =
         salesRange === "7d"
           ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
@@ -1314,7 +1316,7 @@ export const DashboardOverviewPage: React.FC = () => {
         const sku = toText(row.sku);
         const category = toText(
           toRecord(toRecord(row.subcategory).category).title ??
-            toRecord(row.subcategory).title,
+          toRecord(row.subcategory).title,
           "Catalog",
         );
         return [id, { title, sku, category }];
@@ -1429,9 +1431,9 @@ export const DashboardOverviewPage: React.FC = () => {
     () =>
       currentCategories.length > 0
         ? currentCategories.map((category) => ({
-            label: category.name,
-            value: category.count,
-          }))
+          label: category.name,
+          value: category.count,
+        }))
         : [{ label: "Category", value: 0 }],
     [currentCategories],
   );
@@ -1454,10 +1456,10 @@ export const DashboardOverviewPage: React.FC = () => {
     const cutoff =
       visitorsRange === "today"
         ? new Date(
-            new Date().getFullYear(),
-            new Date().getMonth(),
-            new Date().getDate(),
-          ).getTime()
+          new Date().getFullYear(),
+          new Date().getMonth(),
+          new Date().getDate(),
+        ).getTime()
         : now - (visitorsRange === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
 
     return visitorRecords.filter((row) => {
@@ -1529,6 +1531,16 @@ export const DashboardOverviewPage: React.FC = () => {
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 20),
     [dashboardOverviewQuery.data],
+  );
+
+  const displayedRecentOrders = React.useMemo(
+    () => (showAllOrders ? recentOrders : recentOrders.slice(0, 5)),
+    [recentOrders, showAllOrders],
+  );
+
+  const displayedInquiries = React.useMemo(
+    () => (showAllInquiries ? inquiries : inquiries.slice(0, 5)),
+    [inquiries, showAllInquiries],
   );
   const updateOrderStatus = useUpdateOrderStatus();
   const [updatingRecentOrderId, setUpdatingRecentOrderId] =
@@ -1650,13 +1662,13 @@ export const DashboardOverviewPage: React.FC = () => {
           return (
             <div
               key={card.label}
-              className={`relative min-h-34 overflow-hidden rounded-2xl border p-4 transition-transform duration-300 ease-out hover:-translate-y-0.5 ${card.tone.cardClassName}`}
+              className={`relative min-h-34 overflow-hidden rounded-2xl border border-zinc-200 p-4 transition-transform duration-300 ease-out hover:-translate-y-0.5 bg-white`}
             >
               <div className="relative flex h-full flex-col justify-between gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${card.tone.iconBg}`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-md ${card.tone.iconBg}`}
                     >
                       <span className={card.tone.iconColor}>{card.icon}</span>
                     </div>
@@ -1686,225 +1698,6 @@ export const DashboardOverviewPage: React.FC = () => {
           );
         })}
       </div>
-
-      {/* ── Row 2: Recent Orders | Inquiries ── */}
-      <div
-        className={`grid grid-cols-12 gap-4 mt-8 ${animateRows ? "overview-rise" : "opacity-0"}`}
-        style={rowAnimation(90)}
-      >
-        <div className="col-span-12 lg:col-span-7">
-          <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <h2 className="text-sm font-semibold text-(--text)">
-              Recent Orders
-            </h2>
-            <button type="button" className={viewAllButtonClassName}>
-              <span>View all</span>
-              <ArrowRight size={14} strokeWidth={2} />
-            </button>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-(--line) bg-(--bg)">
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Order
-                    </th>
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Customer
-                    </th>
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Amount
-                    </th>
-                    <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Status
-                    </th>
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--line)">
-                  {dashboardOverviewQuery.isLoading ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)"
-                      >
-                        Loading recent orders...
-                      </td>
-                    </tr>
-                  ) : dashboardOverviewQuery.isError ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-5 py-8 text-center text-xs font-medium text-red-600"
-                      >
-                        Unable to load recent orders.
-                      </td>
-                    </tr>
-                  ) : recentOrders.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)"
-                      >
-                        No recent orders found.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentOrders.map((o) => {
-                      const currentStatus = recentOrderStatuses[o.id] ?? o.status;
-                      const isUpdatingStatus = updatingRecentOrderId === o.id;
-
-                      return (
-                    <tr
-                      key={o.id}
-                      className="transition-colors hover:bg-(--bg)"
-                    >
-                      <td className="px-5 py-3.5 font-mono text-xs font-medium text-(--text-secondary)">
-                        {o.orderNumber}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium text-(--text)">
-                          {o.customer}
-                        </p>
-                        <p className="text-[10px] text-(--text-tertiary)">
-                          {o.email}
-                        </p>
-                      </td>
-                      <td className="px-5 py-3.5 text-right font-semibold text-(--text)">
-                        {o.amount}
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <DropdownMenu.Root>
-                          <DropdownMenu.Trigger asChild>
-                            <button
-                              type="button"
-                              disabled={isUpdatingStatus}
-                              className={`inline-flex w-30 items-center justify-center gap-1 rounded-md px-3 py-1 font-medium leading-none transition-opacity disabled:cursor-not-allowed disabled:opacity-60 ${orderStatusStyle[currentStatus]}`}
-                              style={{ fontSize: "12px", lineHeight: 1 }}
-                            >
-                              <span className="truncate">
-                                {isUpdatingStatus
-                                  ? "UPDATING"
-                                  : formatOrderStatusLabelText(currentStatus)}
-                              </span>
-                              <ChevronDown size={11} />
-                            </button>
-                          </DropdownMenu.Trigger>
-                          <DropdownMenu.Portal>
-                            <DropdownMenu.Content
-                              align="center"
-                              sideOffset={6}
-                              className="z-50 min-w-35 rounded-xl border border-slate-200 bg-white p-1 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
-                            >
-                              {orderStatusOptions.map((status) => (
-                                <DropdownMenu.Item
-                                  key={status}
-                                  disabled={isUpdatingStatus}
-                                  onSelect={() => {
-                                    void updateRecentOrderStatus(o.id, status);
-                                  }}
-                                  className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50"
-                                >
-                                  <span
-                                    className={`h-2.5 w-2.5 rounded-full ${orderStatusIndicatorStyle[status]}`}
-                                  />
-                                  {formatOrderStatusLabelText(status)}
-                                </DropdownMenu.Item>
-                              ))}
-                            </DropdownMenu.Content>
-                          </DropdownMenu.Portal>
-                        </DropdownMenu.Root>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-(--text-secondary)">
-                        {o.date}
-                      </td>
-                    </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div className="col-span-12 lg:col-span-5">
-          <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <div className="flex items-center gap-2">
-              <MessageSquare size={14} className="text-(--text-secondary)" />
-              <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                {inquiries.filter((i) => i.status === "New").length} new
-              </span>
-              <button type="button" className={viewAllButtonClassName}>
-                <span>View all</span>
-                <ArrowRight size={14} strokeWidth={2} />
-              </button>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50">
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 border-b border-(--line) bg-(--bg) px-2 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                Customer
-              </div>
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                Subject
-              </div>
-              <div className="text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                Type
-              </div>
-            </div>
-            <div className="divide-y divide-(--line)">
-              {dashboardOverviewQuery.isLoading ? (
-                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
-                  Loading inquiries...
-                </div>
-              ) : dashboardOverviewQuery.isError ? (
-                <div className="px-2 py-8 text-center text-xs font-medium text-red-600">
-                  Unable to load inquiries.
-                </div>
-              ) : inquiries.length === 0 ? (
-                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
-                  No recent inquiries found.
-                </div>
-              ) : (
-                inquiries.map((inq) => (
-                <div
-                  key={inq.id}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 px-2 py-3 transition-colors hover:bg-(--bg)"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-(--text)">
-                      {inq.customerName}
-                    </p>
-                    <p className="truncate text-[10px] text-(--text-tertiary)">
-                      {inq.email}
-                    </p>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-(--text-secondary)">
-                      {inq.subject}
-                    </p>
-                  </div>
-                  <div className="flex justify-end">
-                    <span
-                      className={`inline-flex w-18 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
-                    >
-                      {inq.type}
-                    </span>
-                  </div>
-                </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ── Row 3: Sales Overview ── */}
       <div
         className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
@@ -1962,11 +1755,10 @@ export const DashboardOverviewPage: React.FC = () => {
 
                   return (
                     <p
-                      className={`flex items-center gap-0.5 text-xs font-medium ${
-                        revenueTrend >= 0
-                          ? "text-(--badge-success-text)"
-                          : "text-red-700"
-                      }`}
+                      className={`flex items-center gap-0.5 text-xs font-medium ${revenueTrend >= 0
+                        ? "text-(--badge-success-text)"
+                        : "text-red-700"
+                        }`}
                     >
                       <RevenueTrendIcon size={10} />
                       {formatTrendPercent(revenueTrend)}
@@ -1991,6 +1783,242 @@ export const DashboardOverviewPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Row 2: Recent Orders | Inquiries ── */}
+      <div
+        className={`grid grid-cols-12 gap-4 mt-8 ${animateRows ? "overview-rise" : "opacity-0"}`}
+        style={rowAnimation(90)}
+      >
+        <div className="col-span-12 lg:col-span-7">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <h2 className="text-sm font-semibold text-(--text)">
+              Recent Orders
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowAllOrders((prev) => !prev)}
+              className={viewAllButtonClassName}
+            >
+              <span>{showAllOrders ? "Show less" : "View all"}</span>
+              <ArrowRight
+                size={14}
+                strokeWidth={2}
+                className={`transition-transform duration-200 ${showAllOrders ? "rotate-90" : ""}`}
+              />
+            </button>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-(--line) bg-(--bg)">
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Order
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Customer
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Amount
+                    </th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Status
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--line)">
+                  {dashboardOverviewQuery.isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)"
+                      >
+                        Loading recent orders...
+                      </td>
+                    </tr>
+                  ) : dashboardOverviewQuery.isError ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-5 py-8 text-center text-xs font-medium text-red-600"
+                      >
+                        Unable to load recent orders.
+                      </td>
+                    </tr>
+                  ) : displayedRecentOrders.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)"
+                      >
+                        No recent orders found.
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedRecentOrders.map((o) => {
+                      const currentStatus = recentOrderStatuses[o.id] ?? o.status;
+                      const isUpdatingStatus = updatingRecentOrderId === o.id;
+
+                      return (
+                        <tr
+                          key={o.id}
+                          className="transition-colors hover:bg-(--bg)"
+                        >
+                          <td className="px-5 py-3.5 font-mono text-xs font-medium text-(--text-secondary)">
+                            {o.orderNumber}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <p className="font-medium text-(--text)">
+                              {o.customer}
+                            </p>
+                            <p className="text-[10px] text-(--text-tertiary)">
+                              {o.email}
+                            </p>
+                          </td>
+                          <td className="px-5 py-3.5 text-right font-semibold text-(--text)">
+                            {o.amount}
+                          </td>
+                          <td className="px-5 py-3.5 text-center">
+                            <DropdownMenu.Root>
+                              <DropdownMenu.Trigger asChild>
+                                <button
+                                  type="button"
+                                  disabled={isUpdatingStatus}
+                                  className={`inline-flex w-30 items-center justify-center gap-1 rounded-md px-3 py-1 font-medium leading-none transition-opacity disabled:cursor-not-allowed disabled:opacity-60 ${orderStatusStyle[currentStatus]}`}
+                                  style={{ fontSize: "12px", lineHeight: 1 }}
+                                >
+                                  <span className="truncate">
+                                    {isUpdatingStatus
+                                      ? "UPDATING"
+                                      : formatOrderStatusLabelText(currentStatus)}
+                                  </span>
+                                  <ChevronDown size={11} />
+                                </button>
+                              </DropdownMenu.Trigger>
+                              <DropdownMenu.Portal>
+                                <DropdownMenu.Content
+                                  align="center"
+                                  sideOffset={6}
+                                  className="z-50 min-w-35 rounded-xl border border-slate-200 bg-white p-1 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+                                >
+                                  {orderStatusOptions.map((status) => (
+                                    <DropdownMenu.Item
+                                      key={status}
+                                      disabled={isUpdatingStatus}
+                                      onSelect={() => {
+                                        void updateRecentOrderStatus(o.id, status);
+                                      }}
+                                      className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50"
+                                    >
+                                      <span
+                                        className={`h-2.5 w-2.5 rounded-full ${orderStatusIndicatorStyle[status]}`}
+                                      />
+                                      {formatOrderStatusLabelText(status)}
+                                    </DropdownMenu.Item>
+                                  ))}
+                                </DropdownMenu.Content>
+                              </DropdownMenu.Portal>
+                            </DropdownMenu.Root>
+                          </td>
+                          <td className="px-5 py-3.5 text-xs text-(--text-secondary)">
+                            {o.date}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div className="col-span-12 lg:col-span-5">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={14} className="text-(--text-secondary)" />
+              <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                {inquiries.filter((i) => i.status === "New").length} new
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllInquiries((prev) => !prev)}
+                className={viewAllButtonClassName}
+              >
+                <span>{showAllInquiries ? "Show less" : "View all"}</span>
+                <ArrowRight
+                  size={14}
+                  strokeWidth={2}
+                  className={`transition-transform duration-200 ${showAllInquiries ? "rotate-90" : ""}`}
+                />
+              </button>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 border-b border-(--line) bg-(--bg) px-2 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                Customer
+              </div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                Subject
+              </div>
+              <div className="text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
+                Type
+              </div>
+            </div>
+            <div className="divide-y divide-(--line)">
+              {dashboardOverviewQuery.isLoading ? (
+                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
+                  Loading inquiries...
+                </div>
+              ) : dashboardOverviewQuery.isError ? (
+                <div className="px-2 py-8 text-center text-xs font-medium text-red-600">
+                  Unable to load inquiries.
+                </div>
+              ) : displayedInquiries.length === 0 ? (
+                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
+                  No recent inquiries found.
+                </div>
+              ) : (
+                displayedInquiries.map((inq) => (
+                  <div
+                    key={inq.id}
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 px-2 py-3 transition-colors hover:bg-(--bg)"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-(--text)">
+                        {inq.customerName}
+                      </p>
+                      <p className="truncate text-[10px] text-(--text-tertiary)">
+                        {inq.email}
+                      </p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-(--text-secondary)">
+                        {inq.subject}
+                      </p>
+                    </div>
+                    <div className="flex justify-end">
+                      <span
+                        className={`inline-flex w-18 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
+                      >
+                        {inq.type}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+
 
       {/* ── Row 4: Product Sales Category ── */}
       <div

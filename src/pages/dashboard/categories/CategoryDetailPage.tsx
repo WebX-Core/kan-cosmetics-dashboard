@@ -127,7 +127,6 @@ export const CategoryDetailPage: React.FC = () => {
 
   const category = categoryQuery.data as Record<string, unknown> | undefined;
   const categoryName = readString(category?.title ?? category?.name, "Category");
-  const categoryDescription = readString(category?.description);
 
   const productCountMap = React.useMemo(() => {
     const map = new Map<string, number>();
@@ -354,7 +353,7 @@ export const CategoryDetailPage: React.FC = () => {
     <PageLayout
       variant={isDeletedView ? "deleted" : undefined}
       title={categoryName}
-      subtitle={isDeletedView ? "View deleted subcategories in this category." : (categoryDescription || "Manage subcategories in this category.")}
+      subtitle={isDeletedView ? "View deleted subcategories in this category." : "Manage subcategories in this category."}
       onBack={() => navigate(isDeletedView ? `/dashboard/categories/${id}` : "/dashboard/categories")}
       actions={
         <div className="flex items-center gap-2">

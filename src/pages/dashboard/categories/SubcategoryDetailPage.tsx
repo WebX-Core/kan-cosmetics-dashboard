@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, Package, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star } from "lucide-react";
+import { Edit2, Package, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal } from "lucide-react";
 import { catalogApi } from "@/features/catalog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -27,6 +27,7 @@ type ProductRow = Readonly<{
   identifier: string;
   subcategoryId: string;
   name: string;
+  slug: string;
   sku: string;
   price: string;
   coverImage: string;
@@ -67,6 +68,7 @@ const toProductRow = (value: unknown): ProductRow => {
     identifier: toText(item.id ?? item.slug),
     subcategoryId: getSubcategoryIdFromProduct(item),
     name: toText(item.name ?? item.title, "Untitled Product"),
+    slug: toText(item.slug),
     sku: toText(item.sku, "—"),
     price: toText(item.salePrice ?? item.price, "0"),
     coverImage: toText(item.coverImage ?? item.image ?? item.thumbnail, ""),
@@ -109,7 +111,6 @@ export const SubcategoryDetailPage: React.FC = () => {
 
   const subcategory = subcategoryQuery.data as Record<string, unknown> | undefined;
   const subcategoryName = toText(subcategory?.title ?? subcategory?.name, "Subcategory");
-  const subcategoryDescription = toText(subcategory?.description);
 
   const sourceRows = React.useMemo(() => {
     if (!isDeletedView) return productsQuery.data?.data ?? [];
@@ -325,6 +326,24 @@ export const SubcategoryDetailPage: React.FC = () => {
                   <DropdownMenuItem
                     onClick={(event) => {
                       event.stopPropagation();
+                      navigate(`/dashboard/product-tags?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`);
+                    }}
+                  >
+                    <Tag className="mr-2 h-4 w-4" />
+                    Edit Tags
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/dashboard/product-attributes?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`);
+                    }}
+                  >
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Edit Attributes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.stopPropagation();
                       navigate(`/dashboard/products/${row.id}/faqs`);
                     }}
                   >
@@ -364,7 +383,7 @@ export const SubcategoryDetailPage: React.FC = () => {
     <PageLayout
       variant={isDeletedView ? "deleted" : undefined}
       title={subcategoryName}
-      subtitle={isDeletedView ? "View deleted products in this subcategory." : (subcategoryDescription || "Manage products in this subcategory.")}
+      subtitle={isDeletedView ? "View deleted products in this subcategory." : "Manage products in this subcategory."}
       onBack={() => navigate(isDeletedView ? `/dashboard/categories/${categoryId}/subcategories/${subcategoryId}` : `/dashboard/categories/${categoryId}`)}
       actions={
         <div className="flex items-center gap-2">

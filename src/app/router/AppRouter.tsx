@@ -281,6 +281,10 @@ export const AppRouter: React.FC = () => {
             element={<CategoryEditPage />}
           />
           <Route
+            path="/dashboard/categories/:id/subcategories"
+            element={<CategoryDetailPage />}
+          />
+          <Route
             path="/dashboard/categories/:id/subcategories/create"
             element={<SubcategoryCreatePage />}
           />

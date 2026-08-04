@@ -43,18 +43,19 @@ export const PageLayout: React.FC<Props> = ({
 
   return (
     <div className={`space-y-[21px] p-[34px] ${isDeleted ? "bg-rose-50/40 min-h-screen" : ""}`}>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className={`flex items-center gap-[5px] text-[12px] transition-colors ${isDeleted ? "text-red-400 hover:text-red-600" : "text-[#6e6e73] hover:text-[#1d1d1f]"}`}
+        >
+          <ArrowLeft size={12} strokeWidth={2} />
+          Back
+        </button>
+      )}
+
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-[13px]">
+      <div className="flex flex-wrap items-center justify-between gap-[13px]">
         <div>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className={`mb-[8px] flex items-center gap-[5px] text-[12px] transition-colors ${isDeleted ? "text-red-400 hover:text-red-600" : "text-[#6e6e73] hover:text-[#1d1d1f]"}`}
-            >
-              <ArrowLeft size={12} strokeWidth={2} />
-              Back
-            </button>
-          )}
           <div className="flex items-center gap-[10px]">
             <h1 className="text-[22px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#1d1d1f]">
               {title}
