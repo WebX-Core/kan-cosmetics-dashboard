@@ -25,30 +25,36 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    // server: {
-    //   host: true,
-    //   port: 5173,
-    //   strictPort: true,
-    //   cors: true,
-    //   proxy: {
-    //     [apiBasePath]: {
-    //       target: devProxyTarget,
-    //       changeOrigin: true,
-    //       secure: devProxyTarget.startsWith("https://"),
-    //       cookieDomainRewrite: "",
-    //       configure: (proxy) => {
-    //         proxy.on("error", (err) => {
-    //           console.error("Proxy error:", err.message);
-    //         });
-    //         proxy.on("proxyReq", (proxyReq, req) => {
-    //           console.log("Proxying:", req.method, req.url, "->", proxyReq.path);
-    //         });
-    //         proxy.on("proxyRes", (proxyRes, req) => {
-    //           console.log("Proxy response:", proxyRes.statusCode, req.url);
-    //         });
-    //       },
-    //     },
-    //   },
-    // },
+    server: {
+      host: true,
+      port: 5173,
+      strictPort: true,
+      cors: true,
+      proxy: {
+        [apiBasePath]: {
+          target: devProxyTarget,
+          changeOrigin: true,
+          secure: devProxyTarget.startsWith("https://"),
+          cookieDomainRewrite: "",
+          configure: (proxy) => {
+            proxy.on("error", (err) => {
+              console.error("Proxy error:", err.message);
+            });
+            proxy.on("proxyReq", (proxyReq, req) => {
+              console.log(
+                "Proxying:",
+                req.method,
+                req.url,
+                "->",
+                proxyReq.path,
+              );
+            });
+            proxy.on("proxyRes", (proxyRes, req) => {
+              console.log("Proxy response:", proxyRes.statusCode, req.url);
+            });
+          },
+        },
+      },
+    },
   };
 });
