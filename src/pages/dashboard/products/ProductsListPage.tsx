@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Archive, FilePenLine, Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -22,6 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
+import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
@@ -47,6 +49,8 @@ type ProductRow = Readonly<{
   stock: number;
   category: string;
   createdAt: string;
+  status: PublicationStatus;
+  publishedAt: string;
 }>;
 
 const fmtPrice = (n: number): string =>
@@ -87,6 +91,8 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
         stock: num(item.stock ?? item.totalStock),
         category: text(category.title ?? category.name ?? subcategory.title ?? subcategory.name, "—"),
         createdAt: text(item.createdAt, ""),
+        status: readPublicationStatus(item.status),
+        publishedAt: text(item.publishedAt, ""),
       };
     });
 };
@@ -98,6 +104,7 @@ export const ProductsListPage: React.FC = () => {
   const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
   const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === "/dashboard/products/deleted";
+  const publicationView = (searchParams.get("status") ?? "published") as PublicationView;
   const categoryId = searchParams.get("categoryId") ?? "";
   const subcategoryId = searchParams.get("subcategoryId") ?? "";
   const showAddProductButton = !isDeletedView && Boolean(categoryId && subcategoryId);
@@ -115,7 +122,15 @@ export const ProductsListPage: React.FC = () => {
 
   const query = catalogApi.products.hooks.useList(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView,
+    !isDeletedView && publicationView === "published",
+  );
+  const draftQuery = catalogApi.products.hooks.useDraft(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView && publicationView === "draft",
+  );
+  const archivedQuery = catalogApi.products.hooks.useArchived(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView && publicationView === "archived",
   );
   const deletedQuery = catalogApi.products.hooks.useDeleted(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
@@ -124,8 +139,10 @@ export const ProductsListPage: React.FC = () => {
   const softDelete = catalogApi.products.hooks.useSoftDelete();
   const recover = catalogApi.products.hooks.useRecover();
   const destroy = catalogApi.products.hooks.useDestroy();
+  const updateProduct = catalogApi.products.hooks.useUpdate();
 
-  const sourceData = isDeletedView ? deletedQuery.data : query.data;
+  const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
+  const sourceData = isDeletedView ? deletedQuery.data : lifecycleQuery.data;
   const rows = React.useMemo(() => toRows(sourceData), [sourceData]);
   const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
@@ -170,6 +187,11 @@ export const ProductsListPage: React.FC = () => {
     }
   };
 
+  const changeStatus = async (id: string, status: PublicationStatus) => {
+    await updateProduct.mutateAsync({ id, dto: { status } });
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  };
+
   const columns = [
     {
       key: "name",
@@ -208,6 +230,7 @@ export const ProductsListPage: React.FC = () => {
       render: (r: ProductRow) => <span className="font-medium text-gray-900">{fmtPrice(r.price)}</span>,
     },
     { key: "createdAt", label: "Created", render: (r: ProductRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    { key: "status", label: "Status", render: (r: ProductRow) => <PublicationStatusBadge status={r.status} /> },
     {
       key: "actions",
       label: "Actions",
@@ -324,6 +347,10 @@ export const ProductsListPage: React.FC = () => {
                   </DropdownMenuItem>
                 </>
               )}
+              {canProductUpdate ? <DropdownMenuSeparator /> : null}
+              {canProductUpdate && r.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "PUBLISHED"); }}><Globe className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
+              {canProductUpdate && r.status !== "DRAFT" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
+              {canProductUpdate && r.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -357,9 +384,10 @@ export const ProductsListPage: React.FC = () => {
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search products..."
     >
+      {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(location.search); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : null}
       {!isDeletedView && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label="Total Products" value={stats.total} icon={Package} colorVariant="blue" />
+          <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Products`} value={stats.total} icon={Package} colorVariant="blue" />
           <StatCardV2 label="In Stock" value={stats.inStock} icon={Tag} colorVariant="emerald" />
           <StatCardV2 label="Low Stock" value={stats.lowStock} icon={AlertTriangle} colorVariant="amber" />
           <StatCardV2 label="Out of Stock" value={stats.outOfStock} icon={Layers} colorVariant="red" />
@@ -373,7 +401,7 @@ export const ProductsListPage: React.FC = () => {
         data={filtered}
         searchValue={state.search}
         onRowClick={!isDeletedView ? (r) => navigate(`/dashboard/products/${r.id}`) : undefined}
-        emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading products..." : isDeletedView ? "No deleted products." : "No products found."}
+        emptyMessage={(isDeletedView ? deletedQuery.isLoading : lifecycleQuery.isLoading) ? "Loading products..." : isDeletedView ? "No deleted products." : `No ${publicationView} products found.`}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}

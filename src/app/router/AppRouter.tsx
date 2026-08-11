@@ -167,6 +167,7 @@ import { WebPushNotificationDetailPage } from "@/pages/dashboard/marketing/web-p
 import { CustomerBanPage } from "@/pages/dashboard/customers/CustomerBanPage";
 import { CustomerBanFormPage } from "@/pages/dashboard/customers/CustomerBanFormPage";
 import { CustomerAddressesPage } from "@/pages/dashboard/customers/CustomerAddressesPage";
+import { LoyaltyCustomerDetailPage, LoyaltyLeaderboardPage, LoyaltyOverviewPage, LoyaltyRewardsPage, LoyaltyTierFormPage, LoyaltyTiersPage } from "@/pages/dashboard/loyalty";
 
 export const AppRouter: React.FC = () => {
   return (
@@ -369,6 +370,15 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/coupons/:id" element={<CouponDetailPage />} />
           <Route path="/dashboard/customers" element={<CustomersPage />} />
           <Route path="/dashboard/customers/:id" element={<CustomerDetailsPage />} />
+          <Route element={<PermissionGuard permission="customer-loyalty:view" />}>
+            <Route path="/dashboard/loyalty" element={<LoyaltyOverviewPage />} />
+            <Route path="/dashboard/loyalty/leaderboard" element={<LoyaltyLeaderboardPage />} />
+            <Route path="/dashboard/loyalty/customers/:customerId" element={<LoyaltyCustomerDetailPage />} />
+            <Route path="/dashboard/loyalty/tiers" element={<LoyaltyTiersPage />} />
+            <Route path="/dashboard/loyalty/tiers/create" element={<LoyaltyTierFormPage />} />
+            <Route path="/dashboard/loyalty/tiers/:id/edit" element={<LoyaltyTierFormPage />} />
+            <Route path="/dashboard/loyalty/rewards" element={<LoyaltyRewardsPage />} />
+          </Route>
           <Route
             path="/dashboard/delivery"
             element={<Navigate to="/dashboard/delivery/ready-for-pickup" replace />}

@@ -8,6 +8,8 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
+import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -18,12 +20,14 @@ const categoryFormSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
   slug: z.string().trim().min(1, "Slug is required"),
   description: z.string().optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
 });
 
 type FormData = Readonly<{
   title: string;
   slug: string;
   description: string;
+  status: PublicationStatus;
 }>;
 
 const isValidImageFile = (file: File): boolean =>
@@ -101,7 +105,7 @@ export const CategoryCreatePage: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [manualSlug, setManualSlug] = React.useState(false);
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
-  const [form, setForm] = React.useState<FormData>({ title: "", slug: "", description: "" });
+  const [form, setForm] = React.useState<FormData>({ title: "", slug: "", description: "", status: "DRAFT" });
 
   React.useEffect(() => {
     if (manualSlug && form.slug.trim()) return;
@@ -143,6 +147,7 @@ export const CategoryCreatePage: React.FC = () => {
         title: parsed.title,
         slug: slugify(parsed.slug || parsed.title),
         description: parsed.description?.trim() ?? "",
+        status: parsed.status,
         coverImage: coverImageFile ?? undefined,
       });
       toast.success("Category created");
@@ -208,8 +213,12 @@ export const CategoryCreatePage: React.FC = () => {
           />
         </FormSection>
 
+        <FormSection title="Publication status" description="Choose whether this category should be private, public, or archived after creation.">
+          <PublicationStatusSelector value={form.status} onChange={(status) => setForm((prev) => ({ ...prev, status }))} disabled={loading} />
+        </FormSection>
+
         <FormActions
-          submitLabel="Create Category"
+          submitLabel={form.status === "PUBLISHED" ? "Create & Publish" : form.status === "ARCHIVED" ? "Create as Archived" : "Save as Draft"}
           isSubmitting={loading}
           onCancel={() => navigate("/dashboard/categories")}
         />

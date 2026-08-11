@@ -1,11 +1,15 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FolderTree, Layers, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Archive, FilePenLine, FolderTree, Globe2, Layers, MoreHorizontal, Pencil, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { catalogApi } from "@/features/catalog";
+import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useUserStore } from "@/store/UserStore";
 import {
@@ -28,7 +32,8 @@ type SubcategoryRow = Readonly<{
   description: string;
   coverImage: string;
   products: number;
-  status: "Active" | "Inactive";
+  status: PublicationStatus;
+  publishedAt: string;
   createdAt: string;
 }>;
 
@@ -70,7 +75,6 @@ const toSubcategoryRow = (
   const category = (typeof item.category === "object" && item.category !== null
     ? item.category
     : {}) as Record<string, unknown>;
-  const isDeleted = item.isDeleted === true;
 
   return {
     id,
@@ -81,7 +85,8 @@ const toSubcategoryRow = (
     description: readString(item.description, "—"),
     coverImage: readString(item.coverImage ?? item.image ?? item.thumbnail),
     products: productCountMap.get(id) ?? 0,
-    status: isDeleted ? "Inactive" : "Active",
+    status: readPublicationStatus(item.status),
+    publishedAt: readString(item.publishedAt),
     createdAt: readString(item.createdAt, "—"),
   };
 };
@@ -94,6 +99,7 @@ export const SubcategoriesPage: React.FC = () => {
   const userRole = useUserStore((state) => state.user?.role ?? null);
   const isSudoAdmin = userRole === "SUDOADMIN";
   const isDeletedView = location.pathname === "/dashboard/subcategories/deleted";
+  const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
 
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -108,7 +114,15 @@ export const SubcategoriesPage: React.FC = () => {
 
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView
+    !isDeletedView && publicationView === "published"
+  );
+  const draftSubcategoriesQuery = catalogApi.subcategories.hooks.useDraft(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView && publicationView === "draft"
+  );
+  const archivedSubcategoriesQuery = catalogApi.subcategories.hooks.useArchived(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    !isDeletedView && publicationView === "archived"
   );
   const deletedSubcategoriesQuery = catalogApi.subcategories.hooks.useDeleted(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
@@ -118,6 +132,7 @@ export const SubcategoriesPage: React.FC = () => {
   const softDeleteSubcategory = catalogApi.subcategories.hooks.useSoftDelete();
   const recoverSubcategory = catalogApi.subcategories.hooks.useRecover();
   const destroySubcategory = catalogApi.subcategories.hooks.useDestroy();
+  const updateSubcategory = catalogApi.subcategories.hooks.useUpdate();
 
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
 
@@ -132,9 +147,8 @@ export const SubcategoriesPage: React.FC = () => {
     return map;
   }, [productsQuery.data?.data]);
 
-  const sourceRows = isDeletedView
-    ? deletedSubcategoriesQuery.data?.data
-    : subcategoriesQuery.data?.data;
+  const lifecycleQuery = publicationView === "draft" ? draftSubcategoriesQuery : publicationView === "archived" ? archivedSubcategoriesQuery : subcategoriesQuery;
+  const sourceRows = isDeletedView ? deletedSubcategoriesQuery.data?.data : lifecycleQuery.data?.data;
 
   const rows = React.useMemo(
     () => (sourceRows ?? []).map((row) => toSubcategoryRow(row, productCountMap)),
@@ -144,15 +158,15 @@ export const SubcategoriesPage: React.FC = () => {
   const totalPages =
     (isDeletedView
       ? deletedSubcategoriesQuery.data?.totalPages
-      : subcategoriesQuery.data?.totalPages) ?? 1;
+      : lifecycleQuery.data?.totalPages) ?? 1;
   const totalSubcategories =
-    (isDeletedView ? deletedSubcategoriesQuery.data?.total : subcategoriesQuery.data?.total) ??
+    (isDeletedView ? deletedSubcategoriesQuery.data?.total : lifecycleQuery.data?.total) ??
     rows.length;
 
   const stats = React.useMemo(
     () => ({
       total: totalSubcategories,
-      active: rows.filter((row) => row.status === "Active").length,
+      active: rows.filter((row) => row.status === "PUBLISHED").length,
       totalProducts: rows.reduce((sum, row) => sum + row.products, 0),
       totalCategories: new Set(rows.map((row) => row.categoryId).filter(Boolean)).size,
     }),
@@ -227,6 +241,11 @@ export const SubcategoriesPage: React.FC = () => {
     setPendingIds([]);
   };
 
+  const changeStatus = async (id: string, status: PublicationStatus) => {
+    await updateSubcategory.mutateAsync({ id, dto: { status } });
+    setSelectedIds((prev) => prev.filter((entry) => entry !== id));
+  };
+
   const columns = [
     {
       key: "select",
@@ -292,6 +311,31 @@ export const SubcategoriesPage: React.FC = () => {
         <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>
       ),
     },
+    ...(!isDeletedView ? [{
+      key: "status",
+      label: "Status",
+      render: (row: SubcategoryRow) => <PublicationStatusBadge status={row.status} />,
+    }, {
+      key: "rowActions",
+      label: "Actions",
+      render: (row: SubcategoryRow) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal size={15} /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); navigate(`/dashboard/categories/${row.categoryId}/subcategories/${row.id}/edit`); }}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe2 className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
+            {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
+            {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm("delete", [row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    }] : []),
     ...(isDeletedView
       ? [
           {
@@ -351,10 +395,11 @@ export const SubcategoriesPage: React.FC = () => {
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder="Search subcategories..."
     >
+      {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/subcategories?status=${status}`)} /> : null}
       {!isDeletedView ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label="Total Subcategories" value={stats.total} icon={ShoppingBag} colorVariant="blue" />
-          <StatCardV2 label="Active" value={stats.active} icon={Tag} colorVariant="emerald" />
+          <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Subcategories`} value={stats.total} icon={ShoppingBag} colorVariant="blue" />
+          <StatCardV2 label="Published on this page" value={stats.active} icon={Tag} colorVariant="emerald" />
           <StatCardV2 label="Products" value={stats.totalProducts} icon={Layers} colorVariant="blue" />
           <StatCardV2 label="Categories" value={stats.totalCategories} icon={FolderTree} colorVariant="cyan" />
         </div>
@@ -405,15 +450,8 @@ export const SubcategoriesPage: React.FC = () => {
                 navigate(`/dashboard/categories/${row.categoryId}/subcategories/${row.id}`)
             : undefined
         }
-        onEdit={
-          !isDeletedView
-            ? (row) =>
-                navigate(`/dashboard/categories/${row.categoryId}/subcategories/${row.id}/edit`)
-            : undefined
-        }
-        onDelete={!isDeletedView ? (row) => openConfirm("delete", [row.id]) : undefined}
         emptyMessage={
-          (isDeletedView ? deletedSubcategoriesQuery.isLoading : subcategoriesQuery.isLoading)
+          (isDeletedView ? deletedSubcategoriesQuery.isLoading : lifecycleQuery.isLoading)
             ? "Loading subcategories..."
             : isDeletedView
             ? "No deleted subcategories found."

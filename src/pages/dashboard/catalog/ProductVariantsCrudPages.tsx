@@ -1,6 +1,8 @@
 import React from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Layers, PackagePlus, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { z } from "zod";
 import { catalogApi } from "@/features/catalog";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
@@ -11,6 +13,9 @@ import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { ModernFormLayout, FormActions, FormField, FormSection } from "@/shared/components/forms/ModernFormLayout";
 import { parseApiError } from "@/shared/utils/apiError";
+import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
+import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 import { useUserStore } from "@/store/UserStore";
 import {
   AlertDialog,
@@ -36,6 +41,7 @@ type VariantForm = Readonly<{
   isDefault: boolean;
   isActive: boolean;
   isTryOn: boolean;
+  status: PublicationStatus;
 }>;
 
 const initialForm: VariantForm = {
@@ -51,6 +57,7 @@ const initialForm: VariantForm = {
   isDefault: false,
   isActive: true,
   isTryOn: false,
+  status: "DRAFT",
 };
 
 const variantSchema = z.object({
@@ -71,6 +78,7 @@ const variantSchema = z.object({
   isDefault: z.boolean(),
   isActive: z.boolean(),
   isTryOn: z.boolean(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
 });
 
 const inputClass =
@@ -89,6 +97,7 @@ type VariantRow = Readonly<{
   sku: string;
   productId: string;
   isActive: boolean;
+  status: PublicationStatus;
 }>;
 
 const toVariantRows = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): ReadonlyArray<VariantRow> =>
@@ -98,6 +107,7 @@ const toVariantRows = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): 
     sku: String(row.sku ?? "—"),
     productId: String(row.productId ?? (row.product as Record<string, unknown> | undefined)?.id ?? "—"),
     isActive: row.isActive !== false,
+    status: readPublicationStatus(row.status),
   }));
 
 const readString = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -110,6 +120,7 @@ export const ProductVariantsPage: React.FC = () => {
   const userRole = useUserStore((state) => state.user?.role ?? null);
   const isSudoAdmin = userRole === "SUDOADMIN";
   const isDeletedView = location.pathname.endsWith("/deleted");
+  const publicationView = (searchParams.get("status") ?? "published") as PublicationView;
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -127,7 +138,15 @@ export const ProductVariantsPage: React.FC = () => {
       search: debouncedSearch || undefined,
       product: productFilter || undefined,
     },
-    !isDeletedView,
+    !isDeletedView && publicationView === "published",
+  );
+  const draftQuery = catalogApi.productVariants.hooks.useDraft(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined, product: productFilter || undefined },
+    !isDeletedView && publicationView === "draft",
+  );
+  const archivedQuery = catalogApi.productVariants.hooks.useArchived(
+    { page: state.page, limit: state.limit, search: debouncedSearch || undefined, product: productFilter || undefined },
+    !isDeletedView && publicationView === "archived",
   );
   const deletedQuery = catalogApi.productVariants.hooks.useDeleted(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
@@ -137,14 +156,17 @@ export const ProductVariantsPage: React.FC = () => {
   const softDelete = catalogApi.productVariants.hooks.useSoftDelete();
   const recover = catalogApi.productVariants.hooks.useRecover();
   const destroy = catalogApi.productVariants.hooks.useDestroy();
+  const updateStatus = catalogApi.productVariants.hooks.useUpdate();
 
   const rows = React.useMemo(() => {
-    const source = isDeletedView ? deletedQuery.data?.data : query.data?.data;
+    const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
+    const source = isDeletedView ? deletedQuery.data?.data : lifecycleQuery.data?.data;
     const base = toVariantRows(toRows(source));
     if (!productFilter) return base;
     return base.filter((row) => row.productId === productFilter);
-  }, [deletedQuery.data?.data, isDeletedView, productFilter, query.data?.data]);
-  const totalPages = isDeletedView ? (deletedQuery.data?.totalPages ?? 1) : (query.data?.totalPages ?? 1);
+  }, [archivedQuery.data?.data, deletedQuery.data?.data, draftQuery.data?.data, isDeletedView, productFilter, publicationView, query.data?.data]);
+  const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
+  const totalPages = isDeletedView ? (deletedQuery.data?.totalPages ?? 1) : (lifecycleQuery.data?.totalPages ?? 1);
   const inventoryByVariantId = React.useMemo(() => {
     const map = new Map<string, Record<string, unknown>>();
     const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
@@ -214,6 +236,10 @@ export const ProductVariantsPage: React.FC = () => {
       setPendingIds([]);
     }
   };
+  const changeStatus = async (id: string, status: PublicationStatus) => {
+    await updateStatus.mutateAsync({ id, dto: { status } });
+    setSelectedIds((prev) => prev.filter((entry) => entry !== id));
+  };
 
   const columns = [
     {
@@ -260,6 +286,20 @@ export const ProductVariantsPage: React.FC = () => {
         </span>
       ),
     },
+    { key: "status", label: "Status", render: (row: VariantRow) => <PublicationStatusBadge status={row.status} /> },
+    ...(!isDeletedView ? [{ key: "actions", label: "Actions", render: (row: VariantRow) => <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}><Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal size={15} /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onClick={(event) => { event.stopPropagation(); navigate(`/dashboard/product-variants/${row.id}/edit${location.search}`); }}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe2 className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
+        {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
+        {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm("delete", [row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu> }] : []),
     ...(!isDeletedView && productFilter
       ? [
           {
@@ -463,6 +503,7 @@ export const ProductVariantsPage: React.FC = () => {
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder="Search title, SKU..."
     >
+      {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(searchParams); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : null}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCardV2 label="Total Variants" value={rows.length} icon={Layers} colorVariant="blue" />
         <StatCardV2 label="Active" value={rows.filter((row) => row.isActive).length} icon={Layers} colorVariant="emerald" />
@@ -507,20 +548,8 @@ export const ProductVariantsPage: React.FC = () => {
           ) : undefined
         }
         searchValue={state.search}
-        onEdit={(row) =>
-          navigate(
-            `/dashboard/product-variants/${row.id}/edit${
-              productFilter
-                ? `?product=${encodeURIComponent(productFilter)}&productName=${encodeURIComponent(productName)}&returnPath=${encodeURIComponent(
-                    returnPath,
-                  )}`
-                : ""
-            }`,
-          )
-        }
-        onDelete={!isDeletedView ? (row) => openConfirm("delete", [row.id]) : undefined}
         emptyMessage={
-          (isDeletedView ? deletedQuery.isLoading : query.isLoading)
+          (isDeletedView ? deletedQuery.isLoading : lifecycleQuery.isLoading)
             ? "Loading variants..."
             : isDeletedView
             ? "No deleted variants found."
@@ -628,6 +657,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
       isDefault: Boolean(row.isDefault),
       isActive: row.isActive !== false,
       isTryOn: Boolean(row.isTryOn),
+      status: readPublicationStatus(row.status),
     });
     setExistingImage(readString(row.image));
     setRemovedUrls([]);
@@ -783,6 +813,11 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
             ) : null}
           </div>
 
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-[#1d1d1f]">Publication status</p>
+            <PublicationStatusSelector value={form.status} onChange={(status) => setForm((prev) => ({ ...prev, status }))} disabled={saving} />
+          </div>
+
           <div className="flex flex-wrap items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
@@ -878,7 +913,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
         </FormSection>
 
         <FormActions
-          submitLabel={saving ? "Saving..." : isEdit ? "Update Variant" : "Create Variant"}
+          submitLabel={saving ? "Saving..." : isEdit ? "Update Variant" : form.status === "PUBLISHED" ? "Create & Publish" : form.status === "ARCHIVED" ? "Create as Archived" : "Save as Draft"}
           isSubmitting={saving}
           onCancel={() => navigate(returnPath)}
         />

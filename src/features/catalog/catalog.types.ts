@@ -8,6 +8,14 @@ export type ProductDescriptionJson = Readonly<{
   }>;
 }>;
 
+export type PublicationStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+export type PublicationFields = Readonly<{
+  status?: PublicationStatus;
+  isPublished?: boolean;
+  publishedAt?: string | null;
+}>;
+
 // Sent to backend as `keyFeatures`; labelled "Free From" in the UI
 export type ProductFreeFrom = Readonly<{
   title: string;
@@ -21,7 +29,7 @@ export type CategoryDto = Readonly<{
   sortOrder?: number;
   isDeleted?: boolean;
   coverImage?: File | null;
-}>;
+}> & PublicationFields;
 
 export type SubcategoryDto = Readonly<{
   categoryId?: string;
@@ -32,7 +40,7 @@ export type SubcategoryDto = Readonly<{
   sortOrder?: number;
   isDeleted?: boolean;
   coverImage?: File | null;
-}>;
+}> & PublicationFields;
 
 export type ProductMediaType = "IMAGE" | "VIDEO";
 export type ProductMediaUpload = Readonly<{
@@ -59,7 +67,7 @@ export type ProductDto = Readonly<{
   hoverImage?: File | null;
   pdf?: File | null;
   gallery?: ReadonlyArray<File>;
-}>;
+}> & PublicationFields;
 
 export type ProductVariantDto = Readonly<{
   productId?: string;
@@ -77,7 +85,7 @@ export type ProductVariantDto = Readonly<{
   image?: File | null;
   removeUrls?: ReadonlyArray<string>;
   sortOrder?: number;
-}>;
+}> & PublicationFields;
 
 export type ProductTagDto = Readonly<{
   productId?: string;

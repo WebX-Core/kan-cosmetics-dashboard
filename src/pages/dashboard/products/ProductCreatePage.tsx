@@ -13,6 +13,8 @@ import {
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
+import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
@@ -35,6 +37,7 @@ const schema = z.object({
   productType: z.enum(["LIPSTICK", "OTHERS"]).optional(),
   sortOrder: z.coerce.number().optional(),
   description: z.string().trim().optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
 });
 
 type Form = Readonly<{
@@ -47,6 +50,7 @@ type Form = Readonly<{
   productType: "" | "LIPSTICK" | "OTHERS";
   sortOrder: string;
   description: string;
+  status: PublicationStatus;
 }>;
 
 const initial: Form = {
@@ -59,6 +63,7 @@ const initial: Form = {
   productType: "",
   sortOrder: "0",
   description: "",
+  status: "DRAFT",
 };
 
 const read = (value: unknown): string =>
@@ -531,6 +536,7 @@ export const ProductCreatePage: React.FC = () => {
       productType: (read(row.productType) as Form["productType"]) || "",
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
       description: descriptionText,
+      status: read(row.status) === "PUBLISHED" || read(row.status) === "ARCHIVED" ? read(row.status) as PublicationStatus : "DRAFT",
     });
 
     setFreeFrom(parseFreeFrom(row.keyFeatures));
@@ -645,7 +651,8 @@ export const ProductCreatePage: React.FC = () => {
     if (!parsed) return;
 
     const slug = slugify(parsed.slug || parsed.title);
-    const payload = {
+      const payload = {
+      status: parsed.status,
       title: parsed.title,
       slug,
       subcategoryId: parsed.subcategoryId || undefined,
@@ -1152,13 +1159,21 @@ export const ProductCreatePage: React.FC = () => {
           </div>
         </FormSection>
 
+        <FormSection title="Publication status" description="Choose whether this product should be private, public, or archived after saving.">
+          <PublicationStatusSelector value={form.status} onChange={(status) => setForm((prev) => ({ ...prev, status }))} disabled={saving} />
+        </FormSection>
+
         <FormActions
           submitLabel={
             saving
               ? "Saving…"
               : isEdit
                 ? "Update Product"
-                : "Create Product"
+                : form.status === "PUBLISHED"
+                  ? "Create & Publish"
+                  : form.status === "ARCHIVED"
+                    ? "Create as Archived"
+                    : "Save as Draft"
           }
           submitIcon={
             saving ? <Loader2 size={14} className="animate-spin" /> : undefined

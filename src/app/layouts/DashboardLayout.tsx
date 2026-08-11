@@ -16,6 +16,7 @@ const SIDEBAR_BACKEND_MODULES: Readonly<Record<string, ReadonlyArray<string>>> =
   carts:                     ["cart"],
   wishlists:                 ["wishlist"],
   customers:                 ["customer-address", "customer-ban", "purchase-history"],
+  loyalty:                   ["customer-loyalty"],
   "product-inquiries":       ["inquiry"],
   "site-inquiries":          ["site-inquiry"],
   contacts:                  ["contact"],

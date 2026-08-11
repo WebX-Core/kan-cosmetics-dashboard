@@ -13,6 +13,7 @@ type CrudOptions = Readonly<{
   deleted?: boolean;
   recover?: boolean;
   destroy?: boolean;
+  publicationLifecycle?: boolean;
 }>;
 
 const toCrudPaths = ({
@@ -22,8 +23,11 @@ const toCrudPaths = ({
   deleted = true,
   recover = true,
   destroy = true,
+  publicationLifecycle = false,
 }: CrudOptions): CrudPaths => ({
   getAll: `${basePath}/get-all`,
+  draftList: publicationLifecycle ? `${basePath}/draft` : undefined,
+  archivedList: publicationLifecycle ? `${basePath}/archived` : undefined,
   getOne: getOne ? (id) => `${basePath}/get/${id}` : undefined,
   create: `${basePath}/create`,
   update: update ? (id) => `${basePath}/update/${id}` : undefined,

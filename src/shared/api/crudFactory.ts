@@ -11,6 +11,8 @@ import { parseApiError } from "@/shared/utils/apiError";
 ------------------------- */
 export type CrudPaths = Readonly<{
   getAll: string;
+  draftList?: string;
+  archivedList?: string;
   getOne?: (id: UUID) => string;
 
   create: string;
@@ -165,6 +167,18 @@ export function makeCrud<TItem, TCreate, TUpdate>(
       return normalizeList(unwrap<unknown>(res));
     },
 
+    draft: async (q?: ApiListQuery) => {
+      if (!paths.draftList) throw new Error(`Draft list not implemented for ${key}`);
+      const res = await api.get(paths.draftList, { params: q });
+      return normalizeList(unwrap<unknown>(res));
+    },
+
+    archived: async (q?: ApiListQuery) => {
+      if (!paths.archivedList) throw new Error(`Archived list not implemented for ${key}`);
+      const res = await api.get(paths.archivedList, { params: q });
+      return normalizeList(unwrap<unknown>(res));
+    },
+
     get: async (id: UUID) => {
       if (!paths.getOne) {
         throw new Error(`Get one not implemented for ${key}`);
@@ -252,6 +266,24 @@ export function makeCrud<TItem, TCreate, TUpdate>(
       return query;
     },
 
+    useDraft: (q?: ApiListQuery, enabled = true) =>
+      useQuery({
+        queryKey: [key, "draft", q],
+        queryFn: () => service.draft(q),
+        enabled: Boolean(paths.draftList) && enabled,
+        placeholderData: keepPreviousData,
+        staleTime: 30_000,
+      }),
+
+    useArchived: (q?: ApiListQuery, enabled = true) =>
+      useQuery({
+        queryKey: [key, "archived", q],
+        queryFn: () => service.archived(q),
+        enabled: Boolean(paths.archivedList) && enabled,
+        placeholderData: keepPreviousData,
+        staleTime: 30_000,
+      }),
+
     useGet: (id?: UUID, enabled = true) =>
       useQuery({
         queryKey: [key, "get", id],
@@ -292,6 +324,8 @@ export function makeCrud<TItem, TCreate, TUpdate>(
         mutationFn: (dto: TCreate) => service.create(dto),
         onSuccess: () => {
           void qc.invalidateQueries({ queryKey: [key, "list"] });
+          void qc.invalidateQueries({ queryKey: [key, "draft"] });
+          void qc.invalidateQueries({ queryKey: [key, "archived"] });
           void qc.invalidateQueries({ queryKey: [key, "deleted"] });
           toast.success(toMessage("created", 1));
         },
@@ -306,6 +340,8 @@ export function makeCrud<TItem, TCreate, TUpdate>(
         mutationFn: (vars: { id: UUID; dto: TUpdate }) => service.update(vars.id, vars.dto),
         onSuccess: (_data, vars) => {
           void qc.invalidateQueries({ queryKey: [key, "list"] });
+          void qc.invalidateQueries({ queryKey: [key, "draft"] });
+          void qc.invalidateQueries({ queryKey: [key, "archived"] });
           void qc.invalidateQueries({ queryKey: [key, "get", vars.id] });
           void qc.invalidateQueries({ queryKey: [key, "deleted"] });
           toast.success(toMessage("updated", 1));
@@ -322,6 +358,8 @@ export function makeCrud<TItem, TCreate, TUpdate>(
         onSuccess: (_data, ids) => {
           const count = String(ids).split(",").filter(Boolean).length || 1;
           void qc.invalidateQueries({ queryKey: [key, "list"] });
+          void qc.invalidateQueries({ queryKey: [key, "draft"] });
+          void qc.invalidateQueries({ queryKey: [key, "archived"] });
           void qc.invalidateQueries({ queryKey: [key, "deleted"] });
           toast.success(toMessage("deleted", count));
         },
@@ -337,6 +375,8 @@ export function makeCrud<TItem, TCreate, TUpdate>(
         onSuccess: (_data, payload) => {
           const count = payload.ids?.length ?? 1;
           void qc.invalidateQueries({ queryKey: [key, "list"] });
+          void qc.invalidateQueries({ queryKey: [key, "draft"] });
+          void qc.invalidateQueries({ queryKey: [key, "archived"] });
           void qc.invalidateQueries({ queryKey: [key, "deleted"] });
           toast.success(toMessage("recovered", count));
         },
@@ -352,6 +392,8 @@ export function makeCrud<TItem, TCreate, TUpdate>(
         onSuccess: (_data, ids) => {
           const count = String(ids).split(",").filter(Boolean).length || 1;
           void qc.invalidateQueries({ queryKey: [key, "list"] });
+          void qc.invalidateQueries({ queryKey: [key, "draft"] });
+          void qc.invalidateQueries({ queryKey: [key, "archived"] });
           void qc.invalidateQueries({ queryKey: [key, "deleted"] });
           toast.success(toMessage("destroyed", count));
         },
