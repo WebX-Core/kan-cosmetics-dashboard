@@ -1,12 +1,11 @@
 import React from "react";
-import { ArrowLeft, Download, Loader2, Plus, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Search } from "lucide-react";
 
 type Props = {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
-  showExport?: boolean;
   onNew?: () => void;
   newButtonLabel?: string;
   onBack?: () => void;
@@ -21,7 +20,6 @@ export const PageLayout: React.FC<Props> = ({
   subtitle,
   children,
   actions,
-  showExport = false,
   onNew,
   newButtonLabel = "New",
   onBack,
@@ -95,12 +93,6 @@ export const PageLayout: React.FC<Props> = ({
                 />
               )}
             </div>
-          )}
-          {showExport && (
-            <button className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-              <Download size={13} strokeWidth={2} />
-              Export
-            </button>
           )}
           {onNew && (
             <button

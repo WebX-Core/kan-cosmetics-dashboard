@@ -10,6 +10,7 @@ const SIDEBAR_BACKEND_MODULES: Readonly<Record<string, ReadonlyArray<string>>> =
   categories:                ["category", "subcategory"],
   inventory:                 ["inventory"],
   orders:                    ["order"],
+  "company-settings":       ["company-setting", "order-bill"],
   payments:                  ["payment"],
   coupons:                   ["coupon", "coupon-usage"],
   delivery:                  ["shipment", "shipment-tracking", "courier", "courier-branch", "courier-pickup-address", "pickup-request", "delivery-api-log", "delivery-webhook-event"],

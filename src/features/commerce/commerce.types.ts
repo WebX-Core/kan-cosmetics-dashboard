@@ -65,6 +65,7 @@ export type OrderCreateAddressDto = Readonly<{
   fullName: string;
   phone: string;
   secondaryPhone?: string;
+  panNumber?: string;
   destinationBranch?: string;
   destinationBranchCode?: string;
   destinationCityArea?: string;
@@ -133,6 +134,7 @@ export type CustomerAddressDto = Readonly<{
   fullName?: string;
   phone?: string;
   secondaryPhone?: string;
+  panNumber?: string;
   destinationBranch?: string;
   destinationBranchCode?: string;
   destinationCityArea?: string;

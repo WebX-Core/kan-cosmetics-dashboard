@@ -26,6 +26,7 @@ import {
   Trophy,
   Users,
   Wallet,
+  Building2,
 } from "lucide-react";
 
 export type EcommerceModule = Readonly<{
@@ -46,6 +47,7 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
   { key: "inventory", label: "Inventory", path: "/dashboard/inventory", section: "Products", description: "Variant-aware stock levels, reserves, adjustments, and low-stock monitoring.", icon: Boxes, shortcut: "I" },
 
   { key: "orders", label: "Orders", path: "/dashboard/orders", section: "Sales", description: "Order list, status updates, totals, and customer linkage.", icon: ShoppingCart, shortcut: "O" },
+  { key: "company-settings", label: "Company Settings", path: "/dashboard/company-settings", section: "Sales", description: "Seller identity, VAT/PAN, invoice numbering, and printable bill configuration.", icon: Building2 },
   { key: "payments", label: "Payments", path: "/dashboard/payments", section: "Sales", description: "Payment status tracking, transaction lookup, and method filters.", icon: Wallet },
   { key: "coupons", label: "Coupons", path: "/dashboard/coupons", section: "Sales", description: "Coupon CRUD, activation windows, and usage tracking.", icon: TicketPercent },
   { key: "delivery", label: "Delivery", path: "/dashboard/delivery/ready-for-pickup", section: "Sales", description: "Packed orders, bulk pickup requests, shipment timelines, and delivery partner sync.", icon: Truck },

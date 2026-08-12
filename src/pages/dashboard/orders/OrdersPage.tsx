@@ -7,6 +7,8 @@ import {
   CheckCircle,
   X,
   Plus,
+  Printer,
+  ReceiptText,
 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -17,6 +19,12 @@ import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
 import { formatOrderStatusLabel, orderStatusOptions } from "./orderStore";
 import { formatPaymentStatusLabel, normalizePaymentStatus } from "@/shared/utils/paymentStatus";
+import { billingApi, openBillPrintWindow, printBills, type BillType, type BulkBillPayload } from "@/features/billing";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
+import { usePermission } from "@/shared/hooks/usePermission";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 
 type OrderRow = Readonly<{
   id: string;
@@ -32,6 +40,13 @@ type OrderRow = Readonly<{
 
 export const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
+  const canCreateBill = usePermission("order-bill:create");
+  const canUpdateBill = usePermission("order-bill:update");
+  const [printing, setPrinting] = React.useState<BillType | null>(null);
+  const [previewType, setPreviewType] = React.useState<BillType | null>(null);
+  const [preview, setPreview] = React.useState<BulkBillPayload | null>(null);
+  const [printedOrderIds, setPrintedOrderIds] = React.useState<ReadonlyArray<string>>([]);
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
     [],
@@ -105,6 +120,29 @@ export const OrdersPage: React.FC = () => {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setState((p) => ({ ...p, page: 1 }));
+  };
+  const preparePrint = async (billType: BillType) => {
+    if (!selectedIds.length) return;
+    setPrinting(billType);
+    try {
+      const result = await billingApi.bills.bulk(selectedIds, billType);
+      if (!result.bills.length) throw new Error("No printable orders were returned.");
+      setPreviewType(billType); setPreview(result);
+    } catch (error) { toast.error(parseApiError(error).message); } finally { setPrinting(null); }
+  };
+  const confirmBulkPrint = async () => {
+    if (!preview || !previewType) return;
+    const printWindow = openBillPrintWindow();
+    if (!printWindow) return toast.error("Pop-up blocked. Allow pop-ups to print bills.");
+    await printBills(preview.bills, previewType, printWindow);
+    setPrintedOrderIds(preview.bills.map((bill) => String(bill.order.id)));
+    setPreview(null);
+  };
+  const confirmMarkedPrinted = async () => {
+    if (!previewType || !printedOrderIds.length) return;
+    try { await Promise.all(printedOrderIds.map((orderId) => billingApi.bills.markPrinted(orderId, previewType))); toast.success(`${printedOrderIds.length} bill(s) marked as printed.`); }
+    catch (error) { toast.error(parseApiError(error).message); }
+    finally { setPrintedOrderIds([]); setPreviewType(null); }
   };
 
   const tabs = [
@@ -194,15 +232,14 @@ export const OrdersPage: React.FC = () => {
   return (
     <PageLayout
       title="Orders"
-      showExport
       actions={
-        <button
+        <><ExportMenu basePath="/order" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="orders"/><button
           type="button"
           onClick={() => navigate("/dashboard/orders/create")}
           className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] active:scale-[0.982]"
         >
           <Plus size={14} /> New Order
-        </button>
+        </button></>
       }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
@@ -246,6 +283,8 @@ export const OrdersPage: React.FC = () => {
               <span className="text-xs font-medium text-[#6e6e73]">
                 {selectedIds.length} selected
               </span>
+              {canCreateBill && <button disabled={Boolean(printing)} onClick={() => void preparePrint("SHIPPING_LABEL")} className="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium hover:bg-[#f5f5f7] disabled:opacity-50"><Printer size={12}/> Labels</button>}
+              {canCreateBill && <button disabled={Boolean(printing)} onClick={() => void preparePrint("VAT_BILL")} className="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium hover:bg-[#f5f5f7] disabled:opacity-50"><ReceiptText size={12}/> VAT bills</button>}
               <button
                 type="button"
                 onClick={() => setSelectedIds([])}
@@ -268,6 +307,8 @@ export const OrdersPage: React.FC = () => {
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
       />
+      <AlertDialog open={Boolean(preview)} onOpenChange={(open) => { if (!open) { setPreview(null); setPreviewType(null); } }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirm bulk print</AlertDialogTitle><AlertDialogDescription>Preparing this preview creates immutable bill snapshots for orders that do not already have them.</AlertDialogDescription></AlertDialogHeader><div className="rounded-xl bg-[#f5f5f7] p-4 text-sm"><p><b>{preview?.bills.length ?? 0}</b> printable {previewType === "VAT_BILL" ? "VAT bills" : "shipping labels"}</p><p className="mt-1"><b>{preview?.missingOrderIds.length ?? 0}</b> missing orders</p>{preview?.missingOrderIds.length ? <p className="mt-2 break-all text-xs text-red-600">{preview.missingOrderIds.join(", ")}</p> : null}</div><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); void confirmBulkPrint(); }}>Open print preview</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <AlertDialog open={printedOrderIds.length > 0} onOpenChange={(open) => { if (!open) { setPrintedOrderIds([]); setPreviewType(null); } }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Did printing complete?</AlertDialogTitle><AlertDialogDescription>Only mark these bills printed if the browser print job was completed. Cancelling keeps print history unchanged.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Not printed</AlertDialogCancel>{canUpdateBill && <AlertDialogAction onClick={(event) => { event.preventDefault(); void confirmMarkedPrinted(); }}>Mark as printed</AlertDialogAction>}</AlertDialogFooter></AlertDialogContent></AlertDialog>
     </PageLayout>
   );
 };

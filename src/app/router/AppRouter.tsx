@@ -27,6 +27,8 @@ import { ProductDetailsPage } from "../../pages/dashboard/products/ProductDetail
 import { OrdersPage } from "../../pages/dashboard/orders/OrdersPage";
 import { OrderDetailsPage } from "../../pages/dashboard/orders/OrderDetailsPage";
 import { OrderCreatePage } from "../../pages/dashboard/orders/OrderCreatePage";
+import { CompanySettingsPage } from "@/pages/dashboard/billing/CompanySettingsPage";
+import { CompanySettingFormPage } from "@/pages/dashboard/billing/CompanySettingFormPage";
 import { InventoryPage } from "../../pages/dashboard/inventory/InventoryPage";
 import { InventoryDetailsPage } from "../../pages/dashboard/inventory/InventoryDetailsPage";
 import { ReportsPage } from "../../pages/dashboard/reports/ReportsPage";
@@ -246,6 +248,15 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/orders" element={<OrdersPage />} />
           <Route path="/dashboard/orders/create" element={<OrderCreatePage />} />
           <Route path="/dashboard/orders/:id" element={<OrderDetailsPage />} />
+          <Route element={<PermissionGuard permission="company-setting:view" />}>
+            <Route path="/dashboard/company-settings" element={<CompanySettingsPage />} />
+          </Route>
+          <Route element={<PermissionGuard permission="company-setting:create" />}>
+            <Route path="/dashboard/company-settings/create" element={<CompanySettingFormPage />} />
+          </Route>
+          <Route element={<PermissionGuard permission="company-setting:update" />}>
+            <Route path="/dashboard/company-settings/:id/edit" element={<CompanySettingFormPage />} />
+          </Route>
           <Route path="/dashboard/inventory" element={<InventoryPage />} />
           <Route path="/dashboard/inventory/deleted" element={<InventoryPage />} />
           <Route

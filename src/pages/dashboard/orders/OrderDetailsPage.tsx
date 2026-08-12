@@ -29,6 +29,8 @@ import {
   ShoppingBag,
   CalendarCheck,
   Layers,
+  Printer,
+  ReceiptText,
 } from "lucide-react";
 import { z } from "zod";
 import {
@@ -49,6 +51,9 @@ import {
   normalizeSettlementStatus,
 } from "@/shared/utils/paymentStatus";
 import { validateOrToast } from "@/shared/utils/validation";
+import { billingApi, openBillPrintWindow, printBills, type BillPayload, type BillType } from "@/features/billing";
+import { usePermission } from "@/shared/hooks/usePermission";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import { ModernFormLayout } from "@/shared/components/forms/ModernFormLayout";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { getOrderDetail, normalizeOrderRow } from "@/shared/utils/orderMapping";
@@ -103,9 +108,17 @@ const getShippingAddress = (
   addresses: ReadonlyArray<unknown>,
 ): Record<string, unknown> => {
   const shipping = addresses.find(
-    (address) => toRecord(address).type === "shipping",
+    (address) => text(toRecord(address).type).toLowerCase() === "shipping",
   );
   return toRecord(shipping ?? addresses[0]);
+};
+const getBillingAddress = (
+  addresses: ReadonlyArray<unknown>,
+): Record<string, unknown> => {
+  const billing = addresses.find(
+    (address) => text(toRecord(address).type).toLowerCase() === "billing",
+  );
+  return toRecord(billing);
 };
 const sumQuantity = (items: ReadonlyArray<unknown>): number =>
   items.reduce<number>((sum, item) => sum + num(toRecord(item).quantity, 0), 0);
@@ -364,6 +377,9 @@ export const OrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const toast = useToast();
+  const canViewBill = usePermission("order-bill:view");
+  const canCreateBill = usePermission("order-bill:create");
+  const canUpdateBill = usePermission("order-bill:update");
 
   const query = useOrderGet(id, Boolean(id));
   const updateOrderStatus = useUpdateOrderStatus();
@@ -375,6 +391,39 @@ export const OrderDetailsPage: React.FC = () => {
   const [paymentStatus, setPaymentStatus] = React.useState("UNPAID");
   const [paymentId, setPaymentId] = React.useState<string | null>(null);
   const [syncingPickup, setSyncingPickup] = React.useState(false);
+  const [printing, setPrinting] = React.useState<BillType | null>(null);
+  const [billHistory, setBillHistory] = React.useState<Partial<Record<BillType, BillPayload["bill"]>>>({});
+  const [pendingPrintedType, setPendingPrintedType] = React.useState<BillType | null>(null);
+  const handlePrint = async (billType: BillType) => {
+    if (!id) return;
+    const printWindow = openBillPrintWindow();
+    if (!printWindow) return toast.error("Pop-up blocked. Allow pop-ups to print bills.");
+    printWindow.document.write("<p style='font-family:Arial;padding:24px'>Preparing bill...</p>");
+    setPrinting(billType);
+    try {
+      const bill = await billingApi.bills.get(id, billType);
+      setBillHistory((current) => ({ ...current, [billType]: bill.bill }));
+      await printBills([bill], billType, printWindow);
+      setPendingPrintedType(billType);
+    } catch (error) { printWindow.close(); toast.error(parseApiError(error).message); } finally { setPrinting(null); }
+  };
+  React.useEffect(() => {
+    if (!id || (!canViewBill && !canCreateBill)) return;
+    let active = true;
+    void Promise.allSettled((["SHIPPING_LABEL", "VAT_BILL"] as const).map(async (billType) => ({ billType, payload: await billingApi.bills.get(id, billType) }))).then((results) => {
+      if (!active) return;
+      const next: Partial<Record<BillType, BillPayload["bill"]>> = {};
+      results.forEach((result) => { if (result.status === "fulfilled") next[result.value.billType] = result.value.payload.bill; });
+      setBillHistory(next);
+    });
+    return () => { active = false; };
+  }, [canCreateBill, canViewBill, id]);
+  const markSinglePrinted = async () => {
+    if (!id || !pendingPrintedType) return;
+    try { const result = await billingApi.bills.markPrinted(id, pendingPrintedType); const response = toRecord(result); const updated = toRecord(response.bill); setBillHistory((current) => ({ ...current, [pendingPrintedType]: { ...(current[pendingPrintedType] as BillPayload["bill"]), ...updated } as BillPayload["bill"] })); toast.success("Bill marked as printed."); }
+    catch (error) { toast.error(parseApiError(error).message); }
+    finally { setPendingPrintedType(null); }
+  };
 
   const record = React.useMemo(() => {
     const p = query.data;
@@ -483,6 +532,7 @@ export const OrderDetailsPage: React.FC = () => {
   const payment = firstItemRecord(payments);
   const addresses = toArray(record?.addresses);
   const shippingAddress = getShippingAddress(addresses);
+  const billingAddress = getBillingAddress(addresses);
   const items = toArray(record?.items);
   const canUpdatePayment = Boolean(paymentId);
   const itemCount = items.length;
@@ -496,6 +546,16 @@ export const OrderDetailsPage: React.FC = () => {
     text(shippingAddress.state),
     text(shippingAddress.postalCode),
     text(shippingAddress.country),
+  ]);
+  const billingAddressLine = compactAddress([
+    text(billingAddress.addressLine1),
+    text(billingAddress.addressLine2),
+  ]);
+  const billingCityLine = compactAddress([
+    text(billingAddress.city),
+    text(billingAddress.state),
+    text(billingAddress.postalCode),
+    text(billingAddress.country),
   ]);
   const customerAddress = text(customer.address, "—");
   const orderSource = text(orderDetail.orderSource, "");
@@ -519,6 +579,11 @@ export const OrderDetailsPage: React.FC = () => {
       }
       titleMeta={
         <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            {canCreateBill && <button type="button" disabled={Boolean(printing)} onClick={() => void handlePrint("SHIPPING_LABEL")} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-semibold hover:bg-[#f5f5f7] disabled:opacity-50"><Printer size={13}/> Print label</button>}
+            {canCreateBill && <button type="button" disabled={Boolean(printing)} onClick={() => void handlePrint("VAT_BILL")} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#1d1d1f] px-3 text-[11px] font-semibold text-white hover:bg-black disabled:opacity-50"><ReceiptText size={13}/> Print VAT bill</button>}
+          </div>
+          {Object.entries(billHistory).map(([type, bill]) => bill && <p key={type} className="text-[10px] text-[#86868b]">{type === "VAT_BILL" ? "VAT" : "Label"}: {bill.billNumber} · printed {bill.printCount} time(s){bill.lastPrintedAt ? ` · last ${formatDateTime(bill.lastPrintedAt)}` : ""}</p>)}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <label className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-[11px] font-medium transition-colors ${statusColors(orderStatus).border} ${statusColors(orderStatus).bg}`}>
               <span className={statusColors(orderStatus).text}>Order status</span>
@@ -696,6 +761,27 @@ export const OrderDetailsPage: React.FC = () => {
                 />
               </div>
             </section>
+
+            {Object.keys(billingAddress).length > 0 && (
+              <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
+                <SectionIconHeader
+                  title="Billing Address"
+                  icon={<FileText size={18} className="text-white" strokeWidth={2} />}
+                  bg="bg-violet-500"
+                />
+                <div className="mt-4">
+                  <IconFieldList
+                    fields={[
+                      { label: "Name", value: text(billingAddress.fullName, "—"), icon: <User size={13} /> },
+                      { label: "Phone", value: text(billingAddress.phone, "—"), icon: <Phone size={13} /> },
+                      { label: "Buyer PAN", value: text(billingAddress.panNumber, "—"), icon: <Hash size={13} /> },
+                      { label: "Address line", value: billingAddressLine || "—", icon: <Map size={13} /> },
+                      { label: "Location", value: billingCityLine || "—", icon: <MapPin size={13} /> },
+                    ]}
+                  />
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Right column */}
@@ -819,6 +905,7 @@ export const OrderDetailsPage: React.FC = () => {
             </div>
           </section>
         )}
+        <AlertDialog open={Boolean(pendingPrintedType)} onOpenChange={(open) => { if (!open) setPendingPrintedType(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Did printing complete?</AlertDialogTitle><AlertDialogDescription>Only update print history if the browser print job completed. Choose “Not printed” if you cancelled it.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Not printed</AlertDialogCancel>{canUpdateBill && <AlertDialogAction onClick={(event) => { event.preventDefault(); void markSinglePrinted(); }}>Mark as printed</AlertDialogAction>}</AlertDialogFooter></AlertDialogContent></AlertDialog>
       </div>
     </ModernFormLayout>
   );

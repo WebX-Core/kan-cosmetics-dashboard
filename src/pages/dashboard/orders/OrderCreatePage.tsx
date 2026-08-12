@@ -32,6 +32,7 @@ type AddressForm = {
   fullName: string;
   phone: string;
   secondaryPhone: string;
+  panNumber: string;
   destinationBranch: string;
   destinationBranchCode: string;
   destinationCityArea: string;
@@ -56,6 +57,7 @@ const EMPTY_ADDRESS: AddressForm = {
   fullName: "",
   phone: "",
   secondaryPhone: "",
+  panNumber: "",
   destinationBranch: "",
   destinationBranchCode: "",
   destinationCityArea: "",
@@ -881,6 +883,9 @@ const AddressForm: React.FC<{
             onChange={(nextValue) => set("secondaryPhone", nextValue)}
           />
         </InputBlock>
+        <InputBlock label="Buyer PAN Number">
+          <input className={inputCls} placeholder="PAN (optional, used on VAT bill)" value={value.panNumber} disabled={disabled} onChange={(event) => set("panNumber", event.target.value.replace(/[^A-Za-z0-9-]/g, ""))} />
+        </InputBlock>
         <BranchAreaPicker
           value={value}
           branches={branches}
@@ -1017,6 +1022,7 @@ export const OrderCreatePage: React.FC = () => {
           fullName: address.fullName.trim(),
           phone: address.phone.trim(),
           secondaryPhone: address.secondaryPhone.trim() || undefined,
+          panNumber: address.panNumber.trim() || undefined,
           destinationBranch: branch.name,
           destinationBranchCode: branch.code,
           destinationCityArea: area,
