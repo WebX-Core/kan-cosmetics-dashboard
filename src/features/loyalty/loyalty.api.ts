@@ -1,5 +1,5 @@
 import { api, unwrap } from "@/shared/api/api";
-import type { AdjustPointsDto, CreateTierDto, FulfillRewardDto, LoyaltyCustomer, LoyaltyList, LoyaltyQuery, LoyaltyReward, LoyaltyTier, ResetYearlyCycleDto, UpdateTierDto } from "./loyalty.types";
+import type { CreateTierDto, LoyaltyCustomer, LoyaltyList, LoyaltyQuery, LoyaltyTier, ResetYearlyCycleDto, UpdateTierDto } from "./loyalty.types";
 
 const BASE = "/customer-loyalty/admin";
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -8,7 +8,7 @@ const normalizeList = <T>(payload: unknown): LoyaltyList<T> => {
   if (Array.isArray(payload)) return { data: payload as T[], total: payload.length, totalPages: 1 };
   if (!isRecord(payload)) return { data: [] };
   const body = isRecord(payload.data) ? payload.data : payload;
-  const arrays = [body.items, body.data, body.customers, body.tiers, body.rewards, payload.items].find(Array.isArray);
+  const arrays = [body.items, body.data, body.customers, body.tiers, payload.items].find(Array.isArray);
   const rows = (arrays ?? []) as T[];
   return {
     data: rows,
@@ -28,14 +28,6 @@ export const loyaltyApi = {
   },
   customers: {
     list: async (query?: LoyaltyQuery) => normalizeList<LoyaltyCustomer>(unwrap<unknown>(await api.get(`${BASE}/customers`, { params: query }))),
-    // Keep the complete detail payload. It contains the profile/customer plus
-    // ledgers, rewards, and referrals as sibling collections.
-    get: async (customerId: string) => unwrap<Record<string, unknown>>(await api.get(`${BASE}/customers/${customerId}`)),
-    adjustPoints: async (customerId: string, dto: AdjustPointsDto) => unwrap<unknown>(await api.patch(`${BASE}/customers/${customerId}/adjust-points`, dto)),
-  },
-  rewards: {
-    list: async (query?: LoyaltyQuery) => normalizeList<LoyaltyReward>(unwrap<unknown>(await api.get(`${BASE}/rewards`, { params: query }))),
-    fulfill: async (id: string, dto: FulfillRewardDto) => unwrap<unknown>(await api.patch(`${BASE}/rewards/${id}/fulfill`, dto)),
   },
   resetYearlyCycle: async (dto: ResetYearlyCycleDto) => unwrap<unknown>(await api.post(`${BASE}/reset-yearly-cycle`, dto)),
 };
