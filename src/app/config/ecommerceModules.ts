@@ -56,7 +56,7 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
 
   { key: "customers", label: "Customers", path: "/dashboard/customers", section: "Support", description: "All registered customers with profile, order history, and purchase records.", icon: Users, shortcut: "C" },
 
-  { key: "loyalty", label: "Loyalty", path: "/dashboard/loyalty", section: "Loyalty", description: "Customer leaderboard, yearly points, dynamic tiers, rewards, and cycle administration.", icon: Trophy },
+  { key: "loyalty", label: "Loyalty", path: "/dashboard/loyalty", section: "Loyalty", description: "Customer leaderboard, yearly points, dynamic tiers, and cycle administration.", icon: Trophy },
 
   { key: "product-inquiries", label: "Inquiries", path: "/dashboard/support/product-inquiries", section: "Support", description: "Inbox, handled flags, and reply threads for product questions.", icon: Bell },
   { key: "site-inquiries", label: "Site Inquiries", path: "/dashboard/support/site-inquiries", section: "Support", description: "AI digital hair color and site-level inquiry inbox with notes and replies.", icon: SearchCheck },

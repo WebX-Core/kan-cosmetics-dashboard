@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, ChevronDown, Eye, Gift, RotateCcw, Settings2, Trophy, Users } from "lucide-react";
-import { useLoyaltyCustomers, useLoyaltyRewards, useLoyaltyTiers, useResetYearlyCycle } from "@/features/loyalty";
+import { Award, ChevronDown, RotateCcw, Settings2, Trophy, Users } from "lucide-react";
+import { useLoyaltyCustomers, useLoyaltyTiers, useResetYearlyCycle } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -14,13 +14,11 @@ export const LoyaltyOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const customers = useLoyaltyCustomers({ page: 1, limit: 5 });
   const tiers = useLoyaltyTiers();
-  const rewards = useLoyaltyRewards({ page: 1, limit: 5 });
   const reset = useResetYearlyCycle();
   const [open, setOpen] = React.useState(false);
   const [confirmation, setConfirmation] = React.useState("");
   const [reason, setReason] = React.useState("");
   const top = customers.data?.data ?? [];
-  const rewardRows = rewards.data?.data ?? [];
 
   const performReset = async () => {
     if (confirmation !== "RESET YEARLY POINTS") return;
@@ -36,13 +34,12 @@ export const LoyaltyOverviewPage: React.FC = () => {
     { key: "tier", label: "Tier", render: (row: typeof top[number]) => <TierBadge code={row.currentTierCode} /> },
     { key: "yearlyPoints", label: "Yearly Points", render: (row: typeof top[number]) => <span className="font-semibold text-[#1d1d1f]">{row.yearlyPoints.toLocaleString()}</span> },
     { key: "lifetimePoints", label: "Lifetime Points", render: (row: typeof top[number]) => <span className="text-[#6e6e73]">{row.lifetimePoints.toLocaleString()}</span> },
-    { key: "view", label: "", render: () => <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d2d2d7] text-[#6e6e73]"><Eye size={14} /></span> },
   ];
 
   return (
     <PageLayout
       title="Loyalty"
-      subtitle="Leaderboard, dynamic tiers, points, rewards, and yearly-cycle administration."
+      subtitle="Leaderboard, yearly points, dynamic tiers, and yearly-cycle administration."
       actions={
         <>
           <DropdownMenu>
@@ -58,15 +55,11 @@ export const LoyaltyOverviewPage: React.FC = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/leaderboard")}>
                 <Trophy className="mr-2 h-4 w-4 text-amber-600" />
-                <div><p>Leaderboard</p><p className="text-xs text-[#86868b]">Ranks and point adjustments</p></div>
+                <div><p>Leaderboard</p><p className="text-xs text-[#86868b]">Ranks and yearly-point analytics</p></div>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/tiers")}>
                 <Award className="mr-2 h-4 w-4 text-violet-600" />
-                <div><p>Loyalty Tiers</p><p className="text-xs text-[#86868b]">Thresholds, benefits, and rewards</p></div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/rewards")}>
-                <Gift className="mr-2 h-4 w-4 text-emerald-600" />
-                <div><p>Rewards Queue</p><p className="text-xs text-[#86868b]">Assignment and fulfillment</p></div>
+                <div><p>Loyalty Tiers</p><p className="text-xs text-[#86868b]">Thresholds, benefits, and automatic rewards</p></div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -77,10 +70,9 @@ export const LoyaltyOverviewPage: React.FC = () => {
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCardV2 label="Loyalty Members" value={customers.data?.total ?? top.length} icon={Users} colorVariant="blue" />
         <StatCardV2 label="Active Tiers" value={(tiers.data?.data ?? []).filter((tier) => tier.isActive).length} icon={Award} colorVariant="cyan" />
-        <StatCardV2 label="Pending Rewards" value={rewardRows.filter((reward) => reward.rewardStatus === "PENDING").length} icon={Gift} colorVariant="amber" />
         <StatCardV2 label="Top Yearly Score" value={number(top[0]?.yearlyPoints).toLocaleString()} icon={Trophy} colorVariant="emerald" />
       </div>
 
@@ -95,12 +87,12 @@ export const LoyaltyOverviewPage: React.FC = () => {
             View Leaderboard
           </button>
         </div>
-        <DataTableV2 columns={columns} data={top} onRowClick={(row) => navigate(`/dashboard/loyalty/customers/${row.customerId}`)} emptyMessage={customers.isLoading ? "Loading top customers..." : "No loyalty customers yet."} />
+        <DataTableV2 columns={columns} data={top} emptyMessage={customers.isLoading ? "Loading top customers..." : "No loyalty customers yet."} />
       </section>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent className="bg-white">
-          <AlertDialogHeader><AlertDialogTitle>Reset yearly loyalty cycle?</AlertDialogTitle><AlertDialogDescription>This resets yearly points and returns customers to the base tier. Lifetime points, ledgers, referrals, and reward history are preserved.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Reset yearly loyalty cycle?</AlertDialogTitle><AlertDialogDescription>This resets yearly points and returns customers to the base tier. Lifetime points and historical records are preserved.</AlertDialogDescription></AlertDialogHeader>
           <div className="space-y-4"><label className="block text-sm font-medium">Reason<textarea value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 min-h-20 w-full rounded-lg border p-3" /></label><label className="block text-sm font-medium">Type RESET YEARLY POINTS<input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} className="mt-1 h-11 w-full rounded-lg border px-3" /></label></div>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={confirmation !== "RESET YEARLY POINTS" || reset.isPending} className="bg-red-600 hover:bg-red-700" onClick={(event) => { event.preventDefault(); void performReset(); }}>Reset cycle</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
