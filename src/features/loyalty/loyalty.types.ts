@@ -4,7 +4,6 @@ export type RewardStatus = "PENDING" | "ASSIGNED" | "FULFILLED" | "REDEEMED" | "
 export type LoyaltyRewardConfig = Readonly<{
   rewardType?: RewardType;
   type?: RewardType;
-  rewardStatus?: RewardStatus;
   title?: string;
   description?: string | null;
   benefitValue?: number | string | null;

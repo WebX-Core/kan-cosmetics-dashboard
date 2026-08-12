@@ -7,6 +7,7 @@ import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { RankBadge, TierBadge, customerName, date, number, text } from "./loyaltyUi";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 
 export const LoyaltyLeaderboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export const LoyaltyLeaderboardPage: React.FC = () => {
     { key: "lastTierEvaluatedAt", label: "Evaluated", render: (row: typeof rows[number]) => date(row.lastTierEvaluatedAt) },
   ];
   const pageYearly = rows.reduce((sum, row) => sum + number(row.yearlyPoints), 0);
-  return <PageLayout title="Loyalty Leaderboard" subtitle="Yearly customer ranking, points, tiers, and referral codes." searchValue={state.search} onSearchChange={(search) => setState((prev) => ({ ...prev, page: 1, search }))} searchPlaceholder="Search customers...">
+  return <PageLayout title="Loyalty Leaderboard" subtitle="Yearly customer ranking, points, tiers, and referral codes." actions={<ExportMenu basePath="/customer-loyalty/admin/customers" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="loyalty-customers"/>} searchValue={state.search} onSearchChange={(search) => setState((prev) => ({ ...prev, page: 1, search }))} searchPlaceholder="Search customers...">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><StatCardV2 label="Loyalty Members" value={query.data?.total ?? rows.length} icon={Users} colorVariant="blue" /><StatCardV2 label="Page Yearly Points" value={pageYearly.toLocaleString()} icon={Coins} colorVariant="emerald" /><StatCardV2 label="Top Rank" value={rows[0]?.rank ? `#${rows[0].rank}` : "—"} icon={Trophy} colorVariant="amber" /><StatCardV2 label="Tiers Represented" value={new Set(rows.map((row) => row.currentTierCode)).size} icon={Award} colorVariant="cyan" /></div>
     <DataTableV2 columns={columns} data={rows} searchValue={state.search} onRowClick={(row) => navigate(`/dashboard/loyalty/customers/${row.customerId}`)} emptyMessage={query.isLoading ? "Loading leaderboard..." : "No loyalty customers found."} showPagination currentPage={state.page} totalPages={query.data?.totalPages ?? 1} onPageChange={(page) => setState((prev) => ({ ...prev, page }))} />
   </PageLayout>;
