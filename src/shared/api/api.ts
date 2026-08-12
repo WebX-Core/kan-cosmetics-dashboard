@@ -55,7 +55,8 @@ api.interceptors.response.use(
       };
       const resp = typedError.response;
       const requestPath = getRequestPath(typedError.config);
-      if (resp?.status === 401 && requestPath !== "/auth/session") {
+      const isSessionProbe = requestPath.endsWith("/auth/session");
+      if (resp?.status === 401 && !isSessionProbe) {
         triggerGlobalLogout();
       }
     }
