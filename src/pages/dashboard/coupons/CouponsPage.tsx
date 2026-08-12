@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Tag, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
@@ -130,6 +131,7 @@ export const CouponsPage: React.FC = () => {
       subtitle="Manage discount codes, activation windows, and usage tracking."
       onNew={() => navigate("/dashboard/coupons/create")}
       newButtonLabel="New Coupon"
+      actions={<ExportMenu basePath="/coupon" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="coupons"/>}
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search coupons..."

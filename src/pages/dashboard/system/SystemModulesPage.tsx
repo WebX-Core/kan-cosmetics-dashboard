@@ -13,6 +13,7 @@ import { SimpleApiTablePage } from "@/pages/dashboard/common/SimpleApiTablePage"
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 // import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import {
   AlertDialog,
@@ -240,6 +241,7 @@ export const CouponUsagePage: React.FC = () => {
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search by coupon code or customer…"
+      actions={<ExportMenu basePath="/coupon-usage" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="coupon-usage"/>}
     >
       <div className="rounded-xl border border-[#d2d2d7] bg-white p-4 space-y-2">
         <p className="text-sm font-medium text-[#1d1d1f]">Look up by ID</p>

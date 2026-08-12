@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Trash2, RotateCcw, FileDown, FileText } from "lucide-react";
+import { MessageSquare, Trash2, RotateCcw } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -21,6 +21,7 @@ import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
 import { parseApiError } from "@/shared/utils/apiError";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 const toRowsArray = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
@@ -82,7 +83,6 @@ export const ProductInquiriesPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const [exporting, setExporting] = React.useState<"excel" | "pdf" | null>(null);
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const confirm = useConfirmAction();
 
@@ -133,25 +133,6 @@ export const ProductInquiriesPage: React.FC = () => {
       toast.error(parseApiError(error).message);
     } finally {
       confirm.dismiss();
-    }
-  };
-
-  const handleExport = async (type: "excel" | "pdf") => {
-    setExporting(type);
-    try {
-      const result = type === "excel" ? await engagementApi.inquiries.exportExcel() : await engagementApi.inquiries.exportPdf();
-      if (typeof result === "string" && (result.startsWith("http") || result.startsWith("/"))) {
-        const a = document.createElement("a");
-        a.href = result;
-        a.download = type === "excel" ? "inquiries.xlsx" : "inquiries.pdf";
-        a.click();
-      } else {
-        toast.success(`${type === "excel" ? "Excel" : "PDF"} export ready.`);
-      }
-    } catch (error) {
-      toast.error(parseApiError(error).message);
-    } finally {
-      setExporting(null);
     }
   };
 
@@ -226,22 +207,7 @@ export const ProductInquiriesPage: React.FC = () => {
       actions={
         !isDeletedView ? (
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void handleExport("excel")}
-              disabled={exporting !== null}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
-            >
-              <FileDown size={13} strokeWidth={2} /> {exporting === "excel" ? "Exporting…" : "Export Excel"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleExport("pdf")}
-              disabled={exporting !== null}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
-            >
-              <FileText size={13} strokeWidth={2} /> {exporting === "pdf" ? "Exporting…" : "Export PDF"}
-            </button>
+            <ExportMenu basePath="/inquiry" params={{ page: state.page, limit: state.limit, search: debouncedSearch || undefined }} filename="product-inquiries"/>
             {isSudoAdmin && (
               <button type="button" onClick={() => navigate(DELETED_PATH)} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
                 <Trash2 size={13} strokeWidth={2} /> View Deleted

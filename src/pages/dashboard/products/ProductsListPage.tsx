@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
 import { usePermission } from "@/shared/hooks/usePermission";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -374,11 +375,11 @@ export const ProductsListPage: React.FC = () => {
       }
       newButtonLabel="Add Product"
       actions={
-        !isDeletedView && isSudoAdmin ? (
+        !isDeletedView ? <div className="flex gap-2"><ExportMenu basePath="/product" params={{ page: state.page, limit: state.limit, search: debouncedSearch || undefined, subcategory: subcategoryId || undefined }} filename="products"/>{isSudoAdmin ? (
           <button type="button" onClick={() => navigate("/dashboard/products/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
             <Trash2 size={13} strokeWidth={2} /> View Deleted
           </button>
-        ) : undefined
+        ) : null}</div> : undefined
       }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}

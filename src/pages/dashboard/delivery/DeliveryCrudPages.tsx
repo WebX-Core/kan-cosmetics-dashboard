@@ -10,6 +10,7 @@ import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { ModernFormLayout, FormActions, FormField, FormSection } from "@/shared/components/forms/ModernFormLayout";
 
@@ -43,6 +44,7 @@ type ModuleConfig = Readonly<{
   basePath: string;
   entity: DeliveryEntity;
   fields: ReadonlyArray<FieldConfig>;
+  exportPath?: string;
 }>;
 
 const asText = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -211,6 +213,7 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
       subtitle={`Manage ${config.label.toLowerCase()} records.`}
       onNew={() => navigate(`${config.basePath}/create`)}
       newButtonLabel={`New ${config.label.slice(0, -1)}`}
+      actions={config.exportPath ? <ExportMenu basePath={config.exportPath} params={{ search: debouncedSearch || undefined, limit: 10000 }} filename={config.key}/> : undefined}
       searchValue={state.search}
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder={`Search ${config.label.toLowerCase()}...`}
@@ -365,6 +368,7 @@ const modules: Readonly<Record<string, ModuleConfig>> = {
     key: "shipments",
     label: "Shipments",
     basePath: "/dashboard/delivery/shipments",
+    exportPath: "/shipment",
     entity: deliveryApi.shipments as unknown as DeliveryEntity,
     fields: [
       { key: "orderId", label: "Order ID", required: true },
@@ -377,6 +381,7 @@ const modules: Readonly<Record<string, ModuleConfig>> = {
     key: "shipmentTracking",
     label: "Shipment Tracking",
     basePath: "/dashboard/delivery/shipment-tracking",
+    exportPath: "/shipment-tracking",
     entity: deliveryApi.shipmentTracking as unknown as DeliveryEntity,
     fields: [
       { key: "shipmentId", label: "Shipment ID", required: true },
@@ -390,6 +395,7 @@ const modules: Readonly<Record<string, ModuleConfig>> = {
     key: "pickupRequests",
     label: "Pickup Requests",
     basePath: "/dashboard/delivery/pickup-requests",
+    exportPath: "/pickup-request",
     entity: deliveryApi.pickupRequests as unknown as DeliveryEntity,
     fields: [
       { key: "courierId", label: "Courier ID", required: true },

@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import {
@@ -296,6 +297,7 @@ export const InventoryPage: React.FC = () => {
       onBack={isDeletedView ? () => navigate("/dashboard/inventory") : undefined}
       actions={
         <div className="flex items-center gap-[8px]">
+          {!isDeletedView && <ExportMenu basePath="/inventory" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="inventory"/>}
           {!isDeletedView && isSudoAdmin && (
             <button
               type="button"

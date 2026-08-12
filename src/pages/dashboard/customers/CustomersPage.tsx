@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Users, UserCheck, ShieldOff, Eye, MoreHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
@@ -192,13 +193,13 @@ export const CustomersPage: React.FC = () => {
       onSearchChange={(v) => { setState((p) => ({ ...p, page: 1, search: v })); }}
       searchPlaceholder="Search name, email, phone..."
       actions={
-        <button
+        <><ExportMenu basePath="/customer" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="customers"/><button
           type="button"
           onClick={() => navigate("/dashboard/customers/bans")}
           className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
         >
           <ShieldOff size={13} strokeWidth={2} /> Bans
-        </button>
+        </button></>
       }
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

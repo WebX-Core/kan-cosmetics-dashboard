@@ -21,6 +21,7 @@ import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useUserStore } from "@/store/UserStore";
 import { parseApiError } from "@/shared/utils/apiError";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 const toRowsArray = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
@@ -201,11 +202,11 @@ export const SiteInquiriesPage: React.FC = () => {
       subtitle={isDeletedView ? "Deleted site inquiry records." : "Website and general inquiry inbox."}
       onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
       actions={
-        !isDeletedView && isSudoAdmin ? (
+        !isDeletedView ? <div className="flex gap-2"><ExportMenu basePath="/site-inquiry" params={{ page: state.page, limit: state.limit, search: debouncedSearch || undefined }} filename="site-inquiries"/>{isSudoAdmin ? (
           <button type="button" onClick={() => navigate(DELETED_PATH)} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
             <Trash2 size={13} strokeWidth={2} /> View Deleted
           </button>
-        ) : undefined
+        ) : null}</div> : undefined
       }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}

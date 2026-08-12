@@ -2,6 +2,7 @@ import React from "react";
 import { CreditCard, CheckCircle, Clock, XCircle, DollarSign, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
+import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
@@ -354,7 +355,7 @@ export const PaymentsPage: React.FC = () => {
     <PageLayout
       title="Payments"
       subtitle="Track payment status and transaction details."
-      showExport
+      actions={<ExportMenu basePath="/payment" params={{ search: search || undefined, paymentStatus: activeTab !== "all" ? activeTab.toUpperCase() : undefined, limit: 10000 }} filename="payments"/>}
       searchValue={search}
       onSearchChange={(v) => { setSearch(v); setPage(1); }}
       searchPlaceholder="Search payments..."
