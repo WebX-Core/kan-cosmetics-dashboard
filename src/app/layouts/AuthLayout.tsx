@@ -65,17 +65,7 @@ export const AuthLayout: React.FC = () => {
             "-=0.48",
           )
           .from(subRef.current, { y: 14, opacity: 0, duration: 0.42 }, "-=0.28")
-          .from(copyRef.current, { opacity: 0, duration: 0.36 }, "-=0.2")
-          .from(
-            rightRef.current,
-            { x: 28, opacity: 0, duration: 0.55 },
-            "-=0.6",
-          )
-          .from(
-            [formRef.current, footerRef.current],
-            { y: 18, opacity: 0, stagger: 0.1, duration: 0.44 },
-            "-=0.38",
-          );
+          .from(copyRef.current, { opacity: 0, duration: 0.36 }, "-=0.2");
       }, rootRef);
 
       return () => ctx.revert();
