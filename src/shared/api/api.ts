@@ -5,6 +5,14 @@ import type { ApiEnvelope } from "../types/common.types";
 import { triggerGlobalLogout } from "../../app/providers/authEvents";
 import { getRecaptchaToken, shouldSkipRecaptcha } from "../security/recaptcha";
 
+const getRequestPath = (config?: InternalAxiosRequestConfig): string => {
+  const rawUrl = String(config?.url ?? "");
+  try {
+    return new URL(rawUrl, config?.baseURL ?? window.location.origin).pathname;
+  } catch {
+    return rawUrl.split("?")[0] ?? rawUrl;
+  }
+};
 
 /* =========================
    Axios instance
@@ -41,8 +49,13 @@ api.interceptors.response.use(
   (res) => res,
   (error: unknown) => {
     if (typeof error === "object" && error !== null && "response" in error) {
-      const resp = (error as { response?: { status?: number } }).response;
-      if (resp?.status === 401) {
+      const typedError = error as {
+        config?: InternalAxiosRequestConfig;
+        response?: { status?: number };
+      };
+      const resp = typedError.response;
+      const requestPath = getRequestPath(typedError.config);
+      if (resp?.status === 401 && requestPath !== "/auth/session") {
         triggerGlobalLogout();
       }
     }

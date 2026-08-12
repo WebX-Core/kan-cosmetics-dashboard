@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useMemo, useRef, useState } from "react";
 
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { queryClient } from "../../shared/api/queryClient";
 import { registerLogoutHandler } from "./authEvents";
@@ -25,6 +26,12 @@ type AuthContextValue = Readonly<{
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_STORAGE_KEY = "dashboard_auth_state";
+const AUTH_FAILURE_STATUSES = new Set([400, 401, 403]);
+
+function getResponseStatus(error: unknown): number | null {
+  if (!axios.isAxiosError(error)) return null;
+  return error.response?.status ?? null;
+}
 
 function readInitialAuthState(): AuthState {
   if (typeof window === "undefined") {
@@ -148,12 +155,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
           sessionStatus: "authenticated",
         };
       });
-    } catch {
+    } catch (error) {
       if (requestVersion !== authVersionRef.current) {
         return;
       }
 
-      clearAuth();
+      const status = getResponseStatus(error);
+      if (status && AUTH_FAILURE_STATUSES.has(status)) {
+        clearAuth();
+        return;
+      }
+
+      setState((previous) => ({
+        ...previous,
+        sessionStatus: previous.isAuthenticated ? "authenticated" : "unauthenticated",
+      }));
     }
   }, [clearAuth]);
 
