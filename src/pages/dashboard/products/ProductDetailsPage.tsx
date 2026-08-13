@@ -221,6 +221,9 @@ export const ProductDetailsPage: React.FC = () => {
   const salePrice = readText(product?.salePrice, price);
   const weight = readText(product?.weight, "—");
   const productType = readText(product?.productType, "—");
+  const occasionType = readText(product?.occasionType, "NONE");
+  const vatRate = readText(product?.vatRate, "13");
+  const isVatIncluded = product?.isVatIncluded !== false;
   const createdAt = formatDateTime(readText(product?.createdAt ?? product?.created_at));
   const updatedAt = formatDateTime(readText(product?.updatedAt ?? product?.updated_at));
   const status: "Active" | "Inactive" =
@@ -442,6 +445,8 @@ export const ProductDetailsPage: React.FC = () => {
               {[
                 { label: "SKU", value: sku },
                 { label: "Weight", value: weight !== "—" ? `${weight} g` : "—" },
+                { label: "Occasion", value: occasionType.replaceAll("_", " ") },
+                { label: "VAT", value: `${vatRate}% ${isVatIncluded ? "included" : "excluded"}` },
                 { label: "Category", value: categoryTitle },
                 { label: "Subcategory", value: subcategoryTitle },
               ].map(({ label, value }) => (

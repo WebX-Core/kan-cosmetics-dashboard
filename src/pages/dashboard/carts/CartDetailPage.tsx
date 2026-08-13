@@ -31,6 +31,10 @@ type CartItem = Readonly<{
   productId: string;
   quantity: number;
   price: number;
+  isVatIncluded: boolean;
+  vatRate: number;
+  taxableAmount: number;
+  vatAmount: number;
   subtotal: number;
 }>;
 
@@ -120,6 +124,10 @@ const toCartItem = (raw: unknown): CartItem => {
     productId: text(row.productId),
     quantity,
     price,
+    isVatIncluded: row.isVatIncluded !== false,
+    vatRate: toNumber(row.vatRate, 13),
+    taxableAmount: toNumber(row.taxableAmount, price * quantity),
+    vatAmount: toNumber(row.vatAmount),
     subtotal: toNumber(row.subtotal ?? row.lineTotal ?? (price * quantity)),
   };
 };
@@ -227,6 +235,16 @@ export const CartDetailPage: React.FC = () => {
       key: "price",
       label: "Unit Price",
       render: (row: CartItem) => <span className="text-[#1d1d1f]">{itemCurrency(row.price)}</span>,
+    },
+    {
+      key: "vat",
+      label: "VAT",
+      render: (row: CartItem) => (
+        <div className="text-xs text-[#6e6e73]">
+          <div>{itemCurrency(row.vatAmount)} ({row.vatRate}%)</div>
+          <div>{row.isVatIncluded ? "Included" : "Added"} · Taxable {itemCurrency(row.taxableAmount)}</div>
+        </div>
+      ),
     },
     {
       key: "subtotal",

@@ -893,6 +893,11 @@ export const OrderDetailsPage: React.FC = () => {
                           <p className="mt-0.5 text-[11px] text-[#9a948d]">
                             Qty {num(row.quantity, 0)} · {formatMoney(row.price)} each
                           </p>
+                          {row.vatAmount != null && (
+                            <p className="mt-0.5 text-[11px] text-[#9a948d]">
+                              VAT {formatMoney(row.vatAmount)} ({num(row.vatRate, 13)}%) · {row.isVatIncluded === false ? "added" : "included"}
+                            </p>
+                          )}
                         </div>
                         <p className="shrink-0 text-[13px] font-semibold tabular-nums text-[#1d1d1f]">
                           {formatMoney(row.subtotal)}
