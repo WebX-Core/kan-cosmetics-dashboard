@@ -41,6 +41,8 @@ type VariantForm = Readonly<{
   isDefault: boolean;
   isActive: boolean;
   isTryOn: boolean;
+  isVatIncluded: boolean;
+  vatRate: string;
   status: PublicationStatus;
 }>;
 
@@ -57,6 +59,8 @@ const initialForm: VariantForm = {
   isDefault: false,
   isActive: true,
   isTryOn: false,
+  isVatIncluded: true,
+  vatRate: "13",
   status: "DRAFT",
 };
 
@@ -78,6 +82,8 @@ const variantSchema = z.object({
   isDefault: z.boolean(),
   isActive: z.boolean(),
   isTryOn: z.boolean(),
+  isVatIncluded: z.boolean(),
+  vatRate: z.coerce.number().min(0, "VAT rate cannot be negative").max(100, "VAT rate cannot exceed 100"),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
 });
 
@@ -657,6 +663,8 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
       isDefault: Boolean(row.isDefault),
       isActive: row.isActive !== false,
       isTryOn: Boolean(row.isTryOn),
+      isVatIncluded: typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
+      vatRate: row.vatRate != null ? String(row.vatRate) : "13",
       status: readPublicationStatus(row.status),
     });
     setExistingImage(readString(row.image));
@@ -800,6 +808,9 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                 className={inputClass}
               />
             </FormField>
+            <FormField label="VAT Rate (%)" required>
+              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm((prev) => ({ ...prev, vatRate: e.target.value }))} className={inputClass} />
+            </FormField>
             {isLipstickProduct ? (
               <FormField label="Color HEX">
                 <input
@@ -819,6 +830,10 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
           </div>
 
           <div className="flex flex-wrap items-center gap-6">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={form.isVatIncluded} onChange={(e) => setForm((prev) => ({ ...prev, isVatIncluded: e.target.checked }))} />
+              Price includes VAT
+            </label>
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"

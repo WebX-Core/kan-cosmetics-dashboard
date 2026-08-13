@@ -13,7 +13,7 @@ import {
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
-import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { OCCASION_TYPES, PRODUCT_TYPES, type OccasionType, type ProductType, type PublicationStatus } from "@/features/catalog/catalog.types";
 import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -34,7 +34,10 @@ const schema = z.object({
   sku: z.string().trim().min(1, "SKU is required"),
   price: z.string().trim().min(1, "Price is required"),
   weight: z.string().trim().optional(),
-  productType: z.enum(["LIPSTICK", "OTHERS"]).optional(),
+  productType: z.enum(PRODUCT_TYPES).optional(),
+  occasionType: z.enum(OCCASION_TYPES),
+  isVatIncluded: z.boolean(),
+  vatRate: z.coerce.number().min(0, "VAT rate cannot be negative").max(100, "VAT rate cannot exceed 100"),
   sortOrder: z.coerce.number().optional(),
   description: z.string().trim().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
@@ -47,7 +50,10 @@ type Form = Readonly<{
   sku: string;
   price: string;
   weight: string;
-  productType: "" | "LIPSTICK" | "OTHERS";
+  productType: "" | ProductType;
+  occasionType: OccasionType;
+  isVatIncluded: boolean;
+  vatRate: string;
   sortOrder: string;
   description: string;
   status: PublicationStatus;
@@ -61,6 +67,9 @@ const initial: Form = {
   price: "",
   weight: "",
   productType: "",
+  occasionType: "NONE",
+  isVatIncluded: true,
+  vatRate: "13",
   sortOrder: "0",
   description: "",
   status: "DRAFT",
@@ -534,6 +543,9 @@ export const ProductCreatePage: React.FC = () => {
       price: read(row.price),
       weight: read(row.weight),
       productType: (read(row.productType) as Form["productType"]) || "",
+      occasionType: (read(row.occasionType) as OccasionType) || "NONE",
+      isVatIncluded: typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
+      vatRate: row.vatRate != null ? String(row.vatRate) : "13",
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
       description: descriptionText,
       status: read(row.status) === "PUBLISHED" || read(row.status) === "ARCHIVED" ? read(row.status) as PublicationStatus : "DRAFT",
@@ -660,6 +672,9 @@ export const ProductCreatePage: React.FC = () => {
       price: parsed.price,
       weight: parsed.weight || undefined,
       productType: parsed.productType || undefined,
+      occasionType: parsed.occasionType,
+      isVatIncluded: parsed.isVatIncluded,
+      vatRate: parsed.vatRate,
       sortOrder: parsed.sortOrder ?? 0,
       description: parsed.description || undefined,
       descriptionJson: (() => {
@@ -823,9 +838,26 @@ export const ProductCreatePage: React.FC = () => {
                 className={selectClass}
               >
                 <option value="">— Select type —</option>
-                <option value="LIPSTICK">Lipstick</option>
-                <option value="OTHERS">Others</option>
+                {PRODUCT_TYPES.map((type) => (
+                  <option key={type} value={type}>{type.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+                ))}
               </select>
+            </FormField>
+            <FormField label="Occasion">
+              <select value={form.occasionType} onChange={(e) => setForm((p) => ({ ...p, occasionType: e.target.value as OccasionType }))} className={selectClass}>
+                {OCCASION_TYPES.map((type) => (
+                  <option key={type} value={type}>{type.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="VAT Rate (%)" required>
+              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm((p) => ({ ...p, vatRate: e.target.value }))} className={inputClass} />
+            </FormField>
+            <FormField label="VAT Pricing">
+              <label className="flex h-11 items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={form.isVatIncluded} onChange={(e) => setForm((p) => ({ ...p, isVatIncluded: e.target.checked }))} />
+                Price includes VAT
+              </label>
             </FormField>
           </div>
         </FormSection>

@@ -43,6 +43,19 @@ export type SubcategoryDto = Readonly<{
 }> & PublicationFields;
 
 export type ProductMediaType = "IMAGE" | "VIDEO";
+export const PRODUCT_TYPES = [
+  "OTHERS", "LIPSTICK", "COMBO_OFFER", "GIFT_SET", "FESTIVE_OFFER", "CLEARANCE_SALE",
+] as const;
+export type ProductType = (typeof PRODUCT_TYPES)[number];
+
+export const OCCASION_TYPES = [
+  "NONE", "DASHAIN", "TIHAR", "TEEJ", "HOLI", "MAGHI", "CHHATH", "JANAI_PURNIMA", "RAKHI",
+  "GAURA_PARVA", "INDRA_JATRA", "GAI_JATRA", "LOSAR", "BUDDHA_JAYANTI", "SHIVARATRI",
+  "KRISHNA_JANMASHTAMI", "RAM_NAVAMI", "NEPALI_NEW_YEAR", "ENGLISH_NEW_YEAR", "CHRISTMAS",
+  "VALENTINES_DAY", "WEDDING_SEASON", "BRIDAL_OFFER",
+] as const;
+export type OccasionType = (typeof OCCASION_TYPES)[number];
+
 export type ProductMediaUpload = Readonly<{
   file: File;
   type: ProductMediaType;
@@ -58,7 +71,10 @@ export type ProductDto = Readonly<{
   weight?: string;
   sku?: string;
   price?: string;
-  productType?: string;
+  productType?: ProductType;
+  occasionType?: OccasionType;
+  isVatIncluded?: boolean;
+  vatRate?: number;
   additionalInformationJson?: unknown;
   removeUrls?: ReadonlyArray<string>;
   removeMediaAssetIds?: ReadonlyArray<string>;
@@ -82,6 +98,8 @@ export type ProductVariantDto = Readonly<{
   isDefault?: boolean;
   isActive?: boolean;
   isTryOn?: boolean;
+  isVatIncluded?: boolean;
+  vatRate?: number;
   image?: File | null;
   removeUrls?: ReadonlyArray<string>;
   sortOrder?: number;
