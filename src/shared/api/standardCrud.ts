@@ -14,6 +14,7 @@ type CrudOptions = Readonly<{
   recover?: boolean;
   destroy?: boolean;
   publicationLifecycle?: boolean;
+  dashboardStatusList?: boolean;
 }>;
 
 const toCrudPaths = ({
@@ -24,10 +25,21 @@ const toCrudPaths = ({
   recover = true,
   destroy = true,
   publicationLifecycle = false,
+  dashboardStatusList = false,
 }: CrudOptions): CrudPaths => ({
-  getAll: `${basePath}/get-all`,
-  draftList: publicationLifecycle ? `${basePath}/draft` : undefined,
-  archivedList: publicationLifecycle ? `${basePath}/archived` : undefined,
+  getAll: dashboardStatusList
+    ? `${basePath}/dashboard/get-all?status=PUBLISHED`
+    : `${basePath}/get-all`,
+  draftList: publicationLifecycle
+    ? dashboardStatusList
+      ? `${basePath}/dashboard/get-all?status=DRAFT`
+      : `${basePath}/draft`
+    : undefined,
+  archivedList: publicationLifecycle
+    ? dashboardStatusList
+      ? `${basePath}/dashboard/get-all?status=ARCHIVED`
+      : `${basePath}/archived`
+    : undefined,
   getOne: getOne ? (id) => `${basePath}/get/${id}` : undefined,
   create: `${basePath}/create`,
   update: update ? (id) => `${basePath}/update/${id}` : undefined,

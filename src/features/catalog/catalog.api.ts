@@ -13,7 +13,7 @@ import type {
 
 export const catalogApi = {
   categories: makeStandardCrud<Record<string, unknown>, CategoryDto, CategoryDto>(
-    { key: "categories", basePath: "/category", publicationLifecycle: true },
+    { key: "categories", basePath: "/category", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
         const { coverImage, ...rest } = dto;
@@ -32,7 +32,7 @@ export const catalogApi = {
     }
   ),
   subcategories: makeStandardCrud<Record<string, unknown>, SubcategoryDto, SubcategoryDto>(
-    { key: "subcategories", basePath: "/subcategory", publicationLifecycle: true },
+    { key: "subcategories", basePath: "/subcategory", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
         const { coverImage, ...rest } = dto;
@@ -51,7 +51,7 @@ export const catalogApi = {
     }
   ),
   products: makeStandardCrud<Record<string, unknown>, ProductDto, ProductDto>(
-    { key: "products", basePath: "/product", publicationLifecycle: true },
+    { key: "products", basePath: "/product", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
         const { coverImage, hoverImage, pdf, gallery, keyFeatures, ...rest } = dto;
@@ -86,7 +86,7 @@ export const catalogApi = {
     }
   ),
   productVariants: makeStandardCrud<Record<string, unknown>, ProductVariantDto, ProductVariantDto>(
-    { key: "productVariants", basePath: "/product-variant", publicationLifecycle: true },
+    { key: "productVariants", basePath: "/product-variant", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
         const { image, ...rest } = dto;
