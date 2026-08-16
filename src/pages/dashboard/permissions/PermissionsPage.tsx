@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ShieldCheck, RotateCcw, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { ShieldCheck, RotateCcw, Trash2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -58,6 +59,7 @@ export const PermissionsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname.endsWith("/deleted");
 
@@ -76,6 +78,15 @@ export const PermissionsPage: React.FC = () => {
   const softDelete = identityApi.permissions.hooks.useSoftDelete();
   const recover = identityApi.permissions.hooks.useRecover();
   const destroy = identityApi.permissions.hooks.useDestroy();
+  const syncPermissions = useMutation({
+    mutationFn: identityApi.permissions.sync,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["permissions"] });
+      await query.refetch();
+      toast.success("Permissions synchronized.");
+    },
+    onError: () => toast.error("Permission sync failed."),
+  });
 
   const sourceData = isDeletedView ? deletedQuery.data : query.data;
   const rows = React.useMemo(() => toRows(sourceData), [sourceData]);
@@ -219,13 +230,19 @@ export const PermissionsPage: React.FC = () => {
       newButtonLabel="New Permission"
       actions={
         !isDeletedView && isSudoAdmin ? (
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/rbac/permissions/deleted")}
-            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Trash2 size={13} strokeWidth={2} /> View Deleted
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => syncPermissions.mutate()} disabled={syncPermissions.isPending} className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[17px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50">
+              <RefreshCw size={13} className={syncPermissions.isPending ? "animate-spin" : ""} />
+              {syncPermissions.isPending ? "Syncing..." : "Sync Permissions"}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/rbac/permissions/deleted")}
+              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+            >
+              <Trash2 size={13} strokeWidth={2} /> View Deleted
+            </button>
+          </div>
         ) : undefined
       }
       searchValue={state.search}

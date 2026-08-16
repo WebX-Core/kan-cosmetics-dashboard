@@ -99,12 +99,38 @@ const PermissionPicker: React.FC<{
 }> = ({ selectedIds, onChange, onAllIds }) => {
   const [search, setSearch] = React.useState("");
 
-  const q = identityApi.permissions.hooks.useList({ limit: 500 });
+  const q = useQuery({
+    queryKey: ["permissions", "modules"],
+    queryFn: identityApi.permissions.modules,
+  });
   const permissions: PermOption[] = React.useMemo(() => {
-    const raw = q.data;
-    const items: unknown[] = Array.isArray(raw)
-      ? raw
-      : ((raw as { data?: unknown[] } | undefined)?.data ?? []);
+    const root = q.data;
+    const body = typeof root === "object" && root !== null && !Array.isArray(root)
+      ? (root as Record<string, unknown>)
+      : {};
+    const modules: unknown[] = Array.isArray(root)
+      ? root
+      : Array.isArray(body.modules)
+        ? body.modules
+        : Array.isArray(body.data)
+          ? body.data
+          : [];
+    const items = modules.flatMap((entry): unknown[] => {
+      if (typeof entry !== "object" || entry === null) return [];
+      const moduleRow = entry as Record<string, unknown>;
+      const nested = Array.isArray(moduleRow.permissions)
+        ? moduleRow.permissions
+        : Array.isArray(moduleRow.items)
+          ? moduleRow.items
+          : null;
+      if (!nested) return [moduleRow];
+      const moduleName = String(moduleRow.module ?? moduleRow.name ?? moduleRow.key ?? "");
+      return nested.map((permission) =>
+        typeof permission === "object" && permission !== null
+          ? { ...(permission as Record<string, unknown>), module: (permission as Record<string, unknown>).module ?? moduleName }
+          : permission,
+      );
+    });
     return items
       .filter(
         (i): i is Record<string, unknown> =>
