@@ -1,5 +1,5 @@
 import { api, unwrap } from "@/shared/api/api";
-import type { CreateTierDto, LoyaltyCustomer, LoyaltyList, LoyaltyQuery, LoyaltyTier, ResetYearlyCycleDto, UpdateTierDto } from "./loyalty.types";
+import type { CreateTierDto, LoyaltyCustomer, LoyaltyList, LoyaltyPointLedger, LoyaltyPointsQuery, LoyaltyQuery, LoyaltySettings, LoyaltyTier, ResetYearlyCycleDto, UpdateLoyaltySettingsDto, UpdateTierDto } from "./loyalty.types";
 
 const BASE = "/customer-loyalty/admin";
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -28,6 +28,13 @@ export const loyaltyApi = {
   },
   customers: {
     list: async (query?: LoyaltyQuery) => normalizeList<LoyaltyCustomer>(unwrap<unknown>(await api.get(`${BASE}/customers`, { params: query }))),
+  },
+  settings: {
+    get: async () => unwrap<LoyaltySettings>(await api.get(`${BASE}/settings`)),
+    update: async (dto: UpdateLoyaltySettingsDto) => unwrap<LoyaltySettings>(await api.patch(`${BASE}/settings`, dto)),
+  },
+  points: {
+    list: async (query?: LoyaltyPointsQuery) => normalizeList<LoyaltyPointLedger>(unwrap<unknown>(await api.get(`${BASE}/points`, { params: query }))),
   },
   resetYearlyCycle: async (dto: ResetYearlyCycleDto) => unwrap<unknown>(await api.post(`${BASE}/reset-yearly-cycle`, dto)),
 };
