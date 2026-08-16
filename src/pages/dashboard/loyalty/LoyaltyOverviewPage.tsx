@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, ChevronDown, RotateCcw, Settings2, Trophy, Users } from "lucide-react";
+import { Award, ChevronDown, Coins, RotateCcw, Settings2, Trophy, Users } from "lucide-react";
 import { useLoyaltyCustomers, useLoyaltyTiers, useResetYearlyCycle } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -61,11 +61,19 @@ export const LoyaltyOverviewPage: React.FC = () => {
                 <Award className="mr-2 h-4 w-4 text-violet-600" />
                 <div><p>Loyalty Tiers</p><p className="text-xs text-[#86868b]">Thresholds, benefits, and automatic rewards</p></div>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/points")}>
+                <Coins className="mr-2 h-4 w-4 text-emerald-600" />
+                <div><p>Point History</p><p className="text-xs text-[#86868b]">Earnings, adjustments, and resets</p></div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/settings")}>
+                <Settings2 className="mr-2 h-4 w-4 text-blue-600" />
+                <div><p>Loyalty Settings</p><p className="text-xs text-[#86868b]">Referral reward configuration</p></div>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <button type="button" onClick={() => setOpen(true)} className="inline-flex h-[34px] items-center gap-2 rounded-full border border-red-200 bg-white px-[15px] text-[13px] font-medium text-red-600 transition hover:bg-red-50">
             <RotateCcw size={13} />
-            Reset Cycle
+            Run Due Cycle Reset
           </button>
         </>
       }
@@ -92,9 +100,9 @@ export const LoyaltyOverviewPage: React.FC = () => {
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent className="bg-white">
-          <AlertDialogHeader><AlertDialogTitle>Reset yearly loyalty cycle?</AlertDialogTitle><AlertDialogDescription>This resets yearly points and returns customers to the base tier. Lifetime points and historical records are preserved.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Run due loyalty-cycle resets?</AlertDialogTitle><AlertDialogDescription>Only customers whose personal cycle has ended are reset. Yearly points return to zero and the active base tier is applied when available. Lifetime points, available points, ledgers, referrals, and reward history are preserved.</AlertDialogDescription></AlertDialogHeader>
           <div className="space-y-4"><label className="block text-sm font-medium">Reason<textarea value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 min-h-20 w-full rounded-lg border p-3" /></label><label className="block text-sm font-medium">Type RESET YEARLY POINTS<input value={confirmation} onChange={(e) => setConfirmation(e.target.value)} className="mt-1 h-11 w-full rounded-lg border px-3" /></label></div>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={confirmation !== "RESET YEARLY POINTS" || reset.isPending} className="bg-red-600 hover:bg-red-700" onClick={(event) => { event.preventDefault(); void performReset(); }}>Reset cycle</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={confirmation !== "RESET YEARLY POINTS" || reset.isPending} className="bg-red-600 hover:bg-red-700" onClick={(event) => { event.preventDefault(); void performReset(); }}>Run due resets</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </PageLayout>

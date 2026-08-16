@@ -18,8 +18,10 @@ export const LoyaltyLeaderboardPage: React.FC = () => {
     { key: "currentTierCode", label: "Tier", render: (row: typeof rows[number]) => <TierBadge code={row.currentTierCode} /> },
     { key: "yearlyPoints", label: "Yearly Points", render: (row: typeof rows[number]) => <span className="font-semibold">{number(row.yearlyPoints).toLocaleString()}</span> },
     { key: "lifetimePoints", label: "Lifetime", render: (row: typeof rows[number]) => number(row.lifetimePoints).toLocaleString() },
+    { key: "availablePoints", label: "Available", render: (row: typeof rows[number]) => number(row.availablePoints).toLocaleString() },
+    { key: "cycle", label: "Current Cycle", render: (row: typeof rows[number]) => <span className="text-xs">{date(row.currentCycleStartAt)} – {date(row.currentCycleEndAt)}</span> },
     { key: "referralCode", label: "Referral Code", render: (row: typeof rows[number]) => <span className="font-mono text-xs">{text(row.referralCode)}</span> },
-    { key: "lastTierEvaluatedAt", label: "Evaluated", render: (row: typeof rows[number]) => date(row.lastTierEvaluatedAt) },
+    { key: "yearlyResetAt", label: "Last Reset", render: (row: typeof rows[number]) => date(row.yearlyResetAt) },
   ];
   const pageYearly = rows.reduce((sum, row) => sum + number(row.yearlyPoints), 0);
   return <PageLayout title="Loyalty Leaderboard" subtitle="Yearly customer ranking, points, tiers, and referral codes." actions={<ExportMenu basePath="/customer-loyalty/admin/customers" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="loyalty-customers"/>} searchValue={state.search} onSearchChange={(search) => setState((prev) => ({ ...prev, page: 1, search }))} searchPlaceholder="Search customers...">
