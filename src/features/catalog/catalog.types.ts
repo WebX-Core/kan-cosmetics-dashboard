@@ -61,6 +61,13 @@ export type ProductMediaUpload = Readonly<{
   type: ProductMediaType;
 }>;
 
+export type ComboPackageItemDto = Readonly<{
+  componentProductId: string;
+  componentProductVariantId?: string;
+  quantity: number;
+  sortOrder: number;
+}>;
+
 export type ProductDto = Readonly<{
   subcategoryId?: string;
   title?: string;
@@ -83,6 +90,7 @@ export type ProductDto = Readonly<{
   hoverImage?: File | null;
   pdf?: File | null;
   gallery?: ReadonlyArray<File>;
+  comboItems?: ReadonlyArray<ComboPackageItemDto>;
 }> & PublicationFields;
 
 export type ProductVariantDto = Readonly<{

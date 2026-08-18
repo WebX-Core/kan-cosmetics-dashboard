@@ -54,11 +54,12 @@ export const catalogApi = {
     { key: "products", basePath: "/product", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
-        const { coverImage, hoverImage, pdf, gallery, keyFeatures, ...rest } = dto;
+        const { coverImage, hoverImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
             keyFeatures: keyFeatures !== undefined ? JSON.stringify(keyFeatures) : undefined,
+            comboItems: comboItems !== undefined ? JSON.stringify(comboItems) : undefined,
           },
           files: {
             coverImage: (coverImage ?? undefined) as FormFileValue,
@@ -69,11 +70,12 @@ export const catalogApi = {
         };
       },
       update: (dto) => {
-        const { coverImage, hoverImage, pdf, gallery, keyFeatures, ...rest } = dto;
+        const { coverImage, hoverImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
             keyFeatures: keyFeatures !== undefined ? JSON.stringify(keyFeatures) : undefined,
+            comboItems: comboItems !== undefined ? JSON.stringify(comboItems) : undefined,
           },
           files: {
             coverImage: (coverImage ?? undefined) as FormFileValue,

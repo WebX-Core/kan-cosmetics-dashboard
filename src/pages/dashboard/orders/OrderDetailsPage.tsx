@@ -867,6 +867,7 @@ export const OrderDetailsPage: React.FC = () => {
                 const images = getItemImageCandidates(row);
                 const title = getItemTitle(row);
                 const isLast = index === items.length - 1;
+                const components = toArray(row.orderItemComponents ?? row.components).map(toRecord);
 
                 return (
                   <div
@@ -897,6 +898,17 @@ export const OrderDetailsPage: React.FC = () => {
                             <p className="mt-0.5 text-[11px] text-[#9a948d]">
                               VAT {formatMoney(row.vatAmount)} ({num(row.vatRate, 13)}%) · {row.isVatIncluded === false ? "added" : "included"}
                             </p>
+                          )}
+                          {components.length > 0 && (
+                            <ul className="mt-2 space-y-1 border-l-2 border-orange-200 pl-2">
+                              {components.map((component, componentIndex) => (
+                                <li key={text(component.id, `${componentIndex}`)} className="text-[11px] text-[#6e6e73]">
+                                  {text(component.componentProductTitleSnapshot, "Component")}
+                                  {text(component.componentVariantTitleSnapshot) ? ` — ${text(component.componentVariantTitleSnapshot)}` : ""}
+                                  {` × ${num(component.totalQuantity, 0)}`}
+                                </li>
+                              ))}
+                            </ul>
                           )}
                         </div>
                         <p className="shrink-0 text-[13px] font-semibold tabular-nums text-[#1d1d1f]">

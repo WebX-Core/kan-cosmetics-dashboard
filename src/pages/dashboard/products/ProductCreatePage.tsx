@@ -101,6 +101,48 @@ const readDescriptionText = (
 };
 
 type FreeFromItem = { title: string };
+const COMBO_PRODUCT_TYPES: ReadonlyArray<ProductType> = [
+  "COMBO_OFFER",
+  "GIFT_SET",
+  "FESTIVE_OFFER",
+];
+type ComboItemForm = {
+  componentProductId: string;
+  componentProductVariantId: string;
+  quantity: string;
+};
+type ComboProductOption = {
+  id: string;
+  title: string;
+  sku: string;
+  productType: string;
+  variants: Array<{ id: string; title: string; sku: string }>;
+};
+
+const parseComboItems = (value: unknown): ComboItemForm[] => {
+  const parsed = typeof value === "string"
+    ? (() => { try { return JSON.parse(value) as unknown; } catch { return []; } })()
+    : value;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const item = entry as Record<string, unknown>;
+    const componentProduct = typeof item.componentProduct === "object" && item.componentProduct !== null
+      ? item.componentProduct as Record<string, unknown>
+      : null;
+    const componentVariant = typeof item.componentProductVariant === "object" && item.componentProductVariant !== null
+      ? item.componentProductVariant as Record<string, unknown>
+      : null;
+    const componentProductId = read(item.componentProductId) || read(componentProduct?.id);
+    if (!componentProductId) return [];
+    return [{
+      componentProductId,
+      componentProductVariantId: read(item.componentProductVariantId) || read(componentVariant?.id),
+      quantity: item.quantity != null ? String(item.quantity) : "1",
+    }];
+  });
+};
+
 const parseFreeFrom = (value: unknown): FreeFromItem[] => {
   const arr =
     typeof value === "string"
@@ -452,8 +494,74 @@ export const ProductCreatePage: React.FC = () => {
     ReadonlyArray<string>
   >([]);
   const [freeFrom, setFreeFrom] = React.useState<FreeFromItem[]>([]);
+  const [comboItems, setComboItems] = React.useState<ComboItemForm[]>([]);
+  const [comboProductOptions, setComboProductOptions] = React.useState<ComboProductOption[]>([]);
+  const [comboProductsLoading, setComboProductsLoading] = React.useState(false);
   const [descJson, setDescJson] =
     React.useState<DescriptionJsonForm>(emptyDescJson);
+
+  const isComboType = COMBO_PRODUCT_TYPES.includes(form.productType as ProductType);
+
+  React.useEffect(() => {
+    let active = true;
+    const loadComponentProducts = async () => {
+      setComboProductsLoading(true);
+      try {
+        const [result, variantResult] = await Promise.all([
+          catalogApi.products.service.list({ page: 1, limit: 1000 }),
+          catalogApi.productVariants.service.list({ page: 1, limit: 1000 }),
+        ]);
+        if (!active) return;
+        const variantsByProduct = new Map<string, Array<{ id: string; title: string; sku: string }>>();
+        variantResult.data.forEach((entry) => {
+          if (typeof entry !== "object" || entry === null) return;
+          const row = entry as Record<string, unknown>;
+          const product = typeof row.product === "object" && row.product !== null
+            ? row.product as Record<string, unknown>
+            : null;
+          const productId = read(row.productId) || read(product?.id);
+          const variantId = read(row.id);
+          if (!productId || !variantId) return;
+          const current = variantsByProduct.get(productId) ?? [];
+          variantsByProduct.set(productId, [...current, {
+            id: variantId,
+            title: read(row.title) || read(row.variantValue) || "Variant",
+            sku: read(row.sku),
+          }]);
+        });
+        const options = result.data.flatMap((entry) => {
+          if (typeof entry !== "object" || entry === null) return [];
+          const row = entry as Record<string, unknown>;
+          const productType = read(row.productType);
+          const productId = read(row.id);
+          if (!productId || productId === id || COMBO_PRODUCT_TYPES.includes(productType as ProductType)) return [];
+          const embeddedVariants = Array.isArray(row.variants)
+            ? row.variants.flatMap((variant) => {
+                if (typeof variant !== "object" || variant === null) return [];
+                const value = variant as Record<string, unknown>;
+                const variantId = read(value.id);
+                return variantId ? [{ id: variantId, title: read(value.title) || "Variant", sku: read(value.sku) }] : [];
+            })
+            : [];
+          const variants = variantsByProduct.get(productId) ?? embeddedVariants;
+          return [{
+            id: productId,
+            title: read(row.title) || "Untitled product",
+            sku: read(row.sku),
+            productType,
+            variants,
+          }];
+        });
+        setComboProductOptions(options);
+      } catch {
+        if (active) setComboProductOptions([]);
+      } finally {
+        if (active) setComboProductsLoading(false);
+      }
+    };
+    void loadComponentProducts();
+    return () => { active = false; };
+  }, [id]);
 
   React.useEffect(() => {
     if (isEdit || !prefillSubcategoryId) return;
@@ -552,6 +660,7 @@ export const ProductCreatePage: React.FC = () => {
     });
 
     setFreeFrom(parseFreeFrom(row.keyFeatures));
+    setComboItems(parseComboItems(row.comboItems));
     setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
     setExistingHoverImage(read(row.hoverImage));
@@ -662,6 +771,26 @@ export const ProductCreatePage: React.FC = () => {
     const parsed = validateOrToast(schema, form, toast);
     if (!parsed) return;
 
+    const normalizedComboItems = comboItems
+      .filter((item) => item.componentProductId)
+      .map((item, index) => ({
+        componentProductId: item.componentProductId,
+        ...(item.componentProductVariantId ? { componentProductVariantId: item.componentProductVariantId } : {}),
+        quantity: Number(item.quantity),
+        sortOrder: index + 1,
+      }));
+
+    if (isComboType) {
+      if (normalizedComboItems.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1)) {
+        toast.error("Every combo component quantity must be a whole number of at least 1.");
+        return;
+      }
+      if (parsed.status === "PUBLISHED" && normalizedComboItems.length === 0) {
+        toast.error("Published combo products require at least one package item.");
+        return;
+      }
+    }
+
     const slug = slugify(parsed.slug || parsed.title);
       const payload = {
       status: parsed.status,
@@ -704,6 +833,7 @@ export const ProductCreatePage: React.FC = () => {
           .map(({ title }) => ({ title: title.trim() }));
         return items.length ? items : undefined;
       })(),
+      comboItems: isComboType ? normalizedComboItems : undefined,
       coverImage: coverImageFile ?? undefined,
       hoverImage: hoverImageFile ?? undefined,
       pdf: pdfFile ?? undefined,
@@ -728,7 +858,7 @@ export const ProductCreatePage: React.FC = () => {
 
       const createdResult = await createMutation.mutateAsync(payload);
       const createdId = read((createdResult as Record<string, unknown>)?.id);
-      const shouldCreateInventory = nextStep === "inventory" && createdId;
+      const shouldCreateInventory = !isComboType && nextStep === "inventory" && createdId;
 
       if (shouldCreateInventory) {
         navigate(
@@ -861,6 +991,102 @@ export const ProductCreatePage: React.FC = () => {
             </FormField>
           </div>
         </FormSection>
+
+        {isComboType && (
+          <FormSection
+            title="Combo Package Items"
+            description="Choose the published products consumed when one package is sold. Combo products cannot be used as components."
+          >
+            <div className="space-y-3">
+              {comboProductsLoading && (
+                <p className="flex items-center gap-2 text-[13px] text-[#86868b]">
+                  <Loader2 size={14} className="animate-spin" /> Loading component products…
+                </p>
+              )}
+              {comboItems.map((item, index) => {
+                const selectedProduct = comboProductOptions.find((option) => option.id === item.componentProductId);
+                const selectedElsewhere = new Set(
+                  comboItems.filter((_, itemIndex) => itemIndex !== index).map((entry) => entry.componentProductId),
+                );
+                return (
+                  <div key={index} className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_110px_38px]">
+                    <FormField label={`Component ${index + 1}`} required>
+                      <select
+                        value={item.componentProductId}
+                        onChange={(event) => setComboItems((previous) => previous.map((entry, itemIndex) =>
+                          itemIndex === index
+                            ? { ...entry, componentProductId: event.target.value, componentProductVariantId: "" }
+                            : entry,
+                        ))}
+                        className={selectClass}
+                      >
+                        <option value="">— Select product —</option>
+                        {comboProductOptions.map((option) => (
+                          <option key={option.id} value={option.id} disabled={selectedElsewhere.has(option.id)}>
+                            {option.title}{option.sku ? ` (${option.sku})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label="Variant">
+                      <select
+                        value={item.componentProductVariantId}
+                        disabled={!selectedProduct?.variants.length}
+                        onChange={(event) => setComboItems((previous) => previous.map((entry, itemIndex) =>
+                          itemIndex === index ? { ...entry, componentProductVariantId: event.target.value } : entry,
+                        ))}
+                        className={selectClass}
+                      >
+                        <option value="">Default / no variant</option>
+                        {(selectedProduct?.variants ?? []).map((variant) => (
+                          <option key={variant.id} value={variant.id}>
+                            {variant.title}{variant.sku ? ` (${variant.sku})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label="Quantity" required>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.quantity}
+                        onChange={(event) => setComboItems((previous) => previous.map((entry, itemIndex) =>
+                          itemIndex === index ? { ...entry, quantity: event.target.value } : entry,
+                        ))}
+                        className={inputClass}
+                      />
+                    </FormField>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        title="Remove component"
+                        onClick={() => setComboItems((previous) => previous.filter((_, itemIndex) => itemIndex !== index))}
+                        className="flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setComboItems((previous) => [...previous, {
+                  componentProductId: "",
+                  componentProductVariantId: "",
+                  quantity: "1",
+                }])}
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-2 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              >
+                <Plus size={12} /> Add package item
+              </button>
+              {form.status === "PUBLISHED" && comboItems.length === 0 && (
+                <p className="text-[12px] text-amber-700">At least one package item is required before publishing.</p>
+              )}
+            </div>
+          </FormSection>
+        )}
 
         <FormSection
           title="Product Media"

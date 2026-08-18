@@ -288,6 +288,26 @@ export const ProductDetailsPage: React.FC = () => {
     .map((item) => readText(item.title))
     .filter(Boolean);
 
+  const comboItemRows = parseArray(product?.comboItems).flatMap((entry, index) => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const item = entry as Record<string, unknown>;
+    const component = typeof item.componentProduct === "object" && item.componentProduct !== null
+      ? item.componentProduct as Record<string, unknown>
+      : {};
+    const variant = typeof item.componentProductVariant === "object" && item.componentProductVariant !== null
+      ? item.componentProductVariant as Record<string, unknown>
+      : {};
+    return [{
+      id: readText(item.id, String(index)),
+      title: readText(component.title, "Unknown product"),
+      sku: readText(component.sku),
+      variantTitle: readText(variant.title),
+      variantSku: readText(variant.sku),
+      quantity: readText(item.quantity, "1"),
+      sortOrder: Number(item.sortOrder ?? index),
+    }];
+  }).sort((a, b) => a.sortOrder - b.sortOrder);
+
   const productDetailSections = (() => {
     const raw = product?.descriptionJson;
     const obj =
@@ -527,6 +547,27 @@ export const ProductDetailsPage: React.FC = () => {
                     <CheckCircle2 size={12} className="shrink-0 text-[#1a9e6b]" strokeWidth={2.5} />
                     {label}
                   </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {comboItemRows.length > 0 && (
+            <div className="mt-7 border-t border-[#f2f2f4] pt-7">
+              <p className="mb-3 text-[12px] font-semibold text-[#86868b]">Package items</p>
+              <div className="divide-y divide-[#f2f2f4] rounded-lg bg-[#f9f9fb] px-4">
+                {comboItemRows.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium text-[#1d1d1f]">{item.title}</p>
+                      {(item.variantTitle || item.sku || item.variantSku) && (
+                        <p className="truncate text-[11px] text-[#86868b]">
+                          {[item.variantTitle, item.variantSku || item.sku].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-[13px] font-semibold text-[var(--primary)]">× {item.quantity}</span>
+                  </div>
                 ))}
               </div>
             </div>
