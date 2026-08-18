@@ -36,6 +36,7 @@ import {
   ToggleLeft,
   ToggleRight,
   RotateCcw,
+  RefreshCw,
   Database,
   Package,
   Plus,
@@ -329,6 +330,11 @@ export const RolesPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const softDeleteRole = identityApi.roles.hooks.useSoftDelete();
   const updateRole = identityApi.roles.hooks.useUpdate();
+  const syncPermissions = useMutation({
+    mutationFn: identityApi.permissions.sync,
+    onSuccess: () => toast.success("Permissions synchronized."),
+    onError: (error) => toast.error(parseApiError(error).message),
+  });
   const q = identityApi.roles.hooks.useList({
     page: state.page,
     limit: state.limit,
@@ -536,12 +542,18 @@ export const RolesPage: React.FC = () => {
       subtitle="Manage dashboard roles."
       onNew={undefined}
       actions={
-        <Link
-          to="/dashboard/rbac/roles/create"
-          className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-semibold text-white! transition-colors hover:bg-[var(--primary-hover)] hover:text-white active:scale-[0.982]"
-        >
-          <Plus size={14} /> New Role
-        </Link>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => syncPermissions.mutate()} disabled={syncPermissions.isPending} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[17px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50">
+            <RefreshCw size={13} className={syncPermissions.isPending ? "animate-spin" : ""} />
+            {syncPermissions.isPending ? "Syncing..." : "Sync Permissions"}
+          </button>
+          <Link
+            to="/dashboard/rbac/roles/create"
+            className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-semibold text-white! transition-colors hover:bg-[var(--primary-hover)] hover:text-white active:scale-[0.982]"
+          >
+            <Plus size={14} /> New Role
+          </Link>
+        </div>
       }
       searchValue={state.search}
       onSearchChange={(value) =>

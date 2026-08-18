@@ -203,6 +203,12 @@ export const AppRouter: React.FC = () => {
           </Route>
 
           <Route path="/dashboard" element={<DashboardOverviewPage />} />
+          <Route path="/dashboard/auth" element={<Navigate to="/dashboard/auth/signup" replace />} />
+          <Route path="/dashboard/permissions" element={<Navigate to="/dashboard/permissions/users" replace />} />
+          <Route path="/dashboard/rbac" element={<Navigate to="/dashboard/rbac/roles" replace />} />
+          <Route path="/dashboard/system" element={<Navigate to="/dashboard/system/api-ops" replace />} />
+          <Route path="/dashboard/support" element={<Navigate to="/dashboard/support/product-inquiries" replace />} />
+          <Route path="/dashboard/marketing" element={<Navigate to="/dashboard/marketing/email-campaigns" replace />} />
           <Route path="/dashboard/profile" element={<ProfilePage />} />
           <Route path="/dashboard/temp-catalog-seeder" element={<TempCatalogSeederPage />} />
           <Route path="/dashboard/temp-engagement-seeder" element={<TempEngagementSeederPage />} />

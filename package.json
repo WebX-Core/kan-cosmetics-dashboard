@@ -10,8 +10,9 @@
     "preview": "vite preview",
     "verify:parity": "node scripts/verify/parity.mjs",
     "verify:routes": "node scripts/verify/router-coverage.mjs",
+    "verify:breadcrumbs": "node scripts/verify/breadcrumb-routes.mjs",
     "verify:recaptcha": "node scripts/verify/recaptcha-policy.mjs",
-    "verify:all": "pnpm verify:parity && pnpm verify:routes && pnpm verify:recaptcha && pnpm -s tsc --noEmit"
+    "verify:all": "pnpm verify:parity && pnpm verify:routes && pnpm verify:breadcrumbs && pnpm verify:recaptcha && pnpm -s tsc --noEmit"
   },
   "dependencies": {
     "@ckeditor/ckeditor5-react": "^11.0.1",

@@ -28,7 +28,7 @@ export const identityApi = {
   }),
   permissions: {
     ...makeStandardCrud<Record<string, unknown>, PermissionDto, PermissionDto>({ key: "permissions", basePath: "/permission" }),
-    modules: async () => unwrap<unknown>(await api.get("/permission/module")),
+    modules: async () => unwrap<unknown>(await api.get("/permission/modules")),
     sync: async () => unwrap<unknown>(await api.post("/permission/sync")),
   },
   userRoles: {

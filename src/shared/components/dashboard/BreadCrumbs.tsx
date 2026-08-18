@@ -11,13 +11,15 @@ const Breadcrumbs = () => {
     <nav aria-label="Breadcrumb" className="flex items-center text-xs font-semibold uppercase tracking-[0.08em]">
       <ol className="flex items-center gap-1.5 text-[var(--muted)]">
         <li>
-          <Link to="/" className="flex items-center p-1 transition-colors hover:text-[var(--primary)]">
+          <Link to="/dashboard" className="flex items-center p-1 transition-colors hover:text-[var(--primary)]">
             <Home size={14} strokeWidth={2} />
           </Link>
         </li>
 
         {pathnames.map((value, index) => {
           const last = index === pathnames.length - 1;
+          const next = pathnames[index + 1];
+          const isUnsafeRecordParent = !last && next === "edit";
           const to = `/${pathnames.slice(0, index + 1).join("/")}`;
           const label = isIdLike(value)
             ? "Details"
@@ -29,7 +31,7 @@ const Breadcrumbs = () => {
           return (
             <li key={to} className="flex items-center">
               <ChevronRight size={13} className="mx-0.5 shrink-0 text-[var(--muted)]/70" />
-              {last ? (
+              {last || isUnsafeRecordParent ? (
                 <span className="max-w-36 truncate font-bold text-[var(--text)] md:max-w-none">{label}</span>
               ) : (
                 <Link to={to} className="transition-colors hover:text-[var(--primary)]">
