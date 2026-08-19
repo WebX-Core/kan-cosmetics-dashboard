@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLogout } from "@/features/auth";
 
 // Maps each sidebar module key to the backend route-module names that grant access.
@@ -55,6 +55,8 @@ import { useAdminUsersGet } from "@/features/adminUsers";
 
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const mainRef = React.useRef<HTMLElement>(null);
   const logout = useLogout();
   const { clearAuth, state } = useAuth();
   const canUsersManage = usePermission("admin:manage");
@@ -143,6 +145,13 @@ export const DashboardLayout: React.FC = () => {
     state.user?.email?.split("@")[0] ||
     "User";
   const profilePicture = resolveProfileImageUrl(currentUserQuery.data ?? state.user);
+  const isRoleFormRoute =
+    location.pathname === "/dashboard/rbac/roles/create" ||
+    /^\/dashboard\/rbac\/roles\/[^/]+\/edit$/.test(location.pathname);
+
+  React.useLayoutEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname]);
 
   const onLogout = async () => {
     try {
@@ -183,8 +192,8 @@ export const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <div className="dashboard-shell min-h-screen bg-transparent">
-      <div className="flex min-h-screen">
+    <div className="dashboard-shell h-screen overflow-hidden bg-transparent">
+      <div className="flex h-full min-h-0">
         <Sidebar
           canUsersManage={canUsersManage}
           canContactManage={canContactManage}
@@ -193,7 +202,14 @@ export const DashboardLayout: React.FC = () => {
           onCloseMobile={() => setMobileOpen(false)}
           notificationCounts={notificationCounts}
         />
-        <main className="relative min-w-0 flex-1">
+        <main
+          ref={mainRef}
+          className={`relative h-full min-w-0 flex-1 overscroll-contain ${
+            isRoleFormRoute
+              ? "overflow-y-auto xl:overflow-hidden"
+              : "overflow-y-auto"
+          }`}
+        >
           <TopNav
             displayName={displayName}
             roleLabel={state.role ?? "USER"}

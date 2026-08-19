@@ -8,6 +8,7 @@ type ModernFormLayoutProps = Readonly<{
   onBack?: () => void;
   titleMeta?: React.ReactNode;
   stats?: ReadonlyArray<{ label: string; value: string }>;
+  constrainToViewport?: boolean;
   children: React.ReactNode;
 }>;
 
@@ -16,11 +17,22 @@ export const ModernFormLayout: React.FC<ModernFormLayoutProps> = ({
   subtitle,
   onBack,
   titleMeta,
+  constrainToViewport = false,
   children,
 }) => {
   return (
-    <div className="compact-form min-h-screen bg-[#f5f5f7]">
-      <div className="w-full space-y-[14px] p-[24px] pb-[38px]">
+    <div
+      className={`compact-form bg-[#f5f5f7] ${
+        constrainToViewport
+          ? "min-h-0 xl:h-[calc(100dvh-55px)] xl:overflow-hidden"
+          : "min-h-screen"
+      }`}
+    >
+      <div
+        className={`w-full space-y-[14px] p-[24px] pb-[38px] ${
+          constrainToViewport ? "xl:h-full xl:overflow-hidden" : ""
+        }`}
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             {onBack && (

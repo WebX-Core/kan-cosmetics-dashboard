@@ -226,7 +226,7 @@ const PermissionPicker: React.FC<{
           No permissions found.
         </p>
       ) : (
-        <div className="max-h-[72vh] min-h-[520px] space-y-3 overflow-y-auto pr-1">
+        <div className="max-h-[min(520px,calc(100vh-220px))] min-h-0 space-y-3 overflow-y-auto overscroll-contain pr-1">
           {grouped.map(([module, perms]) => {
             const allChecked = perms.every((p) => selectedIds.includes(p.id));
             const someChecked =
@@ -518,6 +518,7 @@ export const RolesCreatePage: React.FC = () => {
   return (
     <ModernFormLayout
       title={isEdit ? "Edit Role" : "Create Role"}
+      constrainToViewport
       subtitle={
         isEdit
           ? "Update role details and permission assignments."
@@ -525,8 +526,8 @@ export const RolesCreatePage: React.FC = () => {
       }
       onBack={() => navigate("/dashboard/rbac/roles")}
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <form onSubmit={handleSubmit} className="space-y-6 xl:h-[calc(100%-58px)] xl:min-h-0">
+        <div className="grid items-start gap-6 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <FormSection title="Role Details">
             <div className="grid gap-4 md:grid-cols-2">
               <FormField
@@ -615,7 +616,7 @@ export const RolesCreatePage: React.FC = () => {
             />
           </FormSection>
 
-          <div className="xl:sticky xl:top-[76px]">
+          <div className="xl:h-full xl:min-h-0">
             <FormSection
               title="Assigned Permissions"
               description="Select which permissions this role grants. Permissions are grouped by module."
