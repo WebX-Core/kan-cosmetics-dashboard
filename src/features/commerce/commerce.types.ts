@@ -84,6 +84,7 @@ export type OrderCreateDto = Readonly<{
   shippingAmount?: number;
   paymentMethod: string;
   couponCode?: string;
+  redeemPoints?: number;
   orderSource?: string;
   guestEmail?: string | null;
   syncDeliveryNow?: boolean;

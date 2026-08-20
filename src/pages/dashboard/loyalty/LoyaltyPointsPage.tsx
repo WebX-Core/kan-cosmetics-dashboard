@@ -7,7 +7,7 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { customerName, date, number, text } from "./loyaltyUi";
 
-const sources: Array<LoyaltyPointSource | ""> = ["", "SIGNUP", "ORDER_COMPLETED", "PAYMENT_SETTLED", "REFERRAL", "ADMIN_BONUS", "MANUAL_ADJUSTMENT", "YEARLY_RESET"];
+const sources: Array<LoyaltyPointSource | ""> = ["", "SIGNUP", "ORDER_COMPLETED", "ORDER_SETTLED", "REFERRAL", "ADMIN_BONUS", "MANUAL_ADJUSTMENT", "POINT_REDEMPTION", "YEARLY_RESET"];
 export const LoyaltyPointsPage: React.FC = () => {
   const navigate = useNavigate();
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
@@ -16,7 +16,8 @@ export const LoyaltyPointsPage: React.FC = () => {
   const rows = query.data?.data ?? [];
   const columns = [
     { key: "customer", label: "Customer", render: (row: typeof rows[number]) => <div><p className="font-medium">{customerName(row.customer)}</p><p className="text-xs text-gray-500">{text(row.customer?.email, row.customerId)}</p></div> },
-    { key: "points", label: "Points", render: (row: typeof rows[number]) => <span className={`font-semibold ${number(row.points) < 0 ? "text-red-600" : "text-emerald-700"}`}>{number(row.points) > 0 ? "+" : ""}{number(row.points).toLocaleString()}</span> },
+    { key: "points", label: "Status Points", render: (row: typeof rows[number]) => <span className={`font-semibold ${number(row.points) < 0 ? "text-red-600" : "text-emerald-700"}`}>{number(row.points) > 0 ? "+" : ""}{number(row.points).toLocaleString()}</span> },
+    { key: "rewardPoints", label: "Wallet Points", render: (row: typeof rows[number]) => <span className={`font-semibold ${number(row.rewardPoints) < 0 ? "text-red-600" : "text-emerald-700"}`}>{number(row.rewardPoints) > 0 ? "+" : ""}{number(row.rewardPoints).toLocaleString()}</span> },
     { key: "sourceType", label: "Source", render: (row: typeof rows[number]) => <span className="text-xs font-medium">{row.sourceType.replaceAll("_", " ")}</span> },
     { key: "reason", label: "Reason", render: (row: typeof rows[number]) => text(row.reason) },
     { key: "reference", label: "Reference", render: (row: typeof rows[number]) => <span className="font-mono text-xs">{text(row.sourceReferenceId)}</span> },

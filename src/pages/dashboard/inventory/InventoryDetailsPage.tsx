@@ -137,6 +137,8 @@ export const InventoryDetailsPage: React.FC = () => {
     ) || prefillProductName || prefillProductId || form.productId;
 
   const variantRows = (variantsQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
+  const hasVariants = variantRows.length > 0;
+  const canUseProductInventory = Boolean(form.productId) && !hasVariants;
 
   const backPath = returnPath || "/dashboard/inventory";
 
@@ -144,8 +146,16 @@ export const InventoryDetailsPage: React.FC = () => {
     event.preventDefault();
     const parsed = validateOrToast(schema, form, toast);
     if (!parsed) return;
-    if (!form.productVariantId) {
-      toast.error("Please select a variant.");
+    if (!form.productId) {
+      toast.error("Product context is required.");
+      return;
+    }
+    if (variantsQuery.isLoading) {
+      toast.error("Please wait while variants are loading.");
+      return;
+    }
+    if (!form.productVariantId && !canUseProductInventory) {
+      toast.error("Please select a variant for products that have variants.");
       return;
     }
     if (parsed.reservedQuantity > parsed.stockQuantity) {
@@ -154,7 +164,9 @@ export const InventoryDetailsPage: React.FC = () => {
     }
 
     const dto = {
-      productVariantId: form.productVariantId.trim(),
+      ...(form.productVariantId.trim()
+        ? { productVariantId: form.productVariantId.trim() }
+        : { productId: form.productId.trim() }),
       stockQuantity: parsed.stockQuantity,
       reservedQuantity: parsed.reservedQuantity,
       lowStockThreshold: parsed.lowStockThreshold,
@@ -210,7 +222,9 @@ export const InventoryDetailsPage: React.FC = () => {
                   ? "No product context"
                   : variantsQuery.isLoading
                   ? "Loading variants..."
-                  : "Select variant"}
+                  : hasVariants
+                  ? "Select variant"
+                  : "Product inventory"}
               </option>
               {variantRows.map((variant) => {
                 const variantId = str(variant.id);

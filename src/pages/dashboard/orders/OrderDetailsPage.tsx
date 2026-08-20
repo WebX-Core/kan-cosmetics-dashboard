@@ -724,6 +724,8 @@ export const OrderDetailsPage: React.FC = () => {
                   { label: "Subtotal", value: formatMoney(orderDetail.subtotalAmount), icon: <Tag size={13} /> },
                   { label: "Shipping", value: formatMoney(orderDetail.shippingAmount), icon: <Truck size={13} /> },
                   { label: "Discount", value: formatMoney(orderDetail.discountAmount), icon: <Tag size={13} /> },
+                  { label: "Loyalty points redeemed", value: String(orderDetail.loyaltyRedeemedPoints ?? 0), icon: <Wallet size={13} /> },
+                  { label: "Loyalty redeem amount", value: formatMoney(orderDetail.loyaltyRedeemAmount), icon: <Wallet size={13} /> },
                   { label: "Item count", value: String(itemCount), icon: <ShoppingBag size={13} /> },
                   { label: "Quantity total", value: String(quantityCount), icon: <Layers size={13} /> },
                   { label: "Created at", value: formatDateTime(orderDetail.createdAt), icon: <Calendar size={13} /> },

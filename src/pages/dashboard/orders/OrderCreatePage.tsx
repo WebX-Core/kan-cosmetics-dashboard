@@ -5,6 +5,7 @@ import { Search, X, Plus, Minus, ShoppingCart, User, MapPin, Settings, ChevronDo
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { commerceApi } from "@/features/commerce";
 import { catalogApi } from "@/features/catalog";
+import { useLoyaltySettings } from "@/features/loyalty";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { api, unwrap } from "@/shared/api/api";
@@ -989,6 +990,7 @@ export const OrderCreatePage: React.FC = () => {
   const [orderSource, setOrderSource] = React.useState("ADMIN_DASHBOARD");
   const [customOrderSource, setCustomOrderSource] = React.useState("");
   const [couponCode, setCouponCode] = React.useState("");
+  const [redeemPoints, setRedeemPoints] = React.useState("");
   const [shippingAmount, setShippingAmount] = React.useState("");
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = React.useState(false);
   const [deliveryQuoteError, setDeliveryQuoteError] = React.useState("");
@@ -997,14 +999,19 @@ export const OrderCreatePage: React.FC = () => {
 
   const branchesQuery = useQuery({
     queryKey: ["pickndrop", "branches"],
-    queryFn: async () => unwrap<DeliveryBranch[]>(await api.get("/delivery/pickndrop/branches")),
+    queryFn: async () => unwrap<DeliveryBranch[]>(await api.get("/pickndrop/branches")),
     staleTime: 24 * 60 * 60 * 1000,
   });
+  const loyaltySettingsQuery = useLoyaltySettings();
 
   const deliveryBranches = React.useMemo(
     () => (Array.isArray(branchesQuery.data) ? branchesQuery.data : []),
     [branchesQuery.data],
   );
+
+  React.useEffect(() => {
+    if (!customer && redeemPoints) setRedeemPoints("");
+  }, [customer, redeemPoints]);
 
   const createOrder = useMutation({
     mutationFn: () => {
@@ -1056,6 +1063,7 @@ export const OrderCreatePage: React.FC = () => {
         addresses,
         paymentMethod,
         couponCode: couponCode.trim() || undefined,
+        redeemPoints: redeemPoints.trim() ? money(redeemPoints) : undefined,
         shippingAmount: shippingAmount.trim() ? money(shippingAmount) : undefined,
         orderSource: resolvedOrderSource || "ADMIN_DASHBOARD",
         syncDeliveryNow: syncDelivery,
@@ -1069,8 +1077,12 @@ export const OrderCreatePage: React.FC = () => {
     onError: (error) => toast.error(parseApiError(error).message),
   });
 
+  const redeemPointCount = React.useMemo(() => money(redeemPoints), [redeemPoints]);
+  const couponPointStackingAllowed = loyaltySettingsQuery.data?.allowCouponWithPointRedeem === true;
   const canSubmit =
     items.length > 0 &&
+    !(redeemPointCount > 0 && !customer) &&
+    !(redeemPointCount > 0 && couponCode.trim() && !couponPointStackingAllowed) &&
     Boolean(shipping.fullName) &&
     Boolean(shipping.phone) &&
     Boolean(shipping.addressLine1) &&
@@ -1081,6 +1093,10 @@ export const OrderCreatePage: React.FC = () => {
   const formValidationMessage =
     items.length === 0
       ? "Add at least one product."
+      : redeemPointCount > 0 && !customer
+        ? "Select a customer before redeeming loyalty points."
+        : redeemPointCount > 0 && couponCode.trim() && !couponPointStackingAllowed
+          ? "Coupon and loyalty point redemption cannot be used together."
       : !shipping.fullName || !shipping.phone || !shipping.addressLine1 || !shipping.city || !shipping.destinationBranch || !shipping.destinationCityArea
         ? "Complete the shipping address, destination branch, and delivery area."
         : orderSource === "OTHER" && !customOrderSource.trim()
@@ -1092,7 +1108,15 @@ export const OrderCreatePage: React.FC = () => {
     [items],
   );
   const deliveryCharge = React.useMemo(() => money(shippingAmount), [shippingAmount]);
-  const grandTotal = subtotal + deliveryCharge;
+  const pointsPerNprValue = React.useMemo(
+    () => num(loyaltySettingsQuery.data?.pointsPerNprValue ?? 10) || 10,
+    [loyaltySettingsQuery.data?.pointsPerNprValue],
+  );
+  const estimatedRedeemAmount = React.useMemo(
+    () => redeemPointCount > 0 ? Math.min(subtotal, redeemPointCount / pointsPerNprValue) : 0,
+    [pointsPerNprValue, redeemPointCount, subtotal],
+  );
+  const grandTotal = Math.max(0, subtotal + deliveryCharge - estimatedRedeemAmount);
 
   React.useEffect(() => {
     const branch = shipping.destinationBranch.trim();
@@ -1249,6 +1273,25 @@ export const OrderCreatePage: React.FC = () => {
             </div>
 
             <div>
+              <label className="mb-1.5 block text-xs font-medium text-[#86868b]">Redeem Loyalty Points</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={redeemPoints}
+                onChange={(e) => setRedeemPoints(e.target.value)}
+                placeholder={customer ? "Optional points to redeem" : "Select customer first"}
+                disabled={!customer}
+                className={inputCls}
+              />
+              <p className="mt-1 text-xs text-[#86868b]">
+                {redeemPointCount > 0
+                  ? `Estimated point discount: NPR ${estimatedRedeemAmount.toLocaleString()}`
+                  : `Current conversion: ${pointsPerNprValue.toLocaleString()} points = NPR 1`}
+              </p>
+            </div>
+
+            <div>
               <label className="mb-1.5 block text-xs font-medium text-[#86868b]">Order Source *</label>
               <div className="relative">
                 <select
@@ -1355,6 +1398,14 @@ export const OrderCreatePage: React.FC = () => {
                     : `NPR ${deliveryCharge.toLocaleString()}`}
                 </span>
               </div>
+              {redeemPointCount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#86868b]">Loyalty redemption</span>
+                  <span className="font-medium text-emerald-700">
+                    - NPR {estimatedRedeemAmount.toLocaleString()}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between border-t border-[#f5f5f7] pt-2">
                 <span className="text-[#86868b]">Grand Total</span>
                 <span className="font-semibold text-[#1d1d1f]">NPR {grandTotal.toLocaleString()}</span>

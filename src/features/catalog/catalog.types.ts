@@ -102,13 +102,15 @@ export type ProductVariantDto = Readonly<{
   price?: string;
   compareAtPrice?: string;
   weight?: string;
+  weightUnit?: string;
   colorHex?: string;
   isDefault?: boolean;
-  isActive?: boolean;
   isTryOn?: boolean;
   isVatIncluded?: boolean;
   vatRate?: number;
+  descriptionJson?: ProductDescriptionJson | Record<string, unknown>;
   image?: File | null;
+  images?: ReadonlyArray<File>;
   removeUrls?: ReadonlyArray<string>;
   sortOrder?: number;
 }> & PublicationFields;

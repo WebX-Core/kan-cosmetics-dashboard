@@ -91,17 +91,23 @@ export const catalogApi = {
     { key: "productVariants", basePath: "/product-variant", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
-        const { image, ...rest } = dto;
+        const { image, images, ...rest } = dto;
         return {
           fields: rest as Readonly<Record<string, FormFieldValue>>,
-          files: { image: (image ?? undefined) as FormFileValue },
+          files: {
+            image: (image ?? undefined) as FormFileValue,
+            images: (images?.length ? images : undefined) as FormFileValue,
+          },
         };
       },
       update: (dto) => {
-        const { image, ...rest } = dto;
+        const { image, images, ...rest } = dto;
         return {
           fields: rest as Readonly<Record<string, FormFieldValue>>,
-          files: { image: (image ?? undefined) as FormFileValue },
+          files: {
+            image: (image ?? undefined) as FormFileValue,
+            images: (images?.length ? images : undefined) as FormFileValue,
+          },
         };
       },
     }

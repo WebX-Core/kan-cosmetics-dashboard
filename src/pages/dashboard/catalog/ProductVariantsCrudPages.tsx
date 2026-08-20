@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { z } from "zod";
@@ -37,9 +37,9 @@ type VariantForm = Readonly<{
   price: string;
   compareAtPrice: string;
   weight: string;
+  weightUnit: string;
   colorHex: string;
   isDefault: boolean;
-  isActive: boolean;
   isTryOn: boolean;
   isVatIncluded: boolean;
   vatRate: string;
@@ -55,9 +55,9 @@ const initialForm: VariantForm = {
   price: "",
   compareAtPrice: "",
   weight: "",
+  weightUnit: "g",
   colorHex: "",
   isDefault: false,
-  isActive: true,
   isTryOn: false,
   isVatIncluded: true,
   vatRate: "13",
@@ -73,6 +73,7 @@ const variantSchema = z.object({
   price: z.string().trim().min(1, "Price is required"),
   compareAtPrice: z.string().trim().optional(),
   weight: z.string().trim().optional(),
+  weightUnit: z.enum(["g", "kg", "mg", "ml", "l", "oz", "lb"]),
   colorHex: z
     .string()
     .trim()
@@ -80,7 +81,6 @@ const variantSchema = z.object({
     .optional()
     .or(z.literal("")),
   isDefault: z.boolean(),
-  isActive: z.boolean(),
   isTryOn: z.boolean(),
   isVatIncluded: z.boolean(),
   vatRate: z.coerce.number().min(0, "VAT rate cannot be negative").max(100, "VAT rate cannot exceed 100"),
@@ -89,6 +89,17 @@ const variantSchema = z.object({
 
 const inputClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+
+const MAX_VARIANT_IMAGES = 10;
+const WEIGHT_UNIT_OPTIONS = [
+  { value: "g", label: "g" },
+  { value: "kg", label: "kg" },
+  { value: "mg", label: "mg" },
+  { value: "ml", label: "ml" },
+  { value: "l", label: "l" },
+  { value: "oz", label: "oz" },
+  { value: "lb", label: "lb" },
+] as const;
 
 const toRows = (value: unknown): ReadonlyArray<Readonly<Record<string, unknown>>> => {
   if (Array.isArray(value)) return value as ReadonlyArray<Readonly<Record<string, unknown>>>;
@@ -117,6 +128,112 @@ const toVariantRows = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): 
   }));
 
 const readString = (value: unknown): string => (typeof value === "string" ? value : "");
+
+const readStringArray = (...values: ReadonlyArray<unknown>): string[] =>
+  Array.from(
+    new Set(
+      values
+        .flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []))
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+    ),
+  ).slice(0, MAX_VARIANT_IMAGES);
+
+const readKeyIngredients = (value: unknown): string[] => {
+  const parsed =
+    typeof value === "string"
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return {};
+          }
+        })()
+      : value;
+  if (!parsed || typeof parsed !== "object") return [];
+  const raw = (parsed as Record<string, unknown>).keyIngredients;
+  return Array.isArray(raw)
+    ? raw.filter((item): item is string => typeof item === "string")
+    : [];
+};
+
+const StringListInput: React.FC<{
+  label: string;
+  placeholder: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+}> = ({ label, placeholder, items, onChange }) => {
+  const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
+  const update = (index: number, value: string) => {
+    const next = [...items];
+    next[index] = value;
+    onChange(next);
+  };
+
+  const remove = (index: number) => {
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const add = () => {
+    onChange([...items, ""]);
+    setTimeout(() => inputRefs.current[items.length]?.focus(), 0);
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (index === items.length - 1) add();
+      else inputRefs.current[index + 1]?.focus();
+    }
+    if (event.key === "Backspace" && items[index] === "" && items.length > 0) {
+      event.preventDefault();
+      remove(index);
+      setTimeout(() => inputRefs.current[Math.max(0, index - 1)]?.focus(), 0);
+    }
+  };
+
+  return (
+    <div>
+      <p className="mb-1.5 text-[13px] font-medium text-[#1d1d1f]">{label}</p>
+      <div className="space-y-1.5">
+        {items.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">
+              {index + 1}.
+            </span>
+            <input
+              ref={(element) => {
+                inputRefs.current[index] = element;
+              }}
+              type="text"
+              value={item}
+              onChange={(event) => update(index, event.target.value)}
+              onKeyDown={(event) => onKeyDown(event, index)}
+              placeholder={placeholder}
+              className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
+            />
+            <button
+              type="button"
+              onClick={() => remove(index)}
+              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+              aria-label="Remove ingredient"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={add}
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+        >
+          <Plus size={12} />
+          Add ingredient
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const ProductVariantsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -631,8 +748,9 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
   const createMutation = catalogApi.productVariants.hooks.useCreate();
   const updateMutation = catalogApi.productVariants.hooks.useUpdate();
   const [form, setForm] = React.useState<VariantForm>({ ...initialForm, productId: productFilter });
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [existingImage, setExistingImage] = React.useState<string>("");
+  const [keyIngredients, setKeyIngredients] = React.useState<string[]>([]);
+  const [imageFiles, setImageFiles] = React.useState<ReadonlyArray<File>>([]);
+  const [existingImages, setExistingImages] = React.useState<ReadonlyArray<string>>([]);
   const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>([]);
   const productQuery = catalogApi.products.hooks.useGet(
     form.productId,
@@ -640,9 +758,9 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
   );
   const selectedProductType = readString((productQuery.data as Record<string, unknown> | undefined)?.productType);
   const isLipstickProduct = selectedProductType === "LIPSTICK";
-  const previewImage = React.useMemo(
-    () => (imageFile ? URL.createObjectURL(imageFile) : ""),
-    [imageFile],
+  const previewImages = React.useMemo(
+    () => imageFiles.map((file) => URL.createObjectURL(file)),
+    [imageFiles],
   );
 
   React.useEffect(() => {
@@ -659,17 +777,18 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
       price: String(row.price ?? ""),
       compareAtPrice: String(row.compareAtPrice ?? ""),
       weight: String(row.weight ?? ""),
+      weightUnit: String(row.weightUnit ?? "g"),
       colorHex: String(row.colorHex ?? ""),
       isDefault: Boolean(row.isDefault),
-      isActive: row.isActive !== false,
       isTryOn: Boolean(row.isTryOn),
       isVatIncluded: typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
       vatRate: row.vatRate != null ? String(row.vatRate) : "13",
       status: readPublicationStatus(row.status),
     });
-    setExistingImage(readString(row.image));
+    setKeyIngredients(readKeyIngredients(row.descriptionJson));
+    setExistingImages(readStringArray(row.images, row.image));
     setRemovedUrls([]);
-    setImageFile(null);
+    setImageFiles([]);
   }, [getQuery.data, isEdit, productFilter]);
 
   React.useEffect(() => {
@@ -684,9 +803,9 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
 
   React.useEffect(() => {
     return () => {
-      if (previewImage) URL.revokeObjectURL(previewImage);
+      previewImages.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [previewImage]);
+  }, [previewImages]);
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
@@ -698,7 +817,10 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
     try {
       const payload = {
         ...parsed,
-        image: imageFile ?? undefined,
+        descriptionJson: {
+          keyIngredients: keyIngredients.map((item) => item.trim()).filter(Boolean),
+        },
+        images: imageFiles.length ? imageFiles : undefined,
         removeUrls: removedUrls.length ? removedUrls : undefined,
         colorHex: isLipstickProduct && parsed.colorHex ? parsed.colorHex : undefined,
         isTryOn: isLipstickProduct ? parsed.isTryOn : undefined,
@@ -740,7 +862,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                 type="text"
                 value={productName || form.productId}
                 readOnly={Boolean(productFilter)}
-                placeholder="Product UUID"
+                placeholder="Paste the parent product UUID for this variant"
                 onChange={(e) => setForm((prev) => ({ ...prev, productId: e.target.value }))}
                 className={`${inputClass} ${productFilter ? "bg-[#f5f5f7]" : ""}`}
               />
@@ -749,7 +871,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.title}
-                placeholder="e.g. Matte All On"
+                placeholder="Customer-facing variant name, e.g. Cherry Red 3.5g"
                 onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                 className={inputClass}
               />
@@ -758,7 +880,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.sku}
-                placeholder="e.g. KAN-LIP-001"
+                placeholder="Unique stock code for this variant, e.g. KAN-LIP-001-RED"
                 onChange={(e) => setForm((prev) => ({ ...prev, sku: e.target.value }))}
                 className={inputClass}
               />
@@ -767,7 +889,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.price}
-                placeholder="e.g. 1299"
+                placeholder="Selling price in NPR, e.g. 1299"
                 onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
                 className={inputClass}
               />
@@ -776,7 +898,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.variantType}
-                placeholder="e.g. Shade"
+                placeholder="Option group name, e.g. Shade, Size, Volume"
                 onChange={(e) => setForm((prev) => ({ ...prev, variantType: e.target.value }))}
                 className={inputClass}
               />
@@ -785,7 +907,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.variantValue}
-                placeholder="e.g. Ruby Red"
+                placeholder="Exact option value, e.g. Ruby Red, 30ml, Medium"
                 onChange={(e) => setForm((prev) => ({ ...prev, variantValue: e.target.value }))}
                 className={inputClass}
               />
@@ -794,29 +916,43 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.compareAtPrice}
-                placeholder="e.g. 1499"
+                placeholder="Old/MRP price shown as struck price, e.g. 1499"
                 onChange={(e) => setForm((prev) => ({ ...prev, compareAtPrice: e.target.value }))}
                 className={inputClass}
               />
             </FormField>
-            <FormField label="Weight">
-              <input
-                type="text"
-                value={form.weight}
-                placeholder="e.g. 3.5"
-                onChange={(e) => setForm((prev) => ({ ...prev, weight: e.target.value }))}
-                className={inputClass}
-              />
+            <FormField label="Package Weight">
+              <div className="grid grid-cols-[1fr_112px] gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={form.weight}
+                  placeholder="Number only, e.g. 3.5"
+                  onChange={(e) => setForm((prev) => ({ ...prev, weight: e.target.value }))}
+                  className={inputClass}
+                />
+                <select
+                  value={form.weightUnit}
+                  onChange={(e) => setForm((prev) => ({ ...prev, weightUnit: e.target.value }))}
+                  className={inputClass}
+                  aria-label="Weight unit"
+                >
+                  {WEIGHT_UNIT_OPTIONS.map((unit) => (
+                    <option key={unit.value} value={unit.value}>{unit.label}</option>
+                  ))}
+                </select>
+              </div>
             </FormField>
             <FormField label="VAT Rate (%)" required>
-              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm((prev) => ({ ...prev, vatRate: e.target.value }))} className={inputClass} />
+              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} placeholder="VAT percentage for this variant, e.g. 13" onChange={(e) => setForm((prev) => ({ ...prev, vatRate: e.target.value }))} className={inputClass} />
             </FormField>
             {isLipstickProduct ? (
               <FormField label="Color HEX">
                 <input
                   type="text"
                   value={form.colorHex}
-                  placeholder="#FF3366"
+                  placeholder="Lipstick shade swatch color, e.g. #FF3366"
                   onChange={(e) => setForm((prev) => ({ ...prev, colorHex: e.target.value }))}
                   className={inputClass}
                 />
@@ -828,6 +964,13 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
             <p className="text-sm font-medium text-[#1d1d1f]">Publication status</p>
             <PublicationStatusSelector value={form.status} onChange={(status) => setForm((prev) => ({ ...prev, status }))} disabled={saving} />
           </div>
+
+          <StringListInput
+            label="Key Ingredients"
+            placeholder="Ingredient used in this variant, e.g. Shea Butter, Vitamin E"
+            items={keyIngredients}
+            onChange={setKeyIngredients}
+          />
 
           <div className="flex flex-wrap items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -842,14 +985,6 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               />
               Default
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-              />
-              Active
-            </label>
             {isLipstickProduct ? (
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
@@ -862,21 +997,29 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
             ) : null}
           </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_220px]">
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_360px]">
             <FormField
-              label="Variant Image"
-              hint="Optional. Replaces the current image on update."
+              label="Variant Images"
+              hint={`Upload up to ${MAX_VARIANT_IMAGES} product photos for this variant. The first image becomes the primary variant image.`}
             >
               <div className="flex flex-col gap-3">
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    setImageFile(file);
-                    if (file) {
-                      setRemovedUrls((prev) => prev.filter((entry) => entry !== "image"));
+                    const selectedFiles = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+                    const availableSlots = MAX_VARIANT_IMAGES - existingImages.length - imageFiles.length;
+                    if (availableSlots <= 0) {
+                      toast.error(`A product variant can have up to ${MAX_VARIANT_IMAGES} images.`);
+                      event.currentTarget.value = "";
+                      return;
                     }
+                    const nextFiles = selectedFiles.slice(0, availableSlots);
+                    if (selectedFiles.length > nextFiles.length) {
+                      toast.error(`Only ${availableSlots} more image${availableSlots === 1 ? "" : "s"} can be added.`);
+                    }
+                    setImageFiles((prev) => [...prev, ...nextFiles]);
                     event.currentTarget.value = "";
                   }}
                   className={inputClass}
@@ -885,35 +1028,59 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                   <button
                     type="button"
                     onClick={() => {
-                      setImageFile(null);
-                      if (existingImage) {
-                        setRemovedUrls((prev) => (prev.includes("image") ? prev : [...prev, "image"]));
-                        setExistingImage("");
-                      }
+                      setImageFiles([]);
+                      setRemovedUrls((prev) => Array.from(new Set([...prev, ...existingImages])));
+                      setExistingImages([]);
                     }}
                     className="inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
                   >
-                    Remove Image
+                    Remove All Images
                   </button>
-                  {removedUrls.includes("image") ? (
-                    <span className="text-xs text-[#86868b]">Image will be removed on save.</span>
+                  {removedUrls.length ? (
+                    <span className="text-xs text-[#86868b]">Removed images will be deleted when you save.</span>
                   ) : null}
                 </div>
               </div>
             </FormField>
             <div className="rounded-xl border border-[#d2d2d7] bg-[#f5f5f7] p-3">
               <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Preview
+                Image Preview
               </p>
-              {imageFile || existingImage ? (
-                <img
-                  src={previewImage || existingImage}
-                  alt="Variant preview"
-                  className="h-40 w-full rounded-lg border border-[#e5e5e7] bg-white object-contain p-2"
-                />
+              {existingImages.length || previewImages.length ? (
+                <div className="grid max-h-72 grid-cols-2 gap-2 overflow-auto pr-1">
+                  {existingImages.map((url, index) => (
+                    <div key={url} className="relative rounded-lg border border-[#e5e5e7] bg-white p-2">
+                      <img src={url} alt={`Existing variant image ${index + 1}`} className="h-28 w-full rounded-md object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExistingImages((prev) => prev.filter((entry) => entry !== url));
+                          setRemovedUrls((prev) => (prev.includes(url) ? prev : [...prev, url]));
+                        }}
+                        className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-[#b42318] shadow-sm"
+                      >
+                        Remove
+                      </button>
+                      {index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-[#111827] px-2 py-1 text-[10px] font-semibold text-white">Primary</span> : null}
+                    </div>
+                  ))}
+                  {previewImages.map((url, index) => (
+                    <div key={`${url}-${index}`} className="relative rounded-lg border border-[#e5e5e7] bg-white p-2">
+                      <img src={url} alt={`New variant image ${index + 1}`} className="h-28 w-full rounded-md object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => setImageFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index))}
+                        className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-[#b42318] shadow-sm"
+                      >
+                        Remove
+                      </button>
+                      {!existingImages.length && index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-[#111827] px-2 py-1 text-[10px] font-semibold text-white">Primary</span> : null}
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-[#d2d2d7] bg-white text-sm text-[#86868b]">
-                  No image selected
+                  No variant images selected
                 </div>
               )}
               <p className="mt-2 text-xs text-[#6e6e73]">

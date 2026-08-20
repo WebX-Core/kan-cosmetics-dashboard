@@ -67,7 +67,7 @@ export const LoyaltyOverviewPage: React.FC = () => {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/settings")}>
                 <Settings2 className="mr-2 h-4 w-4 text-blue-600" />
-                <div><p>Loyalty Settings</p><p className="text-xs text-[#86868b]">Referral reward configuration</p></div>
+                <div><p>Loyalty Settings</p><p className="text-xs text-[#86868b]">Earning rates and redemption controls</p></div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

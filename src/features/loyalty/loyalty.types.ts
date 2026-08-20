@@ -17,6 +17,8 @@ export type LoyaltyTierBenefits = Readonly<{
   fixedAmountOff?: number;
   amountOff?: number;
   physicalGift?: boolean;
+  rewardMultiplier?: number;
+  orderRewards?: ReadonlyArray<Record<string, unknown>>;
   reward?: LoyaltyRewardConfig;
   [key: string]: unknown;
 }>;
@@ -42,6 +44,9 @@ export type LoyaltyCustomer = Readonly<{
   lifetimePoints: number;
   yearlyPoints: number;
   availablePoints: number;
+  lifetimeRewardPoints?: number;
+  redeemedRewardPoints?: number;
+  expiredRewardPoints?: number;
   currentTierCode: string | null;
   currentCycleStartAt?: string | null;
   currentCycleEndAt?: string | null;
@@ -56,8 +61,34 @@ export type ResetYearlyCycleDto = Readonly<{ resetAt?: string; reason?: string }
 
 export type LoyaltyList<T> = Readonly<{ data: ReadonlyArray<T>; page?: number; limit?: number; total?: number; totalPages?: number }>;
 export type LoyaltyQuery = Readonly<{ page?: number; limit?: number; search?: string; status?: string; type?: string; tier?: string }>;
-export type LoyaltySettings = Readonly<{ id?: string; referralRewardPoints: number; isActive: boolean; metadata?: Record<string, unknown> | null }>;
-export type UpdateLoyaltySettingsDto = Readonly<{ referralRewardPoints: number; isActive?: boolean; metadata?: Record<string, unknown> | null }>;
-export type LoyaltyPointSource = "SIGNUP" | "ORDER_COMPLETED" | "PAYMENT_SETTLED" | "REFERRAL" | "ADMIN_BONUS" | "MANUAL_ADJUSTMENT" | "YEARLY_RESET";
-export type LoyaltyPointLedger = Readonly<{ id: string; customerId: string; customer?: Record<string, unknown> | null; points: number; sourceType: LoyaltyPointSource; sourceReferenceId?: string | null; reason?: string | null; yearBucket?: string | number | null; cycleStartAt?: string | null; cycleEndAt?: string | null; metadata?: Record<string, unknown> | null; createdById?: string | null; createdAt?: string }>;
+export type LoyaltySettings = Readonly<{
+  id?: string;
+  signupRewardPoints?: number;
+  referralRewardPoints: number;
+  statusPointsPerNpr?: number;
+  baseRewardPointsPerNpr?: number;
+  pointsPerNprValue?: number;
+  minimumRedeemPoints?: number;
+  redeemStepPoints?: number;
+  maxRedeemPercentWithoutCoupon?: number;
+  maxRedeemPercentWithCoupon?: number;
+  allowCouponWithPointRedeem?: boolean;
+  isActive: boolean;
+  metadata?: Record<string, unknown> | null;
+}>;
+export type UpdateLoyaltySettingsDto = Readonly<{
+  signupRewardPoints?: number;
+  referralRewardPoints?: number;
+  statusPointsPerNpr?: number;
+  baseRewardPointsPerNpr?: number;
+  pointsPerNprValue?: number;
+  minimumRedeemPoints?: number;
+  redeemStepPoints?: number;
+  maxRedeemPercentWithoutCoupon?: number;
+  maxRedeemPercentWithCoupon?: number;
+  allowCouponWithPointRedeem?: boolean;
+  metadata?: Record<string, unknown> | null;
+}>;
+export type LoyaltyPointSource = "SIGNUP" | "ORDER_COMPLETED" | "ORDER_SETTLED" | "PAYMENT_SETTLED" | "REFERRAL" | "ADMIN_BONUS" | "MANUAL_ADJUSTMENT" | "POINT_REDEMPTION" | "YEARLY_RESET";
+export type LoyaltyPointLedger = Readonly<{ id: string; customerId: string; customer?: Record<string, unknown> | null; points: number; rewardPoints?: number; sourceType: LoyaltyPointSource; sourceReferenceId?: string | null; reason?: string | null; yearBucket?: string | number | null; cycleStartAt?: string | null; cycleEndAt?: string | null; metadata?: Record<string, unknown> | null; createdById?: string | null; createdAt?: string }>;
 export type LoyaltyPointsQuery = Readonly<{ page?: number; limit?: number; search?: string; sourceType?: LoyaltyPointSource }>;

@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, Package, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal } from "lucide-react";
+import { Edit2, Package, PackagePlus, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal } from "lucide-react";
 import { catalogApi } from "@/features/catalog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -77,6 +77,14 @@ const toProductRow = (value: unknown): ProductRow => {
   };
 };
 
+const getProductIdFromVariant = (value: unknown): string => {
+  const row = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  const direct = toText(row.productId ?? row.product_id);
+  if (direct) return direct;
+  const product = (typeof row.product === "object" && row.product !== null ? row.product : {}) as Record<string, unknown>;
+  return toText(product.id);
+};
+
 export const SubcategoryDetailPage: React.FC = () => {
   const { id: categoryId, subcategoryId } = useParams();
   const navigate = useNavigate();
@@ -99,6 +107,14 @@ export const SubcategoryDetailPage: React.FC = () => {
   const productsQuery = catalogApi.products.hooks.useList(
     { subcategory: subcategoryId, limit: 100 },
     !isDeletedView && Boolean(subcategoryId)
+  );
+  const inventoryQuery = catalogApi.inventory.hooks.useList(
+    { page: 1, limit: 1000 },
+    !isDeletedView
+  );
+  const publishedVariantsQuery = catalogApi.productVariants.hooks.useList(
+    { page: 1, limit: 1000 },
+    !isDeletedView
   );
   const deletedProductsQuery = catalogApi.products.hooks.useDeleted(
     { page: 1, limit: 1000 },
@@ -133,6 +149,43 @@ export const SubcategoryDetailPage: React.FC = () => {
       withImage: filteredRows.filter((row) => Boolean(row.coverImage)).length,
     }),
     [filteredRows],
+  );
+  const productInventoryByProductId = React.useMemo(() => {
+    const map = new Map<string, Record<string, unknown>>();
+    const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
+    source.forEach((entry) => {
+      const product = entry.product as Record<string, unknown> | undefined;
+      const variant = entry.productVariant as Record<string, unknown> | undefined;
+      const productId = typeof product?.id === "string" ? product.id : "";
+      const variantId = typeof variant?.id === "string" ? variant.id : "";
+      if (productId && !variantId) map.set(productId, entry);
+    });
+    return map;
+  }, [inventoryQuery.data?.data]);
+  const productIdsWithVariants = React.useMemo(() => {
+    const ids = new Set<string>();
+    (publishedVariantsQuery.data?.data ?? []).forEach((entry) => {
+      const productId = getProductIdFromVariant(entry);
+      if (productId) ids.add(productId);
+    });
+    return ids;
+  }, [publishedVariantsQuery.data?.data]);
+  const navigateProductInventory = React.useCallback(
+    (row: ProductRow) => {
+      const existing = productInventoryByProductId.get(row.id);
+      const encodedReturnPath = encodeURIComponent(returnPath);
+      const existingId = typeof existing?.id === "string" ? existing.id : "";
+      if (existingId) {
+        navigate(`/dashboard/inventory/${encodeURIComponent(existingId)}?returnPath=${encodedReturnPath}`);
+        return;
+      }
+      navigate(
+        `/dashboard/inventory/create?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(
+          row.name,
+        )}&returnPath=${encodedReturnPath}`,
+      );
+    },
+    [navigate, productInventoryByProductId, returnPath],
   );
 
   const allVisibleIds = React.useMemo(() => filteredRows.map((row) => row.id), [filteredRows]);
@@ -257,6 +310,36 @@ export const SubcategoryDetailPage: React.FC = () => {
       label: "Created",
       render: (row: ProductRow) => <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>,
     },
+    ...(!isDeletedView
+      ? [
+          {
+            key: "inventory",
+            label: "Inventory",
+            render: (row: ProductRow) => {
+              if (productIdsWithVariants.has(row.id)) {
+                return <span className="text-[#86868b]">—</span>;
+              }
+
+              const existing = productInventoryByProductId.get(row.id);
+              const hasInventory = typeof existing?.id === "string" && existing.id.length > 0;
+
+              return (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigateProductInventory(row);
+                  }}
+                  className="inline-flex h-[28px] items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                >
+                  {!hasInventory ? <PackagePlus size={12} /> : null}
+                  {hasInventory ? "Edit" : "Set"}
+                </button>
+              );
+            },
+          },
+        ]
+      : []),
     ...(isDeletedView
       ? [
           {

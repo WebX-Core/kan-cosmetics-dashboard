@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, FilePenLine, Package, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Archive, FilePenLine, Package, PackagePlus, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -98,6 +98,14 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
     });
 };
 
+const getProductIdFromVariant = (value: unknown): string => {
+  const row = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  const direct = text(row.productId ?? row.product_id);
+  if (direct) return direct;
+  const product = (typeof row.product === "object" && row.product !== null ? row.product : {}) as Record<string, unknown>;
+  return text(product.id);
+};
+
 export const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -116,10 +124,14 @@ export const ProductsListPage: React.FC = () => {
   const canFaqView        = usePermission("faq:view");
   const canVariantView    = usePermission("product-variant:view");
   const canSeoView        = usePermission("seo:view");
+  const canInventoryCreate = usePermission("inventory:create");
+  const canInventoryUpdate = usePermission("inventory:update");
+  const canInventoryManage = canInventoryCreate || canInventoryUpdate;
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlySet<string>>(new Set());
   const confirm = useConfirmAction();
+  const returnPath = `${location.pathname}${location.search}`;
 
   const query = catalogApi.products.hooks.useList(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
@@ -136,6 +148,14 @@ export const ProductsListPage: React.FC = () => {
   const deletedQuery = catalogApi.products.hooks.useDeleted(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
     isDeletedView,
+  );
+  const inventoryQuery = catalogApi.inventory.hooks.useList(
+    { page: 1, limit: 1000 },
+    !isDeletedView && canInventoryManage,
+  );
+  const publishedVariantsQuery = catalogApi.productVariants.hooks.useList(
+    { page: 1, limit: 1000 },
+    !isDeletedView && canInventoryManage,
   );
   const softDelete = catalogApi.products.hooks.useSoftDelete();
   const recover = catalogApi.products.hooks.useRecover();
@@ -161,6 +181,43 @@ export const ProductsListPage: React.FC = () => {
     lowStock: rows.filter((r) => r.stock > 0 && r.stock <= 5).length,
     outOfStock: rows.filter((r) => r.stock === 0).length,
   }), [rows, total]);
+  const productInventoryByProductId = React.useMemo(() => {
+    const map = new Map<string, Record<string, unknown>>();
+    const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
+    source.forEach((entry) => {
+      const product = entry.product as Record<string, unknown> | undefined;
+      const variant = entry.productVariant as Record<string, unknown> | undefined;
+      const productId = typeof product?.id === "string" ? product.id : "";
+      const variantId = typeof variant?.id === "string" ? variant.id : "";
+      if (productId && !variantId) map.set(productId, entry);
+    });
+    return map;
+  }, [inventoryQuery.data?.data]);
+  const productIdsWithVariants = React.useMemo(() => {
+    const ids = new Set<string>();
+    (publishedVariantsQuery.data?.data ?? []).forEach((entry) => {
+      const productId = getProductIdFromVariant(entry);
+      if (productId) ids.add(productId);
+    });
+    return ids;
+  }, [publishedVariantsQuery.data?.data]);
+  const navigateProductInventory = React.useCallback(
+    (row: ProductRow) => {
+      const existing = productInventoryByProductId.get(row.id);
+      const encodedReturnPath = encodeURIComponent(returnPath);
+      const existingId = typeof existing?.id === "string" ? existing.id : "";
+      if (existingId) {
+        navigate(`/dashboard/inventory/${encodeURIComponent(existingId)}?returnPath=${encodedReturnPath}`);
+        return;
+      }
+      navigate(
+        `/dashboard/inventory/create?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(
+          row.name,
+        )}&returnPath=${encodedReturnPath}`,
+      );
+    },
+    [navigate, productInventoryByProductId, returnPath],
+  );
 
   const tabs = [
     { key: "all", label: "All Products", count: total },
@@ -232,6 +289,36 @@ export const ProductsListPage: React.FC = () => {
     },
     { key: "createdAt", label: "Created", render: (r: ProductRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
     { key: "status", label: "Status", render: (r: ProductRow) => <PublicationStatusBadge status={r.status} /> },
+    ...(!isDeletedView
+      ? [
+          {
+            key: "inventory",
+            label: "Inventory",
+            render: (r: ProductRow) => {
+              if (!canInventoryManage || productIdsWithVariants.has(r.id)) {
+                return <span className="text-[#86868b]">—</span>;
+              }
+
+              const existing = productInventoryByProductId.get(r.id);
+              const hasInventory = typeof existing?.id === "string" && existing.id.length > 0;
+
+              return (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigateProductInventory(r);
+                  }}
+                  className="inline-flex h-[28px] items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                >
+                  {!hasInventory ? <PackagePlus size={12} /> : null}
+                  {hasInventory ? "Edit" : "Set"}
+                </button>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "actions",
       label: "Actions",
