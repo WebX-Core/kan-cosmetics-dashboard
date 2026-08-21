@@ -20,15 +20,26 @@ const records = (payload: unknown): Record<string, unknown>[] => {
   for (const value of Object.values(payload as Record<string, unknown>)) { const found = records(value); if (found.length) return found; }
   return [];
 };
-const options = (payload: unknown, fallback: string): Option[] => records(payload).map((row) => ({ id: String(row.id ?? ""), label: String(row.title ?? row.name ?? row.code ?? [row.firstname, row.lastname].filter(Boolean).join(" ") ?? fallback), detail: typeof row.email === "string" ? row.email : undefined })).filter((item) => item.id);
+const options = (payload: unknown, fallback: string): Option[] => records(payload).map((row) => ({ id: String(row.id ?? ""), label: String(row.title ?? row.name ?? row.code ?? [row.firstname, row.lastname].filter(Boolean).join(" ") ?? fallback), detail: [row.email, row.phone].filter((value): value is string => typeof value === "string" && value.length > 0).join(" / ") || undefined })).filter((item) => item.id);
 const csv = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 
-const MultiSelect: React.FC<{ label: string; value: string; choices: Option[]; onChange: (value: string) => void; required?: boolean; loading?: boolean }> = ({ label, value, choices, onChange, required, loading }) => {
+const MultiSelect: React.FC<{
+  label: string;
+  value: string;
+  choices: Option[];
+  onChange: (value: string) => void;
+  required?: boolean;
+  loading?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  selectedText?: string;
+  helpText?: string;
+}> = ({ label, value, choices, onChange, required, loading, searchPlaceholder, emptyText = "No restriction selected", selectedText = "selected", helpText }) => {
   const [search, setSearch] = React.useState("");
   const selected = csv(value);
-  const filtered = choices.filter((item) => `${item.label} ${item.detail ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = choices.filter((item) => (item.label + " " + (item.detail ?? "")).toLowerCase().includes(search.toLowerCase()));
   const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((item) => item !== id).join(", ") : [...selected, id].join(", "));
-  return <FormField label={label} required={required}><div className="rounded-xl border border-gray-200 bg-white p-3"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${label.toLowerCase()}...`} className="mb-2 h-9 w-full rounded-lg bg-[#f5f5f7] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/10"/><div className="max-h-44 space-y-1 overflow-auto">{loading ? <p className="px-2 py-3 text-xs text-[#86868b]">Loading...</p> : filtered.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#f5f5f7]"><input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} /><span className="min-w-0"><span className="block truncate text-sm text-[#1d1d1f]">{item.label}</span>{item.detail ? <span className="block truncate text-xs text-[#86868b]">{item.detail}</span> : null}</span></label>)}</div>{selected.length ? <p className="mt-2 text-xs font-medium text-[var(--primary)]">{selected.length} selected</p> : <p className="mt-2 text-xs text-[#86868b]">No restriction selected</p>}</div></FormField>;
+  return <FormField label={label} required={required}><div className="rounded-xl border border-gray-200 bg-white p-3"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchPlaceholder ?? "Search " + label.toLowerCase() + "..."} className="mb-2 h-9 w-full rounded-lg bg-[#f5f5f7] px-3 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]/10"/><div className="max-h-44 space-y-1 overflow-auto">{loading ? <p className="px-2 py-3 text-xs text-[#86868b]">Loading...</p> : filtered.length ? filtered.map((item) => <label key={item.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#f5f5f7]"><input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} /><span className="min-w-0"><span className="block truncate text-sm text-[#1d1d1f]">{item.label}</span>{item.detail ? <span className="block truncate text-xs text-[#86868b]">{item.detail}</span> : null}</span></label>) : <p className="px-2 py-3 text-xs text-[#86868b]">No matching records found.</p>}</div>{selected.length ? <p className="mt-2 text-xs font-medium text-[var(--primary)]">{selected.length} {selectedText}</p> : <p className="mt-2 text-xs text-[#86868b]">{emptyText}</p>}{helpText ? <p className="mt-1 text-xs text-[#86868b]">{helpText}</p> : null}</div></FormField>;
 };
 
 const schema = z.object({
@@ -123,6 +134,11 @@ export const CouponCreatePage: React.FC = () => {
     const parsed = validateOrToast(schema, form, toast);
     if (!parsed) return;
     const ids = (value?: string) => value?.split(",").map((entry) => entry.trim()).filter(Boolean);
+
+    if (parsed.appliesToAllUsers === false && !ids(parsed.eligibleCustomerIds)?.length) {
+      toast.error("Select at least one customer or choose all customers.");
+      return;
+    }
 
     const payload = {
       code: parsed.code,
@@ -230,10 +246,9 @@ export const CouponCreatePage: React.FC = () => {
             
           </div>
           <div className="flex flex-wrap gap-4 pt-2">
-            {(["isActive", "appliesToAllUsers", "firstSignupOnly", "issueOnSignup"] as const).map((key) => {
+            {(["isActive", "firstSignupOnly", "issueOnSignup"] as const).map((key) => {
               const labels: Record<typeof key, string> = {
                 isActive: "Active",
-                appliesToAllUsers: "Applies to all users",
                 firstSignupOnly: "First signup only",
                 issueOnSignup: "Issue on signup",
               };
@@ -250,7 +265,25 @@ export const CouponCreatePage: React.FC = () => {
               );
             })}
           </div>
-          {!form.appliesToAllUsers ? <MultiSelect label="Eligible Customers" value={form.eligibleCustomerIds} onChange={(value) => up("eligibleCustomerIds", value)} choices={options(customersQuery.data, "Customer")} loading={customersQuery.isLoading} required /> : null}
+          <FormField label="Customer Target" required>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className={(form.appliesToAllUsers ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/10" : "border-gray-200 hover:bg-gray-50") + " flex cursor-pointer rounded-xl border bg-white p-4 transition"}>
+                <input type="radio" name="couponAudience" checked={form.appliesToAllUsers} onChange={() => up("appliesToAllUsers", true)} className="mt-1 h-4 w-4 border-gray-300 text-[var(--primary)]" />
+                <span className="ml-3">
+                  <span className="block text-sm font-semibold text-gray-900">All customers</span>
+                  <span className="mt-1 block text-xs text-[#86868b]">Every customer can see and redeem this coupon if the other rules match.</span>
+                </span>
+              </label>
+              <label className={(!form.appliesToAllUsers ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/10" : "border-gray-200 hover:bg-gray-50") + " flex cursor-pointer rounded-xl border bg-white p-4 transition"}>
+                <input type="radio" name="couponAudience" checked={!form.appliesToAllUsers} onChange={() => up("appliesToAllUsers", false)} className="mt-1 h-4 w-4 border-gray-300 text-[var(--primary)]" />
+                <span className="ml-3">
+                  <span className="block text-sm font-semibold text-gray-900">Specific customers</span>
+                  <span className="mt-1 block text-xs text-[#86868b]">Only selected customers will receive this coupon in their available coupon list.</span>
+                </span>
+              </label>
+            </div>
+          </FormField>
+          {!form.appliesToAllUsers ? <MultiSelect label="Target Customers" value={form.eligibleCustomerIds} onChange={(value) => up("eligibleCustomerIds", value)} choices={options(customersQuery.data, "Customer")} loading={customersQuery.isLoading} required searchPlaceholder="Search customer name, phone, or email..." emptyText="No customer selected. Select at least one customer to issue this coupon privately." selectedText="target customer(s) selected" helpText="Selected customers will see this coupon in their available coupons list." /> : null}
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Email Campaign"><select value={form.campaignId} onChange={(e) => up("campaignId", e.target.value)} className={inputClass}><option value="">No campaign</option>{options(campaignsQuery.data?.data, "Campaign").map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></FormField>
             <FormField label="Sort Order"><input type="number" min="1" value={form.sortOrder} onChange={(e) => up("sortOrder", e.target.value)} className={inputClass} /></FormField>
