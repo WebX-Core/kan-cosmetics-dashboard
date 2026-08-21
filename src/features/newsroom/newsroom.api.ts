@@ -15,7 +15,7 @@ const paths: CrudPaths = {
   create: "/blog/create",
   update: (id) => `/blog/update/${id}`,
 
-  softDelete: (ids) => `/blog/delete/${ids}`,
+  softDelete: (ids) => `/blog/destroy/${ids}`,
 
   deletedList: "/blog/deleted",
   recover: "/blog/recover",

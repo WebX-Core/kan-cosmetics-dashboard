@@ -9,7 +9,7 @@ const paths: CrudPaths = {
   create: "/faq/create",
   update: (id) => `/faq/update/${id}`,
 
-  softDelete: (ids) => `/faq/delete/${ids}`, // supports comma-separated IDs
+  softDelete: (ids) => `/faq/destroy/${ids}`,
 
   deletedList: "/faq/deleted",
   recover: "/faq/recover",

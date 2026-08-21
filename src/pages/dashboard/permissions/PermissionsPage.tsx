@@ -58,7 +58,7 @@ export const PermissionsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
+  const isSudoAdmin = useUserStore((state) => state.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname.endsWith("/deleted");
 
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
@@ -217,19 +217,6 @@ export const PermissionsPage: React.FC = () => {
       onBack={isDeletedView ? () => navigate("/dashboard/rbac/permissions") : undefined}
       onNew={!isDeletedView ? () => navigate("/dashboard/rbac/permissions/create") : undefined}
       newButtonLabel="New Permission"
-      actions={
-        !isDeletedView && isSudoAdmin ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/rbac/permissions/deleted")}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              <Trash2 size={13} strokeWidth={2} /> View Deleted
-            </button>
-          </div>
-        ) : undefined
-      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search permissions..."
@@ -312,7 +299,7 @@ export const PermissionsPage: React.FC = () => {
                 ? "This will restore the permission."
                 : confirm.action === "destroy"
                   ? "This cannot be undone."
-                  : "This will move the permission to trash."}
+                  : "This permanently deletes the permission and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

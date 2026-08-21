@@ -6,6 +6,8 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const fmt = (v: string): string => {
@@ -40,6 +42,8 @@ const toLogRows = (payload: unknown): ReadonlyArray<LogRow> =>
   }));
 
 export const EmailLogsPage: React.FC = () => {
+  const toast = useToast();
+  const [retryingId, setRetryingId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
 
@@ -87,6 +91,7 @@ export const EmailLogsPage: React.FC = () => {
     },
     { key: "sentAt", label: "Sent At", render: (r: LogRow) => <span className="text-xs text-gray-500">{fmt(r.sentAt)}</span> },
     { key: "createdAt", label: "Logged At", render: (r: LogRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    { key: "actions", label: "Actions", render: (r: LogRow) => r.status.toLowerCase() === "failed" ? <button type="button" disabled={retryingId === r.id} onClick={(event) => { event.stopPropagation(); void (async () => { setRetryingId(r.id); try { await marketingApi.retryEmailLog(r.id); toast.success("Email queued for retry."); await query.refetch(); } catch (error) { toast.error(parseApiError(error).message); } finally { setRetryingId(null); } })(); }} className="rounded-full border border-[#d2d2d7] px-3 py-1.5 text-xs font-semibold hover:bg-[#f5f5f7] disabled:opacity-50">{retryingId === r.id ? "Retrying…" : "Retry"}</button> : null },
   ];
 
   return (

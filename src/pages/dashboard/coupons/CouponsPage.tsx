@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Tag, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
@@ -27,15 +27,16 @@ type CouponRow = Readonly<{
 const readString = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
 const readNumber = (value: unknown, fallback = 0): number =>
-  typeof value === "number" ? value : fallback;
+  typeof value === "number" ? value : typeof value === "string" && Number.isFinite(Number(value)) ? Number(value) : fallback;
 
-const toStatus = (value: unknown): CouponRow["status"] => {
-  if (typeof value !== "string") return "Inactive";
-  const n = value.toLowerCase();
-  if (n === "active") return "Active";
-  if (n === "expired") return "Expired";
-  if (n === "scheduled") return "Scheduled";
-  return "Inactive";
+const toStatus = (item: Record<string, unknown>): CouponRow["status"] => {
+  if (item.isActive === false) return "Inactive";
+  const now = Date.now();
+  const startsAt = new Date(readString(item.startsAt)).getTime();
+  const expiresAt = new Date(readString(item.expiresAt)).getTime();
+  if (Number.isFinite(startsAt) && now < startsAt) return "Scheduled";
+  if (Number.isFinite(expiresAt) && now > expiresAt) return "Expired";
+  return "Active";
 };
 
 const toCouponRow = (record: unknown): CouponRow => {
@@ -47,25 +48,31 @@ const toCouponRow = (record: unknown): CouponRow => {
     discountType: readString(item.discountType, "Fixed"),
     discountValue: readString(item.discountValue, "0"),
     usageLimit: readNumber(item.usageLimit),
-    usageCount: readNumber(item.usageCount),
-    status: toStatus(item.status),
-    validFrom: readString(item.validFrom, "—"),
-    validUntil: readString(item.validUntil, "—"),
+    usageCount: readNumber(item.usedCount),
+    status: toStatus(item),
+    validFrom: readString(item.startsAt, "—").slice(0, 10),
+    validUntil: readString(item.expiresAt, "—").slice(0, 10),
   };
 };
 
 export const CouponsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
 
-  const couponsQuery = commerceApi.coupons.crud.hooks.useList({
+  const isDeletedView = location.pathname.endsWith("/deleted");
+  const listQuery = commerceApi.coupons.crud.hooks.useList({
     page: state.page,
     limit: state.limit,
     search: debouncedSearch || undefined,
-  });
+  }, !isDeletedView);
+  const deletedQuery = commerceApi.coupons.crud.hooks.useDeleted({ page: state.page, limit: state.limit, search: debouncedSearch || undefined }, isDeletedView);
+  const couponsQuery = isDeletedView ? deletedQuery : listQuery;
   const deleteCoupon = commerceApi.coupons.crud.hooks.useSoftDelete();
+  const recoverCoupon = commerceApi.coupons.crud.hooks.useRecover();
+  const destroyCoupon = commerceApi.coupons.crud.hooks.useDestroy();
 
   const coupons = React.useMemo(
     () => (couponsQuery.data?.data ?? []).map(toCouponRow),
@@ -117,19 +124,20 @@ export const CouponsPage: React.FC = () => {
       <span className="text-gray-700">{row.discountType}: {row.discountValue}</span>
     )},
     { key: "usage", label: "Usage", render: (row: CouponRow) => (
-      <span className="font-medium text-gray-900">{row.usageCount}/{row.usageLimit}</span>
+      <span className="font-medium text-gray-900">{row.usageCount}/{row.usageLimit || "Unlimited"}</span>
     )},
     { key: "status", label: "Status", render: (row: CouponRow) => <StatusBadge status={row.status} /> },
     { key: "validity", label: "Validity", render: (row: CouponRow) => (
       <span className="text-xs text-gray-500">{row.validFrom} – {row.validUntil}</span>
     )},
+    ...(isDeletedView ? [{ key: "restore", label: "Actions", render: (row: CouponRow) => <div className="flex gap-2"><button type="button" onClick={(event) => { event.stopPropagation(); void recoverCoupon.mutateAsync({ ids: [row.id] }); }} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">Recover</button><button type="button" onClick={(event) => { event.stopPropagation(); void (async () => { if (await confirmAction("Permanently delete this coupon?")) await destroyCoupon.mutateAsync(row.id); })(); }} className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100">Delete permanently</button></div> }] : []),
   ];
 
   return (
     <PageLayout
       title="Coupons"
       subtitle="Manage discount codes, activation windows, and usage tracking."
-      onNew={() => navigate("/dashboard/coupons/create")}
+      onNew={isDeletedView ? undefined : () => navigate("/dashboard/coupons/create")}
       newButtonLabel="New Coupon"
       actions={<ExportMenu basePath="/coupon" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="coupons"/>}
       searchValue={state.search}
@@ -150,8 +158,8 @@ export const CouponsPage: React.FC = () => {
         columns={columns}
         data={tabFiltered}
         searchValue={state.search}
-        onEdit={(row) => navigate(`/dashboard/coupons/${row.id}`)}
-        onDelete={(row) => void handleDelete(row.id)}
+        onEdit={isDeletedView ? undefined : (row) => navigate(`/dashboard/coupons/${row.id}`)}
+        onDelete={isDeletedView ? undefined : (row) => void handleDelete(row.id)}
         emptyMessage={couponsQuery.isLoading ? "Loading coupons..." : "No coupons found."}
         showPagination={true}
         currentPage={state.page}

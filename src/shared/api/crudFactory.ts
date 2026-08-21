@@ -224,8 +224,9 @@ export function makeCrud<TItem, TCreate, TUpdate>(
   return unwrap<TItem>(res);
 },
     softDelete: async (idOrCommaIds: UUID | CommaIds) => {
-      const res = await api.delete(paths.softDelete(idOrCommaIds));
-      return unwrap<{ success: boolean }>(res);
+      const ids = String(idOrCommaIds).split(",").map((id) => id.trim()).filter(Boolean);
+      await Promise.all(ids.map((id) => api.delete(paths.softDelete(id))));
+      return { success: true };
     },
 
     recover: async (payload: RecoverDto) => {
@@ -234,8 +235,9 @@ export function makeCrud<TItem, TCreate, TUpdate>(
     },
 
     destroy: async (idOrCommaIds: UUID | CommaIds) => {
-      const res = await api.delete(paths.destroy(idOrCommaIds));
-      return unwrap<{ success: boolean }>(res);
+      const ids = String(idOrCommaIds).split(",").map((id) => id.trim()).filter(Boolean);
+      await Promise.all(ids.map((id) => api.delete(paths.destroy(id))));
+      return { success: true };
     },
   };
 

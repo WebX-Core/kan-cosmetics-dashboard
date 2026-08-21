@@ -18,7 +18,6 @@ import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { useUserStore } from "@/store/UserStore";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
@@ -62,7 +61,6 @@ export const EmailRecipientBucketsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === "/dashboard/marketing/email-recipient-buckets/deleted";
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
@@ -183,13 +181,6 @@ export const EmailRecipientBucketsPage: React.FC = () => {
       onBack={isDeletedView ? () => navigate("/dashboard/marketing/email-recipient-buckets") : undefined}
       onNew={!isDeletedView ? () => navigate("/dashboard/marketing/email-recipient-buckets/create") : undefined}
       newButtonLabel="New Bucket"
-      actions={
-        !isDeletedView && isSudoAdmin ? (
-          <button type="button" onClick={() => navigate("/dashboard/marketing/email-recipient-buckets/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-            <Trash2 size={13} strokeWidth={2} /> View Deleted
-          </button>
-        ) : undefined
-      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search buckets..."
@@ -241,7 +232,7 @@ export const EmailRecipientBucketsPage: React.FC = () => {
               {confirm.action === "recover" ? "Recover bucket?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete bucket?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the bucket." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the bucket to trash."}
+              {confirm.action === "recover" ? "This will restore the bucket." : "This permanently deletes the bucket and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -34,6 +34,10 @@ export type CouponDto = Readonly<{
   issueOnSignup?: boolean;
   campaignId?: string;
   sortOrder?: number;
+  categoryIds?: ReadonlyArray<string>;
+  subcategoryIds?: ReadonlyArray<string>;
+  productIds?: ReadonlyArray<string>;
+  productVariantIds?: ReadonlyArray<string>;
 }>;
 
 export type CouponIssueToUsersDto = Readonly<{
@@ -46,6 +50,7 @@ export type CouponUnassignUsersDto = CouponIssueToUsersDto;
 export type CouponValidateDto = Readonly<{
   code: string;
   orderAmount: number;
+  orderId?: string;
 }>;
 
 export type CouponApplyDto = Readonly<{

@@ -20,7 +20,6 @@ import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { useUserStore } from "@/store/UserStore";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown): number => (typeof v === "number" ? v : 0);
@@ -59,7 +58,6 @@ export const EmailQueuePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === "/dashboard/marketing/email-queue/deleted";
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
@@ -177,11 +175,6 @@ export const EmailQueuePage: React.FC = () => {
       actions={
         !isDeletedView ? (
           <div className="flex items-center gap-2">
-            {isSudoAdmin ? (
-              <button type="button" onClick={() => navigate("/dashboard/marketing/email-queue/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-                <Trash2 size={13} strokeWidth={2} /> View Deleted
-              </button>
-            ) : null}
             <button type="button" onClick={() => navigate("/dashboard/marketing/email-queue/create-from-campaign")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
               <Megaphone size={13} strokeWidth={2} /> From Campaign
             </button>
@@ -242,7 +235,7 @@ export const EmailQueuePage: React.FC = () => {
               {confirm.action === "recover" ? "Recover queue item?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete queue item?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the queue item." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the queue item to trash."}
+              {confirm.action === "recover" ? "This will restore the queue item." : "This permanently deletes the queue item and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

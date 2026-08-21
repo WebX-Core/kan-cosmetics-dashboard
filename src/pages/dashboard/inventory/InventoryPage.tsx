@@ -28,7 +28,6 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { catalogApi } from "@/features/catalog";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
-import { useUserStore } from "@/store/UserStore";
 
 type InventoryRow = Readonly<{
   id: string;
@@ -182,7 +181,6 @@ export const InventoryPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === "/dashboard/inventory/deleted";
 
   const { state, setState, debouncedSearch } = useListQueryState({
@@ -298,15 +296,6 @@ export const InventoryPage: React.FC = () => {
       actions={
         <div className="flex items-center gap-[8px]">
           {!isDeletedView && <ExportMenu basePath="/inventory" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="inventory"/>}
-          {!isDeletedView && isSudoAdmin && (
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/inventory/deleted")}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              <Trash2 size={13} strokeWidth={2} /> View Deleted
-            </button>
-          )}
           <div className="relative">
             <Search
               size={13}

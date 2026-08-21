@@ -8,6 +8,9 @@ import {
   Loader2,
   Check,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "@/app/providers/AuthContext";
+import { hasDashboardPermission } from "@/app/guards/DashboardPermissionGuard";
 
 type Column<T> = {
   key: string;
@@ -79,6 +82,10 @@ export function DataTableV2<T extends Record<string, unknown>>({
   onSelectionChange,
   bulkActions,
 }: Props<T>) {
+  const { pathname } = useLocation();
+  const { state: authState } = useAuth();
+  const effectiveOnEdit = hasDashboardPermission(authState.role, authState.permissions, pathname, "update") ? onEdit : undefined;
+  const effectiveOnDelete = hasDashboardPermission(authState.role, authState.permissions, pathname, "delete") ? onDelete : undefined;
   const isSelectable = Boolean(rowId);
   const [internalSelected, setInternalSelected] = React.useState<Set<string>>(new Set());
   const selected = controlledSelectedIds
@@ -324,7 +331,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   {col.label}
                 </th>
               ))}
-              {(onEdit || onDelete || rowActions) && (
+              {(effectiveOnEdit || effectiveOnDelete || rowActions) && (
                 <th className="px-[21px] py-[10px] text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">
                   Action
                 </th>
@@ -347,7 +354,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                       <div className="h-[14px] w-full animate-pulse rounded bg-[#f3f3f5]" />
                     </td>
                   ))}
-                  {(onEdit || onDelete || rowActions) && (
+                  {(effectiveOnEdit || effectiveOnDelete || rowActions) && (
                     <td className="px-[21px] py-[13px]">
                       <div className="ml-auto h-[14px] w-[42px] animate-pulse rounded bg-[#f3f3f5]" />
                     </td>
@@ -357,7 +364,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
             ) : effectiveData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (onEdit || onDelete || rowActions ? 1 : 0) + (isSelectable ? 1 : 0)}
+                  colSpan={columns.length + (effectiveOnEdit || effectiveOnDelete || rowActions ? 1 : 0) + (isSelectable ? 1 : 0)}
                   className="px-[21px] py-[55px] text-center text-[14px] text-[#86868b]"
                 >
                   {emptyMessage}
@@ -403,28 +410,28 @@ export function DataTableV2<T extends Record<string, unknown>>({
                       )}
                     </td>
                   ))}
-                  {(onEdit || onDelete || rowActions) && (
+                  {(effectiveOnEdit || effectiveOnDelete || rowActions) && (
                     <td className="px-[21px] py-[13px] text-right">
                       {rowActions ? (
                         <div className="flex items-center justify-end">{rowActions(row)}</div>
                       ) : (
                         <div className="flex items-center justify-end gap-[5px]">
-                          {onEdit && (
+                          {effectiveOnEdit && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onEdit(row);
+                                effectiveOnEdit(row);
                               }}
                               className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                             >
                               <Edit size={13} strokeWidth={2} />
                             </button>
                           )}
-                          {onDelete && (
+                          {effectiveOnDelete && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onDelete(row);
+                                effectiveOnDelete(row);
                               }}
                               className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-red-50 hover:text-red-500"
                             >

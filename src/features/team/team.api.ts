@@ -10,7 +10,7 @@ const paths: CrudPaths = {
   create: "/teammember/create",
   update: (id) => `/teammember/update/${id}`,
 
-  softDelete: (id) => `/teammember/delete/${id}`,
+  softDelete: (id) => `/teammember/destroy/${id}`,
 
   deletedList: "/teammember/deleted",
   recover: "/teammember/recover",

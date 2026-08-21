@@ -16,7 +16,6 @@ import { parseApiError } from "@/shared/utils/apiError";
 import type { PublicationStatus } from "@/features/catalog/catalog.types";
 import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
-import { useUserStore } from "@/store/UserStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -113,7 +112,6 @@ type VariantRow = Readonly<{
   title: string;
   sku: string;
   productId: string;
-  isActive: boolean;
   status: PublicationStatus;
 }>;
 
@@ -123,7 +121,6 @@ const toVariantRows = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): 
     title: String(row.title ?? "—"),
     sku: String(row.sku ?? "—"),
     productId: String(row.productId ?? (row.product as Record<string, unknown> | undefined)?.id ?? "—"),
-    isActive: row.isActive !== false,
     status: readPublicationStatus(row.status),
   }));
 
@@ -240,8 +237,6 @@ export const ProductVariantsPage: React.FC = () => {
   const location = useLocation();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const userRole = useUserStore((state) => state.user?.role ?? null);
-  const isSudoAdmin = userRole === "SUDOADMIN";
   const isDeletedView = location.pathname.endsWith("/deleted");
   const publicationView = (searchParams.get("status") ?? "published") as PublicationView;
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
@@ -394,19 +389,6 @@ export const ProductVariantsPage: React.FC = () => {
           <div className="font-medium text-gray-900">{row.title}</div>
           <div className="text-xs text-gray-400">SKU: {row.sku}</div>
         </div>
-      ),
-    },
-    {
-      key: "isActive",
-      label: "Active",
-      render: (row: VariantRow) => (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            row.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
-          }`}
-        >
-          {row.isActive ? "Active" : "Inactive"}
-        </span>
       ),
     },
     { key: "status", label: "Status", render: (row: VariantRow) => <PublicationStatusBadge status={row.status} /> },
@@ -577,22 +559,6 @@ export const ProductVariantsPage: React.FC = () => {
       onBack={productFilter ? () => navigate(returnPath) : undefined}
       actions={
         <div className="flex items-center gap-2">
-          {!isDeletedView && isSudoAdmin ? (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  `/dashboard/product-variants/deleted?product=${encodeURIComponent(productFilter)}&productName=${encodeURIComponent(
-                    productName,
-                  )}&returnPath=${encodeURIComponent(returnPath)}`,
-                )
-              }
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              <Trash2 size={13} strokeWidth={2} />
-              View Deleted
-            </button>
-          ) : null}
           {isDeletedView ? (
             <button
               type="button"
@@ -627,9 +593,8 @@ export const ProductVariantsPage: React.FC = () => {
       searchPlaceholder="Search title, SKU..."
     >
       {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(searchParams); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : null}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4">
         <StatCardV2 label="Total Variants" value={rows.length} icon={Layers} colorVariant="blue" />
-        <StatCardV2 label="Active" value={rows.filter((row) => row.isActive).length} icon={Layers} colorVariant="emerald" />
       </div>
 
       <DataTableV2
@@ -710,8 +675,8 @@ export const ProductVariantsPage: React.FC = () => {
                   ? `This will permanently delete ${pendingIds.length} variants. This cannot be undone.`
                   : "This will permanently delete this variant. This cannot be undone."
                 : pendingIds.length > 1
-                ? `This will move ${pendingIds.length} variants to trash.`
-                : "This will move this variant to trash."}
+                ? `This permanently deletes ${pendingIds.length} variants and cannot be undone.`
+                : "This permanently deletes this variant and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

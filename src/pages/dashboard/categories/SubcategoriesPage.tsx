@@ -11,7 +11,6 @@ import { catalogApi } from "@/features/catalog";
 import type { PublicationStatus } from "@/features/catalog/catalog.types";
 import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
-import { useUserStore } from "@/store/UserStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,8 +95,6 @@ export const SubcategoriesPage: React.FC = () => {
   const location = useLocation();
   const toast = useToast();
 
-  const userRole = useUserStore((state) => state.user?.role ?? null);
-  const isSudoAdmin = userRole === "SUDOADMIN";
   const isDeletedView = location.pathname === "/dashboard/subcategories/deleted";
   const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
 
@@ -379,18 +376,6 @@ export const SubcategoriesPage: React.FC = () => {
           : "Manage product subcategories and hierarchy."
       }
       onBack={isDeletedView ? () => navigate("/dashboard/subcategories") : undefined}
-      actions={
-        !isDeletedView && isSudoAdmin ? (
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/subcategories/deleted")}
-            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Trash2 size={13} strokeWidth={2} />
-            View Deleted
-          </button>
-        ) : undefined
-      }
       searchValue={state.search}
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder="Search subcategories..."
@@ -489,8 +474,8 @@ export const SubcategoriesPage: React.FC = () => {
                   ? `This will permanently delete ${pendingIds.length} subcategories. This cannot be undone.`
                   : "This will permanently delete this subcategory. This cannot be undone."
                 : pendingIds.length > 1
-                ? `This will move ${pendingIds.length} subcategories to trash.`
-                : "This will move this subcategory to trash."}
+                ? `This permanently deletes ${pendingIds.length} subcategories and cannot be undone.`
+                : "This permanently deletes this subcategory and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

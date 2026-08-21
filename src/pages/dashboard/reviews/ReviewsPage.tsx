@@ -22,7 +22,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { useUserStore } from "@/store/UserStore";
 import { parseApiError } from "@/shared/utils/apiError";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
@@ -62,7 +61,6 @@ export const ReviewsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const isDeletedView = location.pathname === DELETED_PATH;
 
   const [activeTab, setActiveTab] = React.useState("all");
@@ -197,13 +195,6 @@ export const ReviewsPage: React.FC = () => {
       title={isDeletedView ? "Deleted Reviews" : "Reviews"}
       subtitle={isDeletedView ? "Deleted review records." : "Moderate product and site reviews."}
       onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
-      actions={
-        !isDeletedView && isSudoAdmin ? (
-          <button type="button" onClick={() => navigate(DELETED_PATH)} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">
-            <Trash2 size={13} strokeWidth={2} /> View Deleted
-          </button>
-        ) : undefined
-      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search reviews..."
@@ -259,7 +250,7 @@ export const ReviewsPage: React.FC = () => {
               {confirm.action === "recover" ? "Recover review?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete review?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the selected review." : confirm.action === "destroy" ? "This cannot be undone." : "This will move the review to trash."}
+              {confirm.action === "recover" ? "This will restore the selected review." : "This permanently deletes the review and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,6 +4,7 @@ import { AuthLayout } from "../layouts/AuthLayout";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { ProtectedRoute } from "../guards/ProtectedRoute";
 import { PermissionGuard } from "../guards/PermissionGuard";
+import { DashboardPermissionGuard } from "../guards/DashboardPermissionGuard";
 import { LoginPage } from "../../pages/LoginPage";
 import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
@@ -48,7 +49,7 @@ import { CartDetailPage } from "../../pages/dashboard/carts/CartDetailPage";
 import { WishlistsPage } from "../../pages/dashboard/wishlists/WishlistsPage";
 import { WishlistDetailPage } from "../../pages/dashboard/wishlists/WishlistDetailPage";
 import { PaymentsPage } from "../../pages/dashboard/payments/PaymentsPage";
-import { CouponsPage, CouponCreatePage, CouponDetailPage } from "../../pages/dashboard/coupons";
+import { CouponsPage, CouponCreatePage, CouponDetailPage, CouponUsagePage } from "../../pages/dashboard/coupons";
 import { CustomersPage } from "../../pages/dashboard/customers/CustomersPage";
 import { CustomerDetailsPage } from "../../pages/dashboard/customers/CustomerDetailsPage";
 import { ReviewsPage } from "../../pages/dashboard/reviews/ReviewsPage";
@@ -78,7 +79,6 @@ import {
   UsersViewPage,
 } from "../../pages/dashboard/views/EntityViewPages";
 import {
-  CouponUsagePage,
   ProductMediaPage,
   PurchaseHistoryPage,
   RolePermissionsPage,
@@ -169,7 +169,7 @@ import { WebPushNotificationDetailPage } from "@/pages/dashboard/marketing/web-p
 import { CustomerBanPage } from "@/pages/dashboard/customers/CustomerBanPage";
 import { CustomerBanFormPage } from "@/pages/dashboard/customers/CustomerBanFormPage";
 import { CustomerAddressesPage } from "@/pages/dashboard/customers/CustomerAddressesPage";
-import { LoyaltyLeaderboardPage, LoyaltyOverviewPage, LoyaltyPointsPage, LoyaltySettingsPage, LoyaltyTierFormPage, LoyaltyTiersPage } from "@/pages/dashboard/loyalty";
+import { LoyaltyCustomerDetailPage, LoyaltyLeaderboardPage, LoyaltyOverviewPage, LoyaltyPointsPage, LoyaltyRewardsPage, LoyaltySettingsPage, LoyaltyTierFormPage, LoyaltyTiersPage } from "@/pages/dashboard/loyalty";
 
 export const AppRouter: React.FC = () => {
   return (
@@ -181,6 +181,7 @@ export const AppRouter: React.FC = () => {
       </Route>
 
       <Route element={<ProtectedRoute />}>
+        <Route element={<DashboardPermissionGuard />}>
         <Route element={<DashboardLayout />}>
           <Route element={<RoleGuard allow={["ADMIN", "SUDOADMIN"]} />}>
             <Route element={<PermissionGuard permission="admin:manage" />}>
@@ -210,8 +211,10 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/support" element={<Navigate to="/dashboard/support/product-inquiries" replace />} />
           <Route path="/dashboard/marketing" element={<Navigate to="/dashboard/marketing/email-campaigns" replace />} />
           <Route path="/dashboard/profile" element={<ProfilePage />} />
-          <Route path="/dashboard/temp-catalog-seeder" element={<TempCatalogSeederPage />} />
-          <Route path="/dashboard/temp-engagement-seeder" element={<TempEngagementSeederPage />} />
+          <Route element={<RoleGuard allow={["SUDOADMIN"]} />}>
+            <Route path="/dashboard/temp-catalog-seeder" element={<TempCatalogSeederPage />} />
+            <Route path="/dashboard/temp-engagement-seeder" element={<TempEngagementSeederPage />} />
+          </Route>
           <Route
             path="/dashboard/change-password"
             element={<ChangePasswordPage />}
@@ -264,7 +267,6 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/company-settings/:id/edit" element={<CompanySettingFormPage />} />
           </Route>
           <Route path="/dashboard/inventory" element={<InventoryPage />} />
-          <Route path="/dashboard/inventory/deleted" element={<InventoryPage />} />
           <Route
             path="/dashboard/inventory/create"
             element={<InventoryDetailsPage />}
@@ -279,19 +281,13 @@ export const AppRouter: React.FC = () => {
             element={<ReportDetailsPage />}
           />
           <Route path="/dashboard/categories" element={<CategoriesPage />} />
-          <Route path="/dashboard/categories/deleted" element={<CategoriesPage />} />
           <Route path="/dashboard/subcategories" element={<SubcategoriesPage />} />
-          <Route path="/dashboard/subcategories/deleted" element={<SubcategoriesPage />} />
           <Route
             path="/dashboard/categories/create"
             element={<CategoryCreatePage />}
           />
           <Route
             path="/dashboard/categories/:id"
-            element={<CategoryDetailPage />}
-          />
-          <Route
-            path="/dashboard/categories/:id/deleted-subcategories"
             element={<CategoryDetailPage />}
           />
           <Route
@@ -311,19 +307,11 @@ export const AppRouter: React.FC = () => {
             element={<SubcategoryDetailPage />}
           />
           <Route
-            path="/dashboard/categories/:id/subcategories/:subcategoryId/deleted-products"
-            element={<SubcategoryDetailPage />}
-          />
-          <Route
             path="/dashboard/categories/:id/subcategories/:subcategoryId/edit"
             element={<SubcategoryEditPage />}
           />
           <Route
             path="/dashboard/product-variants"
-            element={<ProductVariantsPage />}
-          />
-          <Route
-            path="/dashboard/product-variants/deleted"
             element={<ProductVariantsPage />}
           />
           <Route
@@ -371,7 +359,6 @@ export const AppRouter: React.FC = () => {
             element={<ProductMediaPage />}
           />
           <Route path="/dashboard/advertisements" element={<AdvertisementsPage />} />
-          <Route path="/dashboard/advertisements/deleted" element={<AdvertisementsPage />} />
           <Route path="/dashboard/advertisements/create" element={<AdvertisementFormPage />} />
           <Route path="/dashboard/advertisements/:id/edit" element={<AdvertisementFormPage />} />
           <Route path="/dashboard/carts" element={<CartsPage />} />
@@ -381,7 +368,6 @@ export const AppRouter: React.FC = () => {
           <Route path="/dashboard/payments" element={<PaymentsPage />} />
           <Route path="/dashboard/payments/:id" element={<PaymentsPage />} />
           <Route path="/dashboard/coupons" element={<CouponsPage />} />
-          <Route path="/dashboard/coupons/deleted" element={<CouponsPage />} />
           <Route path="/dashboard/coupons/create" element={<CouponCreatePage />} />
           <Route path="/dashboard/coupons/:id/edit" element={<CouponCreatePage />} />
           <Route path="/dashboard/coupons/:id" element={<CouponDetailPage />} />
@@ -390,10 +376,13 @@ export const AppRouter: React.FC = () => {
           <Route element={<PermissionGuard permission="customer-loyalty:view" />}>
             <Route path="/dashboard/loyalty" element={<LoyaltyOverviewPage />} />
             <Route path="/dashboard/loyalty/leaderboard" element={<LoyaltyLeaderboardPage />} />
+            <Route path="/dashboard/loyalty/customers" element={<Navigate to="/dashboard/loyalty/leaderboard" replace />} />
+            <Route path="/dashboard/loyalty/customers/:customerId" element={<LoyaltyCustomerDetailPage />} />
             <Route path="/dashboard/loyalty/tiers" element={<LoyaltyTiersPage />} />
             <Route path="/dashboard/loyalty/tiers/create" element={<LoyaltyTierFormPage />} />
             <Route path="/dashboard/loyalty/tiers/:id/edit" element={<LoyaltyTierFormPage />} />
             <Route path="/dashboard/loyalty/points" element={<LoyaltyPointsPage />} />
+            <Route path="/dashboard/loyalty/rewards" element={<LoyaltyRewardsPage />} />
             <Route path="/dashboard/loyalty/settings" element={<LoyaltySettingsPage />} />
           </Route>
           <Route
@@ -418,11 +407,9 @@ export const AppRouter: React.FC = () => {
           />
           <Route path="/dashboard/delivery/shipments/create" element={<ShipmentsCreatePage />} />
           <Route path="/dashboard/reviews" element={<ReviewsPage />} />
-          <Route path="/dashboard/reviews/deleted" element={<ReviewsPage />} />
           <Route path="/dashboard/reviews/:id" element={<ReviewsPage />} />
 
           <Route path="/dashboard/testimonials" element={<TestimonialsPage />} />
-          <Route path="/dashboard/testimonials/deleted" element={<TestimonialsPage />} />
           <Route element={<PermissionGuard permission="review:create" />}>
             <Route path="/dashboard/testimonials/create" element={<TestimonialFormPage />} />
           </Route>
@@ -430,7 +417,6 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/testimonials/:id/edit" element={<TestimonialFormPage />} />
           </Route>
           <Route path="/dashboard/faqs" element={<FaqsPage />} />
-          <Route path="/dashboard/faqs/deleted" element={<FaqsPage />} />
           <Route path="/dashboard/faqs/create" element={<FaqFormPage />} />
           <Route path="/dashboard/faqs/:id/edit" element={<FaqFormPage />} />
           <Route
@@ -439,10 +425,6 @@ export const AppRouter: React.FC = () => {
           />
           <Route
             path="/dashboard/support/product-inquiries"
-            element={<ProductInquiriesPage />}
-          />
-          <Route
-            path="/dashboard/support/product-inquiries/deleted"
             element={<ProductInquiriesPage />}
           />
           <Route
@@ -456,10 +438,6 @@ export const AppRouter: React.FC = () => {
           />
           <Route
             path="/dashboard/support/site-inquiries"
-            element={<SiteInquiriesPage />}
-          />
-          <Route
-            path="/dashboard/support/site-inquiries/deleted"
             element={<SiteInquiriesPage />}
           />
           <Route
@@ -485,35 +463,33 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/seo-metadata/:id/edit" element={<SeoFormPage />} />
           </Route>
           <Route path="/dashboard/newsletter" element={<NewsletterPage />} />
-          <Route path="/dashboard/newsletter/deleted" element={<NewsletterPage />} />
           <Route path="/dashboard/activity-logs" element={<ActivityLogsPage />} />
-          <Route path="/dashboard/activity-logs/deleted" element={<ActivityLogsPage />} />
           <Route path="/dashboard/activity-logs/:id" element={<ActivityLogsPage />} />
           <Route path="/dashboard/audit-logs" element={<AuditLogsPage />} />
-          <Route path="/dashboard/audit-logs/deleted" element={<AuditLogsPage />} />
           <Route path="/dashboard/audit-logs/:id" element={<AuditLogsPage />} />
 
           <Route path="/dashboard/contact" element={<ContactPage />} />
-          <Route path="/dashboard/contact/deleted" element={<ContactPage />} />
           <Route
             path="/dashboard/contact/create"
             element={<ContactCreatePage />}
           />
           <Route path="/dashboard/contact/:id" element={<ContactConversationViewPage />} />
           <Route path="/dashboard/coupon-usage" element={<CouponUsagePage />} />
+          <Route path="/dashboard/coupon-usage/:id" element={<CouponUsagePage />} />
           <Route path="/dashboard/purchase-history" element={<PurchaseHistoryPage />} />
           <Route path="/dashboard/rbac/roles" element={<RolesPage />} />
           <Route path="/dashboard/rbac/roles/create" element={<RolesCreatePage />} />
           <Route path="/dashboard/rbac/roles/:id/edit" element={<RolesCreatePage />} />
           <Route path="/dashboard/rbac/permissions" element={<PermissionsPage />} />
-          <Route path="/dashboard/rbac/permissions/deleted" element={<PermissionsPage />} />
           <Route path="/dashboard/rbac/permissions/create" element={<PermissionFormPage />} />
           <Route path="/dashboard/rbac/permissions/:id/edit" element={<PermissionFormPage />} />
           <Route path="/dashboard/rbac/user-roles" element={<UserRolesPage />} />
           <Route path="/dashboard/rbac/role-permissions" element={<RolePermissionsPage />} />
           <Route path="/dashboard/rbac/user-permissions" element={<UserPermissionsPage />} />
           <Route path="/dashboard/user-metadata" element={<UserMetadataPage />} />
-          <Route path="/dashboard/system/api-ops" element={<ApiOpsPage />} />
+          <Route element={<RoleGuard allow={["SUDOADMIN"]} />}>
+            <Route path="/dashboard/system/api-ops" element={<ApiOpsPage />} />
+          </Route>
           <Route path="/dashboard/delivery/couriers" element={<CouriersListPage />} />
           <Route path="/dashboard/delivery/couriers/create" element={<CouriersCreatePage />} />
           <Route path="/dashboard/delivery/couriers/:id/edit" element={<CouriersEditPage />} />
@@ -569,19 +545,16 @@ export const AppRouter: React.FC = () => {
 
           {/* Products list */}
           <Route path="/dashboard/products" element={<ProductsListPage />} />
-          <Route path="/dashboard/products/deleted" element={<ProductsListPage />} />
           <Route path="/dashboard/products/bulk" element={<ProductBulkPage />} />
 
           {/* Email campaigns */}
           <Route path="/dashboard/marketing/email-campaigns" element={<EmailCampaignsPage />} />
-          <Route path="/dashboard/marketing/email-campaigns/deleted" element={<EmailCampaignsPage />} />
           <Route path="/dashboard/marketing/email-campaigns/create" element={<EmailCampaignFormPage />} />
           <Route path="/dashboard/marketing/email-campaigns/:id/edit" element={<EmailCampaignFormPage />} />
           <Route path="/dashboard/marketing/email-campaigns/:id" element={<EmailCampaignsPage />} />
 
           {/* Email recipients */}
           <Route path="/dashboard/marketing/email-recipients" element={<EmailRecipientsPage />} />
-          <Route path="/dashboard/marketing/email-recipients/deleted" element={<EmailRecipientsPage />} />
           <Route path="/dashboard/marketing/email-recipients/create" element={<EmailRecipientFormPage />} />
           <Route path="/dashboard/marketing/email-recipients/:id/edit" element={<EmailRecipientFormPage />} />
           <Route path="/dashboard/marketing/email-recipients/select-audience" element={<EmailRecipientSelectAudiencePage />} />
@@ -589,24 +562,19 @@ export const AppRouter: React.FC = () => {
 
           {/* Email recipient buckets */}
           <Route path="/dashboard/marketing/email-recipient-buckets" element={<EmailRecipientBucketsPage />} />
-          <Route path="/dashboard/marketing/email-recipient-buckets/deleted" element={<EmailRecipientBucketsPage />} />
           <Route path="/dashboard/marketing/email-recipient-buckets/create" element={<EmailRecipientBucketFormPage />} />
           <Route path="/dashboard/marketing/email-recipient-buckets/:id/edit" element={<EmailRecipientBucketFormPage />} />
 
           {/* Email queue & logs */}
           <Route path="/dashboard/marketing/email-queue" element={<EmailQueuePage />} />
-          <Route path="/dashboard/marketing/email-queue/deleted" element={<EmailQueuePage />} />
           <Route path="/dashboard/marketing/email-queue/create-from-campaign" element={<EmailQueueFromCampaignPage />} />
           <Route path="/dashboard/marketing/email-queue/create-from-bucket" element={<EmailQueueFromBucketPage />} />
           <Route path="/dashboard/marketing/email-logs" element={<EmailLogsPage />} />
-          <Route path="/dashboard/marketing/email-logs/deleted" element={<EmailLogsPage />} />
 
           {/* Web Push */}
           <Route path="/dashboard/marketing/web-push/subscriptions" element={<WebPushSubscriptionsPage />} />
-          <Route path="/dashboard/marketing/web-push/subscriptions/deleted" element={<WebPushSubscriptionsPage />} />
           <Route path="/dashboard/marketing/web-push/subscriptions/:id" element={<WebPushSubscriptionDetailPage />} />
           <Route path="/dashboard/marketing/web-push/notifications" element={<WebPushNotificationsPage />} />
-          <Route path="/dashboard/marketing/web-push/notifications/deleted" element={<WebPushNotificationsPage />} />
           <Route path="/dashboard/marketing/web-push/notifications/:id" element={<WebPushNotificationDetailPage />} />
           <Route path="/dashboard/marketing/web-push/notifications/create" element={<WebPushNotificationFormPage />} />
           <Route path="/dashboard/marketing/web-push/notifications/:id/edit" element={<WebPushNotificationFormPage />} />
@@ -614,12 +582,11 @@ export const AppRouter: React.FC = () => {
 
           {/* Customer management */}
           <Route path="/dashboard/customers/bans" element={<CustomerBanPage />} />
-          <Route path="/dashboard/customers/bans/deleted" element={<CustomerBanPage />} />
           <Route path="/dashboard/customers/bans/create" element={<CustomerBanFormPage />} />
           <Route path="/dashboard/customers/bans/:id/edit" element={<CustomerBanFormPage />} />
           <Route path="/dashboard/customers/addresses" element={<CustomerAddressesPage />} />
-          <Route path="/dashboard/customers/addresses/deleted" element={<CustomerAddressesPage />} />
 
+        </Route>
         </Route>
       </Route>
 

@@ -5,7 +5,9 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
-import { useOrders, usePurchaseHistoryByCustomer } from "@/features/commerce";
+import { useOrders, usePurchaseHistoryByCustomer, useCustomerProgress, useCustomerCoupons, useCustomerAddresses } from "@/features/commerce";
+import { commerceApi } from "@/features/commerce";
+import { useLoyaltyCustomer } from "@/features/loyalty";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const fmt = (v: string): string => {
@@ -108,6 +110,11 @@ export const CustomerDetailsPage: React.FC = () => {
 
   const ordersQuery = useOrders(undefined, true);
   const purchaseQuery = usePurchaseHistoryByCustomer(customerId, Boolean(customerId));
+  const progressQuery = useCustomerProgress(customerId, Boolean(customerId));
+  const couponsQuery = useCustomerCoupons(customerId, Boolean(customerId));
+  const addressesQuery = useCustomerAddresses(customerId, Boolean(customerId));
+  const loyaltyQuery = useLoyaltyCustomer(customerId);
+  const bansQuery = commerceApi.customerBans.hooks.useList({ page: 1, limit: 10000 }, Boolean(customerId));
 
   const customerOrders = React.useMemo(
     () => toOrderRows(ordersQuery.data, customerId ?? ""),
@@ -118,6 +125,18 @@ export const CustomerDetailsPage: React.FC = () => {
 
   const totalSpent = customerOrders.reduce((s, o) => s + parseFloat(o.total || "0"), 0);
   const profileCompletion = React.useMemo(() => {
+    const progress = (progressQuery.data ?? {}) as Record<string, unknown>;
+    const completedFields = Array.isArray(progress.completedFields) ? progress.completedFields.map(String) : [];
+    const missingFields = Array.isArray(progress.missingFields) ? progress.missingFields.map(String) : [];
+    if (completedFields.length || missingFields.length) {
+      const fields = [...completedFields, ...missingFields];
+      return {
+        items: fields.map((field) => ({ label: field.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()), filled: completedFields.includes(field), weight: 1 })),
+        percent: typeof progress.progress === "number" ? progress.progress : 0,
+        completedWeight: completedFields.length,
+        totalWeight: fields.length,
+      };
+    }
     const completionItems: ReadonlyArray<CompletionItem> = [
       { label: "Name", filled: Boolean(customer?.name?.trim()), weight: 20 },
       { label: "Email", filled: Boolean(customer?.email?.trim()), weight: 20 },
@@ -139,7 +158,36 @@ export const CustomerDetailsPage: React.FC = () => {
       completedWeight,
       totalWeight,
     };
-  }, [customer]);
+  }, [customer, progressQuery.data]);
+
+  const customerCouponRecord = React.useMemo(() => {
+    const payload = couponsQuery.data as { customers?: unknown[] } | undefined;
+    return (payload?.customers?.[0] ?? {}) as Record<string, unknown>;
+  }, [couponsQuery.data]);
+  const couponRows = React.useMemo(() => {
+    const cards = Array.isArray(customerCouponRecord.cards) ? customerCouponRecord.cards : [];
+    return cards.map((value) => {
+      const item = value as Record<string, unknown>;
+      return { id: text(item.id, crypto.randomUUID()), code: text(item.code, "—"), title: text(item.title, "—"), status: text(item.eligibilityStatus, "—"), used: Number(item.usedCountForCustomer ?? 0), expiresAt: text(item.expiresAt) };
+    });
+  }, [customerCouponRecord]);
+  const addressRows = React.useMemo(() => {
+    const values = Array.isArray(addressesQuery.data) ? addressesQuery.data : [];
+    return values.map((value) => {
+      const item = value as Record<string, unknown>;
+      return { id: text(item.id, crypto.randomUUID()), type: text(item.type, "—"), name: text(item.fullName, "—"), phone: text(item.phone, "—"), address: [text(item.addressLine1), text(item.city), text(item.district)].filter(Boolean).join(", "), isDefault: item.isDefault === true };
+    });
+  }, [addressesQuery.data]);
+  const activeBan = React.useMemo(() => {
+    const payload = bansQuery.data as { data?: unknown[] } | unknown[] | undefined;
+    const rows = Array.isArray(payload) ? payload : payload?.data ?? [];
+    return rows.find((value) => {
+      const item = value as Record<string, unknown>;
+      const related = typeof item.customer === "object" && item.customer !== null ? item.customer as Record<string, unknown> : {};
+      return text(item.customerId ?? related.id) === customerId;
+    }) as Record<string, unknown> | undefined;
+  }, [bansQuery.data, customerId]);
+  const loyalty = (loyaltyQuery.data ?? {}) as Record<string, unknown>;
 
   const displayName = customer?.name ?? "Customer";
   const displaySub = customer ? `${customer.email}${customer.phone !== "—" ? ` · ${customer.phone}` : ""}` : (customerId ?? "");
@@ -159,6 +207,21 @@ export const CustomerDetailsPage: React.FC = () => {
           icon={customer?.isVerified ? UserCheck : ShieldOff}
           colorVariant={customer?.isVerified ? "emerald" : "amber"}
         />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => navigate(`/dashboard/loyalty/customers/${customerId}`)} className="rounded-full border border-[#d2d2d7] bg-white px-4 py-2 text-sm font-medium hover:bg-[#f5f5f7]">
+          Loyalty details{typeof loyalty.currentPoints === "number" ? ` · ${loyalty.currentPoints} points` : ""}
+        </button>
+        {activeBan ? (
+          <button type="button" onClick={() => navigate(`/dashboard/customers/bans/${text(activeBan.id)}/edit`)} className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">
+            View active ban
+          </button>
+        ) : (
+          <button type="button" onClick={() => navigate("/dashboard/customers/bans/create", { state: { customer } })} className="rounded-full border border-[#d2d2d7] bg-white px-4 py-2 text-sm font-medium hover:bg-[#f5f5f7]">
+            Ban customer
+          </button>
+        )}
       </div>
 
       {customer && (
@@ -266,6 +329,34 @@ export const CustomerDetailsPage: React.FC = () => {
         ]}
         data={purchaseRows}
         emptyMessage={purchaseQuery.isLoading ? "Loading purchase history…" : "No purchase history found."}
+        showPagination={false}
+      />
+
+      <DataTableV2
+        title="Coupons"
+        columns={[
+          { key: "code", label: "Code", render: (r: typeof couponRows[number]) => <span className="font-mono font-semibold">{r.code}</span> },
+          { key: "title", label: "Coupon" },
+          { key: "status", label: "Eligibility", render: (r: typeof couponRows[number]) => <StatusBadge status={r.status} /> },
+          { key: "used", label: "Times used" },
+          { key: "expiresAt", label: "Expires", render: (r: typeof couponRows[number]) => fmt(r.expiresAt) },
+        ]}
+        data={couponRows}
+        emptyMessage={couponsQuery.isLoading ? "Loading coupons…" : "No coupons found for this customer."}
+        showPagination={false}
+      />
+
+      <DataTableV2
+        title="Saved Addresses"
+        columns={[
+          { key: "type", label: "Type" },
+          { key: "name", label: "Recipient" },
+          { key: "phone", label: "Phone" },
+          { key: "address", label: "Address" },
+          { key: "isDefault", label: "Default", render: (r: typeof addressRows[number]) => r.isDefault ? "Yes" : "No" },
+        ]}
+        data={addressRows}
+        emptyMessage={addressesQuery.isLoading ? "Loading addresses…" : "No saved addresses."}
         showPagination={false}
       />
     </PageLayout>

@@ -43,7 +43,7 @@ const toCrudPaths = ({
   getOne: getOne ? (id) => `${basePath}/get/${id}` : undefined,
   create: `${basePath}/create`,
   update: update ? (id) => `${basePath}/update/${id}` : undefined,
-  softDelete: (ids) => `${basePath}/delete/${ids}`,
+  softDelete: (ids) => `${basePath}/destroy/${ids}`,
   deletedList: deleted ? `${basePath}/deleted` : `${basePath}/get-all`,
   recover: recover ? `${basePath}/recover` : `${basePath}/create`,
   destroy: destroy ? (ids) => `${basePath}/destroy/${ids}` : (ids) => `${basePath}/delete/${ids}`,

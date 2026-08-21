@@ -44,13 +44,14 @@ export const commerceApi = {
     issueUsers: async (payload: CouponIssueToUsersDto) => unwrap<unknown>(await api.post("/coupon/issue-users", payload)),
     unassignUsers: async (payload: CouponUnassignUsersDto) => unwrap<unknown>(await api.post("/coupon/unassign-users", payload)),
     insights: async (couponId: UUID) => unwrap<unknown>(await api.get(`/coupon/insights/${couponId}`)),
+    customerCoupons: async (q?: ApiListQuery & { customerId?: string }) => unwrap<unknown>(await api.get("/coupon/customer-coupons", { params: q })),
     validate: async (payload: CouponValidateDto) => unwrap<unknown>(await api.post("/coupon/validate", payload)),
     myEligible: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon/my-eligible", { params: q })),
     myUsage: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon/my-usage", { params: q })),
     apply: async (payload: CouponApplyDto) => unwrap<unknown>(await api.post("/coupon/apply", payload)),
   },
   couponUsage: {
-    all: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon-usage/get-all", { params: q })),
+    all: async (q?: ApiListQuery & { couponId?: string; customerId?: string; orderId?: string }) => unwrap<unknown>(await api.get("/coupon-usage/get-all", { params: q })),
     get: async (id: UUID) => unwrap<unknown>(await api.get(`/coupon-usage/get/${id}`)),
     myUsage: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/coupon-usage/my-usage", { params: q })),
   },
@@ -72,9 +73,11 @@ export const commerceApi = {
     bulkPickupNotification: async (payload: OrderBulkPickupNotificationDto) => unwrap<unknown>(await api.post("/order/pickup-notification/bulk", payload)),
   },
   payments: {
+    all: async (q?: ApiListQuery & { paymentStatus?: string; settlementStatus?: string; paymentSource?: string; orderId?: string }) => unwrap<unknown>(await api.get("/payment/get-all", { params: q })),
     byOrder: async (orderId: UUID) => unwrap<unknown>(await api.get(`/payment/order/${orderId}`)),
     update: async (id: UUID, payload: PaymentUpdateDto) => unwrap<unknown>(await api.patch(`/payment/update/${id}`, payload)),
     syncProvider: async (id: UUID) => unwrap<unknown>(await api.patch(`/payment/sync-provider/${id}`, {})),
+    settle: async (id: UUID) => unwrap<unknown>(await api.patch(`/payment/settle/${id}`, {})),
   },
   purchaseHistory: {
     syncByOrder: async (orderId: UUID) => unwrap<unknown>(await api.post(`/purchase-history/sync/order/${orderId}`)),
@@ -84,10 +87,12 @@ export const commerceApi = {
   },
   customers: {
     getAll: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/customer/get-all", { params: q })),
+    progress: async (customerId: UUID) => unwrap<unknown>(await api.get(`/customer-progress/admin/${customerId}`)),
   },
   customerBans: {
     ...makeStandardCrud<Record<string, unknown>, CustomerBanDto, CustomerBanDto>({ key: "customerBans", basePath: "/customer-ban" }),
     lift: async (payload: { ids: ReadonlyArray<string> }) => unwrap<unknown>(await api.put("/customer-ban/lift", payload)),
   },
   customerAddresses: makeStandardCrud<Record<string, unknown>, CustomerAddressDto, CustomerAddressDto>({ key: "customerAddresses", basePath: "/customer-address" }),
+  customerAddressesByCustomer: async (customerId: UUID) => unwrap<unknown>(await api.get(`/customer-address/admin/customer/${customerId}`)),
 };

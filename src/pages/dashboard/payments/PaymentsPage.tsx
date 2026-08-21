@@ -6,7 +6,11 @@ import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
-import { usePaymentsAggregate } from "@/features/commerce";
+import { usePaymentsList } from "@/features/commerce";
+import { commerceApi } from "@/features/commerce";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import {
   formatPaymentStatusLabel,
   formatSettlementStatusLabel,
@@ -120,8 +124,6 @@ const toPaymentRows = (payload: unknown, orderRef: Record<string, unknown>): Rea
     };
   });
 };
-const LIMIT = 20;
-
 const formatDateTime = (value: string): string => {
   if (!value || value === "—") return "—";
   const date = new Date(value);
@@ -144,39 +146,25 @@ const DetailField: React.FC<{ label: string; value: React.ReactNode }> = ({ labe
 
 export const PaymentsPage: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { id: paymentId } = useParams<{ id?: string }>();
   const [search, setSearch] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
+  const [settlementFilter, setSettlementFilter] = React.useState("");
+  const [sourceFilter, setSourceFilter] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const query = usePaymentsAggregate();
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const query = usePaymentsList({ page: paymentId ? 1 : page, limit: paymentId ? 10000 : 20, search: paymentId ? undefined : debouncedSearch || undefined, paymentStatus: paymentId ? undefined : activeTab !== "all" ? activeTab.toUpperCase() : undefined, settlementStatus: paymentId ? undefined : settlementFilter || undefined, paymentSource: paymentId ? undefined : sourceFilter || undefined });
+  const [settling, setSettling] = React.useState(false);
 
   const payments = React.useMemo(
     () =>
-      (query.data ?? []).flatMap((entry) => {
-        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
-          return toPaymentRows(
-            (entry as { paymentPayload?: unknown }).paymentPayload,
-            (entry as { orderObj?: Record<string, unknown> }).orderObj ?? {},
-          );
-        }
-        return [];
-      }),
+      (Array.isArray((query.data as Record<string, unknown> | undefined)?.payments) ? ((query.data as Record<string, unknown>).payments as unknown[]) : []).flatMap((entry) => { const item = typeof entry === "object" && entry !== null ? entry as Record<string, unknown> : {}; const order = typeof item.order === "object" && item.order !== null ? item.order as Record<string, unknown> : {}; return toPaymentRows([item], order); }),
     [query.data]
   );
 
-  const tabFiltered = React.useMemo(() => {
-    if (activeTab === "all") return payments;
-    return payments.filter((p) => p.status.toLowerCase() === activeTab);
-  }, [payments, activeTab]);
-
-  const filtered = React.useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return tabFiltered;
-    return tabFiltered.filter((p) =>
-      [p.transactionId, p.customerName, p.customerEmail, p.orderNumber, p.method, p.status].some((v) => v.toLowerCase().includes(q))
-    );
-  }, [tabFiltered, search]);
+  const filtered = payments;
   const visibleIds = React.useMemo(() => filtered.map((row) => row.id), [filtered]);
   const isAllVisibleSelected = React.useMemo(
     () => visibleIds.length > 0 && visibleIds.every((entry) => selectedIds.includes(entry)),
@@ -198,16 +186,17 @@ export const PaymentsPage: React.FC = () => {
     });
   };
 
-  const totalPages = Math.ceil(filtered.length / LIMIT) || 1;
-  const pageData = React.useMemo(() => filtered.slice((page - 1) * LIMIT, page * LIMIT), [filtered, page]);
+  const totalPages = typeof (query.data as Record<string, unknown> | undefined)?.totalPages === "number" ? Number((query.data as Record<string, unknown>).totalPages) : 1;
+  const pageData = filtered;
+  const backendTotal = typeof (query.data as Record<string, unknown> | undefined)?.total === "number" ? Number((query.data as Record<string, unknown>).total) : payments.length;
 
   const stats = React.useMemo(() => ({
-    total: payments.length,
+    total: backendTotal,
     paid: payments.filter((p) => p.status === "PAID").length,
     unpaid: payments.filter((p) => p.status === "UNPAID").length,
     failed: payments.filter((p) => p.status === "FAILED").length,
     totalAmount: payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0),
-  }), [payments]);
+  }), [backendTotal, payments]);
 
   const selectedPayment = React.useMemo(
     () => payments.find((payment) => payment.id === paymentId) ?? null,
@@ -311,6 +300,11 @@ export const PaymentsPage: React.FC = () => {
         subtitle={`Order ${selectedPayment.orderNumber}`}
         onBack={() => navigate("/dashboard/payments")}
       >
+        {selectedPayment.settlementStatus !== "SETTLED" && selectedPayment.settlementStatus !== "NOT_REQUIRED" ? (
+          <div className="mb-4 flex justify-end">
+            <button type="button" disabled={settling} onClick={async () => { setSettling(true); try { await commerceApi.payments.settle(selectedPayment.id); toast.success("Payment settled."); await query.refetch(); } catch (error) { toast.error(parseApiError(error).message); } finally { setSettling(false); } }} className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-50">{settling ? "Settling..." : "Mark Settled"}</button>
+          </div>
+        ) : null}
         <div className="rounded-[24px] border border-[#e5e5e7] bg-white p-6 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white">
@@ -355,17 +349,17 @@ export const PaymentsPage: React.FC = () => {
     <PageLayout
       title="Payments"
       subtitle="Track payment status and transaction details."
-      actions={<ExportMenu basePath="/payment" params={{ search: search || undefined, paymentStatus: activeTab !== "all" ? activeTab.toUpperCase() : undefined, limit: 10000 }} filename="payments"/>}
+      actions={<div className="flex flex-wrap gap-2"><select value={settlementFilter} onChange={(e) => { setSettlementFilter(e.target.value); setPage(1); }} className="h-[34px] rounded-full border border-[#d2d2d7] bg-white px-3 text-xs"><option value="">All settlements</option><option value="PENDING">Pending settlement</option><option value="DUE">Due</option><option value="SETTLED">Settled</option><option value="FAILED">Failed settlement</option><option value="NOT_REQUIRED">Not required</option></select><select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }} className="h-[34px] rounded-full border border-[#d2d2d7] bg-white px-3 text-xs"><option value="">All sources</option><option value="IN_HOUSE">In house</option><option value="COURIER">Courier</option></select><ExportMenu basePath="/payment" params={{ search: debouncedSearch || undefined, paymentStatus: activeTab !== "all" ? activeTab.toUpperCase() : undefined, settlementStatus: settlementFilter || undefined, paymentSource: sourceFilter || undefined, limit: 10000 }} filename="payments"/></div>}
       searchValue={search}
       onSearchChange={(v) => { setSearch(v); setPage(1); }}
       searchPlaceholder="Search payments..."
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCardV2 label="Total Payments" value={stats.total} icon={CreditCard} colorVariant="blue" />
-        <StatCardV2 label="Paid" value={stats.paid} icon={CheckCircle} colorVariant="emerald" />
-        <StatCardV2 label="Unpaid" value={stats.unpaid} icon={Clock} colorVariant="amber" />
-        <StatCardV2 label="Failed" value={stats.failed} icon={XCircle} colorVariant="red" />
-        <StatCardV2 label="Total Revenue" value={`Rs ${stats.totalAmount.toFixed(2)}`} icon={DollarSign} colorVariant="blue" />
+        <StatCardV2 label="Paid on Page" value={stats.paid} icon={CheckCircle} colorVariant="emerald" />
+        <StatCardV2 label="Unpaid on Page" value={stats.unpaid} icon={Clock} colorVariant="amber" />
+        <StatCardV2 label="Failed on Page" value={stats.failed} icon={XCircle} colorVariant="red" />
+        <StatCardV2 label="Page Revenue" value={`Rs ${stats.totalAmount.toFixed(2)}`} icon={DollarSign} colorVariant="blue" />
       </div>
 
       <DataTableV2

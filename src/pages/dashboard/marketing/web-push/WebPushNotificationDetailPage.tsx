@@ -232,7 +232,7 @@ export const WebPushNotificationDetailPage: React.FC = () => {
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete notification?</AlertDialogTitle>
-            <AlertDialogDescription>This will move the notification to trash.</AlertDialogDescription>
+            <AlertDialogDescription>This permanently deletes the notification and cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>

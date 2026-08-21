@@ -1,6 +1,5 @@
 import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useUserStore } from "@/store/UserStore";
 import { catalogApi } from "@/features/catalog";
 import { engagementApi } from "@/features/engagement";
 import { commerceApi } from "@/features/commerce";
@@ -8,7 +7,7 @@ import { identityApi } from "@/features/identity";
 import { telemetryApi } from "@/features/telemetry";
 import { deliveryApi } from "@/features/delivery";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { SimpleApiTablePage } from "@/pages/dashboard/common/SimpleApiTablePage";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -166,7 +165,7 @@ export const CouponUsagePage: React.FC = () => {
   const usageRows = React.useMemo(() => {
     const items = Array.isArray(q.data)
       ? q.data
-      : ((q.data as { data?: unknown[] } | undefined)?.data ?? []);
+      : ((q.data as { usages?: unknown[] } | undefined)?.usages ?? []);
     return items
       .filter(
         (i): i is Record<string, unknown> =>
@@ -179,19 +178,16 @@ export const CouponUsagePage: React.FC = () => {
             item.couponCode ??
             "—",
         ),
-        customerId: String(item.customerId ?? item.customer_id ?? "—"),
-        orderId: String(item.orderId ?? item.order_id ?? "—"),
-        discountAmount:
-          typeof item.discountAmount === "number"
-            ? `NPR ${item.discountAmount.toLocaleString()}`
-            : "—",
+        customerId: String((item.customer as Record<string, unknown> | undefined)?.email ?? item.customerId ?? "—"),
+        orderId: String((item.order as Record<string, unknown> | undefined)?.orderNumber ?? item.orderId ?? "—"),
         usedAt: String(item.usedAt ?? item.createdAt ?? ""),
       }));
   }, [q.data]);
 
   const totalPages =
     (q.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const singleResult = singleQ.data as Record<string, unknown> | undefined;
+  const singlePayload = singleQ.data as Record<string, unknown> | undefined;
+  const singleResult = (singlePayload?.usage as Record<string, unknown> | undefined) ?? singlePayload;
 
   const columns = [
     {
@@ -215,15 +211,6 @@ export const CouponUsagePage: React.FC = () => {
       label: "Order ID",
       render: (r: (typeof usageRows)[number]) => (
         <span className="font-mono text-xs text-gray-500">{r.orderId}</span>
-      ),
-    },
-    {
-      key: "discountAmount",
-      label: "Discount",
-      render: (r: (typeof usageRows)[number]) => (
-        <span className="text-sm font-medium text-emerald-700">
-          {r.discountAmount}
-        </span>
       ),
     },
     {
@@ -1332,7 +1319,6 @@ export const UserMetadataPage: React.FC = () => {
     [],
   );
   const [isDeletedView, setIsDeletedView] = React.useState(false);
-  const isSudoAdmin = useUserStore((s) => s.user?.role === "SUDOADMIN");
   const confirm = useConfirmAction();
 
   const q = telemetryApi.userMetadata.hooks.useList(
@@ -1551,21 +1537,6 @@ export const UserMetadataPage: React.FC = () => {
       title={isDeletedView ? "Deleted User Metadata" : "User Metadata"}
       subtitle="Session and device metadata captured for users."
       onBack={isDeletedView ? () => setIsDeletedView(false) : undefined}
-      actions={
-        !isDeletedView && isSudoAdmin ? (
-          <button
-            type="button"
-            onClick={() => {
-              setIsDeletedView(true);
-              setSelectedIds([]);
-              setState((p) => ({ ...p, page: 1 }));
-            }}
-            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Trash2 size={13} strokeWidth={2} /> View Deleted
-          </button>
-        ) : undefined
-      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search user metadata…"
@@ -2170,18 +2141,43 @@ export const SeoMetadataPage: React.FC = () => {
 };
 
 export const ProductMediaPage: React.FC = () => {
-  const q = catalogApi.products.hooks.useList();
-  const rows = toRows(q.data?.data).map((row) => ({
-    id: row.id,
-    title: row.title ?? row.name,
-    thumbnail: row.thumbnail ?? row.image ?? row.coverImage ?? "-",
-    mediaAssets: row.mediaAssets ?? row.images ?? "-",
-  }));
-  return renderPage({
-    title: "Product Media",
-    description: "Media fields derived from /product records.",
-    rows,
-    isLoading: q.isLoading,
-    isError: q.isError,
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const q = catalogApi.products.hooks.useList({ page: 1, limit: 100 });
+  const detail = catalogApi.products.hooks.useGet(id, Boolean(id));
+  const source = id ? (detail.data ? [detail.data as Readonly<Record<string, unknown>>] : []) : toRows(q.data?.data);
+  const rows = source.map((row) => {
+    const media = Array.isArray(row.mediaAssets) ? row.mediaAssets : Array.isArray(row.images) ? row.images : [];
+    return {
+      id: String(row.id ?? ""),
+      title: str(row.title ?? row.name, "Untitled product"),
+      thumbnail: str(row.thumbnail ?? row.image ?? row.coverImage, ""),
+      mediaCount: media.length,
+    };
   });
+
+  return (
+    <PageLayout
+      title={id ? "Product Media Details" : "Product Media"}
+      subtitle="Review product thumbnails and media coverage. Media is managed from the product editor."
+      onBack={id ? () => navigate("/dashboard/product-media") : undefined}
+    >
+      <DataTableV2
+        columns={[
+          {
+            key: "thumbnail",
+            label: "Preview",
+            render: (row: typeof rows[number]) => row.thumbnail ? <img src={row.thumbnail} alt="" className="h-12 w-12 rounded-lg border border-[#e5e5e7] object-cover" /> : <span className="text-xs text-[#86868b]">No image</span>,
+          },
+          { key: "title", label: "Product" },
+          { key: "mediaCount", label: "Media Assets" },
+        ]}
+        data={rows}
+        onRowClick={id ? undefined : (row) => navigate(`/dashboard/product-media/${row.id}`)}
+        onEdit={(row) => navigate(`/dashboard/products/${row.id}/edit`)}
+        emptyMessage={(id ? detail.isLoading : q.isLoading) ? "Loading product media…" : "No product media found."}
+        showPagination={false}
+      />
+    </PageLayout>
+  );
 };

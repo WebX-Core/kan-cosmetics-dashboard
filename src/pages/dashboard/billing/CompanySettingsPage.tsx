@@ -26,7 +26,7 @@ export const CompanySettingsPage: React.FC = () => {
   const remove = useDeleteCompanySetting();
   const recover = useRecoverCompanySettings();
   const destroy = useDestroyCompanySetting();
-  const [showDeleted, setShowDeleted] = React.useState(false);
+  const [showDeleted] = React.useState(false);
   const deletedQuery = useDeletedCompanySettings(showDeleted);
   const deletedPayload = deletedQuery.data as { settings?: CompanySetting[]; data?: CompanySetting[] } | CompanySetting[] | undefined;
   const deletedRows = Array.isArray(deletedPayload) ? deletedPayload : deletedPayload?.settings ?? deletedPayload?.data ?? [];
@@ -58,7 +58,6 @@ export const CompanySettingsPage: React.FC = () => {
       searchPlaceholder="Search company profiles..."
       actions={
         <div className="flex gap-2">
-          {canDelete && <button type="button" onClick={() => setShowDeleted((value) => !value)} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]">{showDeleted ? <RotateCcw size={13} strokeWidth={2}/> : <Trash2 size={13} strokeWidth={2}/>} {showDeleted ? "Active Profiles" : "View Deleted"}</button>}
           {canCreate && <button type="button" onClick={() => navigate("/dashboard/company-settings/create")} className="flex h-[34px] items-center gap-2 rounded-full bg-[var(--primary)] px-5 text-[13px] font-semibold text-white"><Plus size={14}/> Add profile</button>}
         </div>
       }

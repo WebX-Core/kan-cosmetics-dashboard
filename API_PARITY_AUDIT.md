@@ -1,0 +1,461 @@
+# API Parity Audit
+
+- doc modules: 0
+- frontend feature modules: 57
+- missing modules: 0
+- extra modules: 57
+- missing endpoints: 0
+- extra endpoints: 386
+
+## Missing Modules
+- none
+
+## Extra Modules
+- admin
+- advertisement
+- audit-log
+- auth
+- blog
+- cart
+- category
+- company-setting
+- contact
+- coupon
+- coupon-usage
+- courier
+- courier-branch
+- courier-pickup-address
+- customer
+- customer-address
+- customer-auth
+- customer-ban
+- customer-progress
+- dashboard
+- delivery-api-log
+- delivery-webhook-event
+- email-campaign
+- email-log
+- email-queue
+- email-recipient
+- email-recipient-bucket
+- faq
+- inquiry
+- inventory
+- newsletter
+- order
+- order-bill
+- payment
+- permission
+- pickup-request
+- product
+- product-attribute
+- product-tag
+- product-variant
+- purchase-history
+- reply
+- review
+- role
+- role-permission
+- seo
+- shipment
+- shipment-tracking
+- site-inquiry
+- subcategory
+- user-activity
+- user-metadata
+- user-permission
+- user-role
+- web-push-notification
+- web-push-subscription
+- wishlist
+
+## Missing Endpoints
+- none
+
+## Extra Endpoints
+- DELETE /admin/delete-users/:id
+- DELETE /advertisement/delete/:id
+- DELETE /advertisement/destroy/:id
+- DELETE /audit-log/delete/:id
+- DELETE /audit-log/destroy/:id
+- DELETE /auth/logout
+- DELETE /cart/clear
+- DELETE /cart/item/:id
+- DELETE /company-setting/destroy/:id
+- DELETE /contact/delete/:id
+- DELETE /contact/destroy/:id
+- DELETE /coupon/delete/:id
+- DELETE /coupon/destroy/:id
+- DELETE /courier-branch/delete/:id
+- DELETE /courier-branch/destroy/:id
+- DELETE /courier-pickup-address/delete/:id
+- DELETE /courier-pickup-address/destroy/:id
+- DELETE /courier/delete/:id
+- DELETE /courier/destroy/:id
+- DELETE /customer-address/delete/:id
+- DELETE /customer-address/destroy/:id
+- DELETE /customer-ban/delete/:id
+- DELETE /customer-ban/destroy/:id
+- DELETE /delivery-api-log/delete/:id
+- DELETE /delivery-api-log/destroy/:id
+- DELETE /delivery-webhook-event/delete/:id
+- DELETE /delivery-webhook-event/destroy/:id
+- DELETE /email-campaign/delete/:id
+- DELETE /email-campaign/destroy/:id
+- DELETE /email-log/delete/:id
+- DELETE /email-queue/delete/:id
+- DELETE /email-queue/destroy/:id
+- DELETE /email-recipient-bucket/delete/:id
+- DELETE /email-recipient-bucket/destroy/:id
+- DELETE /email-recipient/delete/:id
+- DELETE /email-recipient/destroy/:id
+- DELETE /faq/delete/:id
+- DELETE /faq/destroy/:id
+- DELETE /inquiry/delete/:id
+- DELETE /inquiry/destroy/:id
+- DELETE /inventory/delete/:id
+- DELETE /inventory/destroy/:id
+- DELETE /newsletter/delete/:id
+- DELETE /newsletter/destroy/:id
+- DELETE /permission/delete/:id
+- DELETE /permission/destroy/:id
+- DELETE /pickup-request/delete/:id
+- DELETE /pickup-request/destroy/:id
+- DELETE /product-attribute/delete/:id
+- DELETE /product-attribute/destroy/:id
+- DELETE /product-tag/delete/:id
+- DELETE /product-tag/destroy/:id
+- DELETE /reply/delete/:id
+- DELETE /reply/destroy/:id
+- DELETE /review/delete/:id
+- DELETE /review/destroy/:id
+- DELETE /role-permission/clear/role/:id
+- DELETE /role-permission/remove/:id
+- DELETE /role/delete/:id
+- DELETE /role/destroy/:id
+- DELETE /seo/delete/:id
+- DELETE /seo/destroy/:id
+- DELETE /shipment-tracking/delete/:id
+- DELETE /shipment-tracking/destroy/:id
+- DELETE /shipment/delete/:id
+- DELETE /shipment/destroy/:id
+- DELETE /site-inquiry/delete/:id
+- DELETE /site-inquiry/destroy/:id
+- DELETE /user-activity/delete/:id
+- DELETE /user-activity/destroy/:id
+- DELETE /user-metadata/delete/:id
+- DELETE /user-metadata/destroy/:id
+- DELETE /user-permission/clear/user/:id
+- DELETE /user-permission/remove/:id
+- DELETE /user-role/clear/user/:id
+- DELETE /user-role/remove/:id
+- DELETE /web-push-notification/delete/:id
+- DELETE /web-push-notification/destroy/:id
+- DELETE /web-push-subscription/delete/:id
+- DELETE /web-push-subscription/destroy/:id
+- DELETE /wishlist/clear
+- DELETE /wishlist/item/:id
+- GET /admin/get-all-users
+- GET /admin/get-users/:id
+- GET /advertisement/deleted
+- GET /advertisement/get-all
+- GET /advertisement/get/:id
+- GET /advertisement/match
+- GET /audit-log/deleted
+- GET /audit-log/get-all
+- GET /audit-log/get/:id
+- GET /auth/session
+- GET /cart/abandoned/customer/:id
+- GET /cart/abandoned/customers
+- GET /cart/customer/:id
+- GET /cart/customers
+- GET /cart/my
+- GET /company-setting/active
+- GET /company-setting/deleted
+- GET /company-setting/get-all
+- GET /company-setting/get/:id
+- GET /contact/deleted
+- GET /contact/get-all
+- GET /contact/get/:id
+- GET /coupon-usage/get-all
+- GET /coupon-usage/get/:id
+- GET /coupon-usage/my-usage
+- GET /coupon/customer-coupons
+- GET /coupon/deleted
+- GET /coupon/get-all
+- GET /coupon/get/:id
+- GET /coupon/insights/:id
+- GET /coupon/my-eligible
+- GET /coupon/my-usage
+- GET /courier-branch/deleted
+- GET /courier-branch/get-all
+- GET /courier-branch/get/:id
+- GET /courier-pickup-address/deleted
+- GET /courier-pickup-address/get-all
+- GET /courier-pickup-address/get/:id
+- GET /courier/deleted
+- GET /courier/get-all
+- GET /courier/get/:id
+- GET /customer-address/admin/customer/:id
+- GET /customer-address/deleted
+- GET /customer-address/get-all
+- GET /customer-address/get/:id
+- GET /customer-auth/me
+- GET /customer-ban/deleted
+- GET /customer-ban/get-all
+- GET /customer-ban/get/:id
+- GET /customer-progress/admin/:id
+- GET /customer/get-all
+- GET /dashboard/overview
+- GET /delivery-api-log/deleted
+- GET /delivery-api-log/get-all
+- GET /delivery-api-log/get/:id
+- GET /delivery-webhook-event/deleted
+- GET /delivery-webhook-event/get-all
+- GET /delivery-webhook-event/get/:id
+- GET /email-campaign/deleted
+- GET /email-campaign/get-all
+- GET /email-campaign/get/:id
+- GET /email-log/deleted
+- GET /email-log/get-all
+- GET /email-log/get/:id
+- GET /email-queue/deleted
+- GET /email-queue/get-all
+- GET /email-queue/get/:id
+- GET /email-recipient-bucket/deleted
+- GET /email-recipient-bucket/get-all
+- GET /email-recipient-bucket/get/:id
+- GET /email-recipient/deleted
+- GET /email-recipient/get-all
+- GET /email-recipient/get/:id
+- GET /faq/deleted
+- GET /faq/get-all
+- GET /faq/get/:id
+- GET /inquiry/deleted
+- GET /inquiry/export/excel
+- GET /inquiry/export/pdf
+- GET /inquiry/get-all
+- GET /inquiry/get/:id
+- GET /inventory/deleted
+- GET /inventory/get-all
+- GET /inventory/get/:id
+- GET /newsletter/deleted
+- GET /newsletter/get-all
+- GET /order-bill/get/:id
+- GET /order/get-all
+- GET /order/get/:id
+- GET /order/my
+- GET /order/my/:id
+- GET /order/ready-for-pickup
+- GET /order/sales-analytics
+- GET /payment/get-all
+- GET /payment/order/:id
+- GET /permission/deleted
+- GET /permission/get-all
+- GET /permission/get/:id
+- GET /permission/modules
+- GET /pickup-request/deleted
+- GET /pickup-request/get-all
+- GET /pickup-request/get/:id
+- GET /product-attribute/deleted
+- GET /product-attribute/get-all
+- GET /product-attribute/get/:id
+- GET /product-tag/deleted
+- GET /product-tag/get-all
+- GET /product-tag/get/:id
+- GET /purchase-history/customer/:id
+- GET /purchase-history/get/:id
+- GET /reply/deleted
+- GET /reply/get-all
+- GET /reply/get/:id
+- GET /review/deleted
+- GET /review/get-all
+- GET /review/get-product/:id
+- GET /review/get-site
+- GET /review/get/:id
+- GET /role-permission/role/:id
+- GET /role/deleted
+- GET /role/get-all
+- GET /role/get/:id
+- GET /seo/:id/:id
+- GET /seo/deleted
+- GET /seo/get-all
+- GET /seo/get/:id
+- GET /seo/page
+- GET /shipment-tracking/deleted
+- GET /shipment-tracking/get-all
+- GET /shipment-tracking/get/:id
+- GET /shipment/deleted
+- GET /shipment/get-all
+- GET /shipment/get/:id
+- GET /site-inquiry/deleted
+- GET /site-inquiry/get-all
+- GET /site-inquiry/get/:id
+- GET /user-activity/deleted
+- GET /user-activity/discard-analytics
+- GET /user-activity/funnel
+- GET /user-activity/get-all
+- GET /user-activity/get/:id
+- GET /user-metadata/deleted
+- GET /user-metadata/get-all
+- GET /user-metadata/get/:id
+- GET /user-permission/user/:id
+- GET /user-role/user/:id
+- GET /web-push-notification/deleted
+- GET /web-push-notification/get-all
+- GET /web-push-notification/get/:id
+- GET /web-push-subscription/deleted
+- GET /web-push-subscription/get-all
+- GET /web-push-subscription/get/:id
+- GET /wishlist/customer/:id
+- GET /wishlist/customers
+- GET /wishlist/my
+- PATCH /auth/change-password
+- PATCH /auth/reset-password
+- PATCH /cart/item/:id
+- PATCH /customer-auth/update-profile
+- PATCH /order/cancel/:id
+- PATCH /order/status/:id
+- PATCH /payment/settle/:id
+- PATCH /payment/sync-provider/:id
+- PATCH /payment/update/:id
+- POST /admin/create-users
+- POST /advertisement/create
+- POST /audit-log/create
+- POST /auth/forgot-password
+- POST /auth/signin
+- POST /auth/signup
+- POST /cart/add-item
+- POST /company-setting/create
+- POST /contact/create
+- POST /coupon/apply
+- POST /coupon/create
+- POST /coupon/issue-users
+- POST /coupon/unassign-users
+- POST /coupon/validate
+- POST /courier-branch/create
+- POST /courier-pickup-address/create
+- POST /courier/create
+- POST /customer-address/create
+- POST /customer-auth/google-signin
+- POST /customer-auth/logout
+- POST /customer-auth/signin
+- POST /customer-auth/signup
+- POST /customer-ban/create
+- POST /delivery-api-log/create
+- POST /delivery-webhook-event/create
+- POST /email-campaign/create
+- POST /email-log/create
+- POST /email-log/retry/:id
+- POST /email-queue/create
+- POST /email-queue/create-from-bucket
+- POST /email-queue/create-from-campaign
+- POST /email-recipient-bucket/create
+- POST /email-recipient/create
+- POST /email-recipient/create-from-subscribers
+- POST /email-recipient/select-audience
+- POST /faq/create
+- POST /inquiry/create
+- POST /inventory/create
+- POST /newsletter/create
+- POST /order-bill/bulk
+- POST /order-bill/mark-printed/:id
+- POST /order/create
+- POST /order/create-dashboard
+- POST /order/delivery-webhook
+- POST /order/pickup-notification/:id
+- POST /order/pickup-notification/bulk
+- POST /order/sync-branches
+- POST /order/sync-delivery/:id
+- POST /permission/create
+- POST /permission/sync
+- POST /pickup-request/create
+- POST /product-attribute/create
+- POST /product-tag/create
+- POST /product/bulk-create
+- POST /product/bulk-upload-images
+- POST /purchase-history/sync/customer/:id
+- POST /purchase-history/sync/order/:id
+- POST /reply/create
+- POST /review/create
+- POST /role-permission/assign
+- POST /role/create
+- POST /seo/create
+- POST /shipment-tracking/create
+- POST /shipment/create
+- POST /site-inquiry/create
+- POST /user-activity/create
+- POST /user-activity/track
+- POST /user-metadata/create
+- POST /user-permission/assign
+- POST /user-role/assign
+- POST /web-push-notification/create
+- POST /web-push-subscription/create
+- POST /wishlist/add-item
+- PUT /admin/update-users/:id
+- PUT /advertisement/recover
+- PUT /advertisement/update/:id
+- PUT /audit-log/recover
+- PUT /company-setting/recover
+- PUT /company-setting/update/:id
+- PUT /contact/recover
+- PUT /coupon/recover
+- PUT /coupon/update/:id
+- PUT /courier-branch/recover
+- PUT /courier-branch/update/:id
+- PUT /courier-pickup-address/recover
+- PUT /courier-pickup-address/update/:id
+- PUT /courier/recover
+- PUT /courier/update/:id
+- PUT /customer-address/recover
+- PUT /customer-address/update/:id
+- PUT /customer-ban/lift
+- PUT /customer-ban/recover
+- PUT /customer-ban/update/:id
+- PUT /delivery-api-log/recover
+- PUT /delivery-api-log/update/:id
+- PUT /delivery-webhook-event/recover
+- PUT /delivery-webhook-event/update/:id
+- PUT /email-campaign/recover
+- PUT /email-campaign/update/:id
+- PUT /email-log/recover
+- PUT /email-queue/recover
+- PUT /email-recipient-bucket/recover
+- PUT /email-recipient-bucket/update/:id
+- PUT /email-recipient/recover
+- PUT /email-recipient/update/:id
+- PUT /faq/recover
+- PUT /faq/update/:id
+- PUT /inquiry/recover
+- PUT /inquiry/update/:id
+- PUT /inventory/recover
+- PUT /inventory/update/:id
+- PUT /newsletter/recover
+- PUT /permission/recover
+- PUT /permission/update/:id
+- PUT /pickup-request/recover
+- PUT /pickup-request/update/:id
+- PUT /product-attribute/recover
+- PUT /product-attribute/update/:id
+- PUT /product-tag/recover
+- PUT /product-tag/update/:id
+- PUT /reply/recover
+- PUT /reply/update/:id
+- PUT /review/recover
+- PUT /review/update/:id
+- PUT /role/recover
+- PUT /role/update/:id
+- PUT /seo/recover
+- PUT /seo/update/:id
+- PUT /shipment-tracking/recover
+- PUT /shipment-tracking/update/:id
+- PUT /shipment/recover
+- PUT /shipment/update/:id
+- PUT /site-inquiry/recover
+- PUT /site-inquiry/update/:id
+- PUT /user-activity/recover
+- PUT /user-metadata/recover
+- PUT /web-push-notification/recover
+- PUT /web-push-notification/update/:id
+- PUT /web-push-subscription/recover
+- PUT /web-push-subscription/update/:id

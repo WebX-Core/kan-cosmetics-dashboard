@@ -11,7 +11,6 @@ import { catalogApi, useCategoryList } from "@/features/catalog";
 import type { PublicationStatus } from "@/features/catalog/catalog.types";
 import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
-import { useUserStore } from "@/store/UserStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,8 +97,6 @@ export const CategoriesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const userRole = useUserStore((state) => state.user?.role ?? null);
-  const isSudoAdmin = userRole === "SUDOADMIN";
   const isDeletedView = location.pathname === "/dashboard/categories/deleted";
   const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
@@ -357,18 +354,6 @@ export const CategoriesPage: React.FC = () => {
       onBack={isDeletedView ? () => navigate("/dashboard/categories") : undefined}
       onNew={!isDeletedView ? () => navigate("/dashboard/categories/create") : undefined}
       newButtonLabel="New Category"
-      actions={
-        !isDeletedView && isSudoAdmin ? (
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/categories/deleted")}
-            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-          >
-            <Trash2 size={13} strokeWidth={2} />
-            View Deleted
-          </button>
-        ) : undefined
-      }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search categories..."
@@ -466,8 +451,8 @@ export const CategoriesPage: React.FC = () => {
                   ? `This will permanently delete ${pendingIds.length} categories. This cannot be undone.`
                   : "This will permanently delete this category. This cannot be undone."
                 : pendingIds.length > 1
-                ? `This will move ${pendingIds.length} categories to trash.`
-                : "This will move this category to trash."}
+                ? `This permanently deletes ${pendingIds.length} categories and cannot be undone.`
+                : "This permanently deletes this category and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

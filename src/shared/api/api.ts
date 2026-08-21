@@ -51,12 +51,22 @@ api.interceptors.response.use(
     if (typeof error === "object" && error !== null && "response" in error) {
       const typedError = error as {
         config?: InternalAxiosRequestConfig;
-        response?: { status?: number };
+        response?: { status?: number; data?: { message?: unknown } };
       };
       const resp = typedError.response;
       const requestPath = getRequestPath(typedError.config);
       const isSessionProbe = requestPath.endsWith("/auth/session");
-      if (resp?.status === 401 && !isSessionProbe) {
+      const message = typeof resp?.data?.message === "string"
+        ? resp.data.message.toLowerCase()
+        : "";
+      const isExpiredSession =
+        message.includes("session expired") ||
+        message.includes("invalid or expired token") ||
+        message.includes("missing or expired") ||
+        message === "please login" ||
+        message === "unauthorized";
+
+      if (resp?.status === 401 && !isSessionProbe && isExpiredSession) {
         triggerGlobalLogout();
       }
     }

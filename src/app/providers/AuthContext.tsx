@@ -26,7 +26,7 @@ type AuthContextValue = Readonly<{
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_STORAGE_KEY = "dashboard_auth_state";
-const AUTH_FAILURE_STATUSES = new Set([400, 401, 403]);
+const AUTH_FAILURE_STATUSES = new Set([401]);
 
 function getResponseStatus(error: unknown): number | null {
   if (!axios.isAxiosError(error)) return null;

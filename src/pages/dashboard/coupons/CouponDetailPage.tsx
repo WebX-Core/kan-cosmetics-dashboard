@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Tag, Users, UserMinus, BarChart2, Edit, X, Search } from "lucide-react";
 import { ModernFormLayout, FormSection } from "@/shared/components/forms/ModernFormLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
@@ -173,7 +174,7 @@ const CustomerMultiPicker: React.FC<CustomerMultiPickerProps> = ({
 };
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
-const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
+const num = (v: unknown, fb = 0): number => typeof v === "number" ? v : typeof v === "string" && Number.isFinite(Number(v)) ? Number(v) : fb;
 
 export const CouponDetailPage: React.FC = () => {
   const { id } = useParams();
@@ -188,6 +189,11 @@ export const CouponDetailPage: React.FC = () => {
     enabled: Boolean(id),
     staleTime: 30_000,
   });
+  const usageQuery = useQuery({
+    queryKey: ["coupon", "usage", id],
+    queryFn: () => commerceApi.couponUsage.all({ couponId: id!, page: 1, limit: 100 }),
+    enabled: Boolean(id),
+  });
 
   const [issueCustomers, setIssueCustomers] = React.useState<CustomerOption[]>([]);
   const [unassignCustomers, setUnassignCustomers] = React.useState<CustomerOption[]>([]);
@@ -196,6 +202,25 @@ export const CouponDetailPage: React.FC = () => {
 
   const coupon = couponQuery.data as Record<string, unknown> | undefined;
   const insights = insightsQuery.data as Record<string, unknown> | undefined;
+  const assignedCustomers = React.useMemo<CustomerOption[]>(() => {
+    const values = Array.isArray(insights?.assignedCustomers) ? insights.assignedCustomers : [];
+    return values.flatMap((value) => {
+      if (!value || typeof value !== "object") return [];
+      const customer = value as Record<string, unknown>;
+      const customerId = text(customer.id);
+      if (!customerId) return [];
+      return [{ id: customerId, name: text(customer.name, "Unknown customer"), email: text(customer.email, "—") }];
+    });
+  }, [insights]);
+  const usageRows = React.useMemo(() => {
+    const payload = usageQuery.data as { usages?: unknown[] } | undefined;
+    return (payload?.usages ?? []).map((value) => {
+      const item = value as Record<string, unknown>;
+      const customer = typeof item.customer === "object" && item.customer !== null ? item.customer as Record<string, unknown> : {};
+      const order = typeof item.order === "object" && item.order !== null ? item.order as Record<string, unknown> : {};
+      return { id: text(item.id, crypto.randomUUID()), customer: [text(customer.firstname), text(customer.lastname)].filter(Boolean).join(" ") || text(customer.email, "—"), email: text(customer.email, "—"), order: text(order.orderNumber, "—"), usedAt: text(item.usedAt ?? item.createdAt, "") };
+    });
+  }, [usageQuery.data]);
 
   const handleIssue = async () => {
     if (!issueCustomers.length) { toast.error("Select at least one customer"); return; }
@@ -281,7 +306,7 @@ export const CouponDetailPage: React.FC = () => {
           </div>
           <div className="rounded-xl border border-gray-100 bg-white p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide">Status</p>
-            <div className="mt-1"><StatusBadge status={text(coupon.status, "Inactive")} /></div>
+            <div className="mt-1"><StatusBadge status={coupon.isActive === false ? "Inactive" : new Date(text(coupon.expiresAt)).getTime() < Date.now() ? "Expired" : new Date(text(coupon.startsAt)).getTime() > Date.now() ? "Scheduled" : "Active"} /></div>
           </div>
         </div>
         {typeof coupon.description === "string" && coupon.description ? (
@@ -299,7 +324,7 @@ export const CouponDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCardV2
               label="Total Usage"
-              value={num(insights?.totalUsage ?? coupon.usageCount)}
+              value={num(insights?.totalUsages ?? coupon.usedCount)}
               icon={BarChart2}
               colorVariant="blue"
             />
@@ -316,14 +341,41 @@ export const CouponDetailPage: React.FC = () => {
               colorVariant="emerald"
             />
             <StatCardV2
-              label="Total Discount Given"
-              value={`Rs ${num(insights?.totalDiscountGiven ?? insights?.totalSavings).toFixed(0)}`}
+              label="Remaining Uses"
+              value={insights?.remainingGlobalUsage === null ? "Unlimited" : num(insights?.remainingGlobalUsage)}
               icon={BarChart2}
               colorVariant="blue"
             />
           </div>
         )}
       </FormSection>
+
+      {!insights?.appliesToAllUsers ? (
+        <FormSection title="Assigned Customers">
+          <DataTableV2
+            columns={[
+              { key: "name", label: "Customer" },
+              { key: "email", label: "Email" },
+            ]}
+            data={assignedCustomers}
+            onRowClick={(row) => navigate(`/dashboard/customers/${row.id}`)}
+            rowActions={(row) => (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setUnassignCustomers((current) => current.some((customer) => customer.id === row.id) ? current : [...current, row]);
+                }}
+                className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+              >
+                Select to remove
+              </button>
+            )}
+            emptyMessage={insightsQuery.isLoading ? "Loading assigned customers…" : "No customers are directly assigned to this coupon."}
+            showPagination={false}
+          />
+        </FormSection>
+      ) : null}
 
       {/* Manage customers — issue + remove in one section */}
       <FormSection title="Manage Customers">
@@ -355,6 +407,10 @@ export const CouponDetailPage: React.FC = () => {
             Remove Coupon{unassignCustomers.length > 0 ? ` (${unassignCustomers.length})` : ""}
           </button>
         </div>
+      </FormSection>
+
+      <FormSection title="Usage History">
+        <DataTableV2 columns={[{ key: "customer", label: "Customer" }, { key: "email", label: "Email" }, { key: "order", label: "Order" }, { key: "usedAt", label: "Used At", render: (row: typeof usageRows[number]) => row.usedAt ? new Date(row.usedAt).toLocaleString() : "—" }]} data={usageRows} onRowClick={(row) => navigate(`/dashboard/coupon-usage/${row.id}`)} emptyMessage={usageQuery.isLoading ? "Loading usage history…" : "This coupon has not been used yet."} showPagination={false}/>
       </FormSection>
     </ModernFormLayout>
   );

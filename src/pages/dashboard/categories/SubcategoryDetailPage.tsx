@@ -8,7 +8,6 @@ import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
-import { useUserStore } from "@/store/UserStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,8 +90,6 @@ export const SubcategoryDetailPage: React.FC = () => {
   const location = useLocation();
   const toast = useToast();
 
-  const userRole = useUserStore((state) => state.user?.role ?? null);
-  const isSudoAdmin = userRole === "SUDOADMIN";
   const isDeletedView = location.pathname.endsWith("/deleted-products");
   const returnPath = location.pathname;
 
@@ -484,16 +481,6 @@ export const SubcategoryDetailPage: React.FC = () => {
               Add Product
             </button>
           ) : null}
-          {!isDeletedView && isSudoAdmin ? (
-            <button
-              type="button"
-              onClick={() => navigate(`/dashboard/categories/${categoryId}/subcategories/${subcategoryId}/deleted-products`)}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              <Trash2 size={13} strokeWidth={2} />
-              View Deleted
-            </button>
-          ) : null}
           {!isDeletedView ? (
             <button
               type="button"
@@ -603,8 +590,8 @@ export const SubcategoryDetailPage: React.FC = () => {
                   ? `This will permanently delete ${pendingIds.length} products. This cannot be undone.`
                   : "This will permanently delete this product. This cannot be undone."
                 : pendingIds.length > 1
-                ? `This will move ${pendingIds.length} products to trash.`
-                : "This will move this product to trash."}
+                ? `This permanently deletes ${pendingIds.length} products and cannot be undone.`
+                : "This permanently deletes this product and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

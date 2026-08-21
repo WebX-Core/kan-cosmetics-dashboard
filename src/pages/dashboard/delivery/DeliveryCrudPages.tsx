@@ -19,7 +19,7 @@ type Row = Readonly<Record<string, unknown>>;
 type DeliveryEntity = Readonly<{
   hooks: {
     useList: (q?: Readonly<{ page?: number; limit?: number; search?: string }>) => {
-      data?: Readonly<{ data: ReadonlyArray<Row> }>;
+      data?: Readonly<{ data: ReadonlyArray<Row>; totalPages?: number }>;
       isLoading: boolean;
     };
     useGet: (id?: string) => { data?: Row; isLoading: boolean };
@@ -45,6 +45,7 @@ type ModuleConfig = Readonly<{
   entity: DeliveryEntity;
   fields: ReadonlyArray<FieldConfig>;
   exportPath?: string;
+  readOnly?: boolean;
 }>;
 
 const asText = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -121,7 +122,7 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
   const remove = config.entity.hooks.useSoftDelete();
 
   const rows = React.useMemo(() => toRows(query.data?.data), [query.data]);
-  const totalPages = 1;
+  const totalPages = query.data?.totalPages ?? 1;
   const visibleIds = React.useMemo(
     () => rows.map((row) => String(row.id ?? "")),
     [rows],
@@ -172,7 +173,7 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
       },
       ...visibleKeys.map((column) => ({
         key: column,
-        label: column,
+        label: config.fields.find((field) => field.key === column)?.label ?? (column === "id" ? "ID" : column),
         render: (row: Row) => (
           <span className="text-sm text-zinc-700">
             {typeof row[column] === "object" ? JSON.stringify(row[column]) : String(row[column] ?? "-")}
@@ -211,8 +212,8 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
     <PageLayout
       title={config.label}
       subtitle={`Manage ${config.label.toLowerCase()} records.`}
-      onNew={() => navigate(`${config.basePath}/create`)}
-      newButtonLabel={`New ${config.label.slice(0, -1)}`}
+      onNew={config.readOnly ? undefined : () => navigate(`${config.basePath}/create`)}
+      newButtonLabel={config.readOnly ? undefined : `New ${config.label.slice(0, -1)}`}
       actions={config.exportPath ? <ExportMenu basePath={config.exportPath} params={{ search: debouncedSearch || undefined, limit: 10000 }} filename={config.key}/> : undefined}
       searchValue={state.search}
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
@@ -223,8 +224,8 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
         data={rows}
         actions={tableActions}
         onRowClick={(row) => navigate(getDetailPath(String(row.id)))}
-        onEdit={(row) => navigate(getEditPath(String(row.id)))}
-        onDelete={(row) => void handleDelete(String(row.id))}
+        onEdit={config.readOnly ? undefined : (row) => navigate(getEditPath(String(row.id)))}
+        onDelete={config.readOnly ? undefined : (row) => void handleDelete(String(row.id))}
         emptyMessage={query.isLoading ? "Loading..." : "No records found."}
         showPagination={true}
         currentPage={state.page}
@@ -256,6 +257,7 @@ const DeliveryFormPage: React.FC<Readonly<{ config: ModuleConfig; mode: "create"
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
+    if (config.readOnly) return;
     const parsed = validateOrToast(schema, values, toast);
     if (!parsed) return;
     const payload = payloadFor(config.fields, parsed as Record<string, unknown>);
@@ -278,8 +280,8 @@ const DeliveryFormPage: React.FC<Readonly<{ config: ModuleConfig; mode: "create"
 
   return (
     <ModernFormLayout
-      title={mode === "create" ? `Create ${config.label.slice(0, -1)}` : `Edit ${config.label.slice(0, -1)}`}
-      subtitle={mode === "create" ? "Add a new record." : "Update existing record."}
+      title={config.readOnly ? `${config.label.slice(0, -1)} details` : mode === "create" ? `Create ${config.label.slice(0, -1)}` : `Edit ${config.label.slice(0, -1)}`}
+      subtitle={config.readOnly ? "Operational record (read-only)." : mode === "create" ? "Add a new record." : "Update existing record."}
       onBack={() => navigate(config.basePath)}
     >
       <form onSubmit={onSubmit} className="space-y-[21px]">
@@ -292,6 +294,7 @@ const DeliveryFormPage: React.FC<Readonly<{ config: ModuleConfig; mode: "create"
                     <input
                       type="checkbox"
                       checked={Boolean(values[field.key])}
+                      disabled={config.readOnly}
                       onChange={(event) => setValues((prev) => ({ ...prev, [field.key]: event.target.checked }))}
                     />
                     Enabled
@@ -300,6 +303,7 @@ const DeliveryFormPage: React.FC<Readonly<{ config: ModuleConfig; mode: "create"
                   <input
                     type={field.type === "number" ? "number" : "text"}
                     value={String(values[field.key] ?? "")}
+                    disabled={config.readOnly}
                     onChange={(event) => setValues((prev) => ({ ...prev, [field.key]: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
                   />
@@ -309,12 +313,14 @@ const DeliveryFormPage: React.FC<Readonly<{ config: ModuleConfig; mode: "create"
           </div>
         </FormSection>
 
-        <FormActions
-          submitLabel={saving ? "Saving..." : mode === "create" ? "Create" : "Update"}
-          submitIcon={saving ? <Loader2 size={14} className="animate-spin" /> : undefined}
-          isSubmitting={saving}
-          onCancel={() => navigate(config.basePath)}
-        />
+        {config.readOnly ? null : (
+          <FormActions
+            submitLabel={saving ? "Saving..." : mode === "create" ? "Create" : "Update"}
+            submitIcon={saving ? <Loader2 size={14} className="animate-spin" /> : undefined}
+            isSubmitting={saving}
+            onCancel={() => navigate(config.basePath)}
+          />
+        )}
       </form>
     </ModernFormLayout>
   );
@@ -410,6 +416,7 @@ const modules: Readonly<Record<string, ModuleConfig>> = {
     label: "Delivery API Logs",
     basePath: "/dashboard/delivery/api-logs",
     entity: deliveryApi.deliveryApiLogs as unknown as DeliveryEntity,
+    readOnly: true,
     fields: [
       { key: "courierId", label: "Courier ID" },
       { key: "shipmentId", label: "Shipment ID" },
@@ -425,6 +432,7 @@ const modules: Readonly<Record<string, ModuleConfig>> = {
     label: "Delivery Webhook Events",
     basePath: "/dashboard/delivery/webhook-events",
     entity: deliveryApi.deliveryWebhookEvents as unknown as DeliveryEntity,
+    readOnly: true,
     fields: [
       { key: "courierId", label: "Courier ID" },
       { key: "shipmentId", label: "Shipment ID" },

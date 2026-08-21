@@ -3,8 +3,6 @@ import { useEffect } from "react";
 import type { ApiListQuery, UUID } from "@/shared/types/common.types";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
-import { getOrderRows } from "@/shared/utils/orderMapping";
-import { normalizePaymentStatus } from "@/shared/utils/paymentStatus";
 import { commerceApi } from "./commerce.api";
 import type { CustomerBanLiftDto } from "./commerce.types";
 
@@ -19,6 +17,9 @@ const keys = {
   paymentsAggregate: () => ["commerce", "payments", "aggregate"] as const,
   customers: (q?: ApiListQuery) => ["commerce", "customers", q] as const,
   purchaseHistoryByCustomer: (customerId?: UUID) => ["commerce", "purchase-history", "customer", customerId] as const,
+  customerProgress: (customerId?: UUID) => ["commerce", "customer-progress", customerId] as const,
+  customerCoupons: (customerId?: UUID) => ["commerce", "customer-coupons", customerId] as const,
+  customerAddresses: (customerId?: UUID) => ["commerce", "customer-addresses", customerId] as const,
 };
 
 export const useOrders = (q?: ApiListQuery, enabled = true) => {
@@ -186,6 +187,27 @@ export const usePurchaseHistoryByCustomer = (customerId?: UUID, enabled = true) 
     enabled: enabled && Boolean(customerId),
   });
 
+export const useCustomerProgress = (customerId?: UUID, enabled = true) =>
+  useQuery({
+    queryKey: keys.customerProgress(customerId),
+    queryFn: () => commerceApi.customers.progress(customerId!),
+    enabled: enabled && Boolean(customerId),
+  });
+
+export const useCustomerCoupons = (customerId?: UUID, enabled = true) =>
+  useQuery({
+    queryKey: keys.customerCoupons(customerId),
+    queryFn: () => commerceApi.coupons.customerCoupons({ customerId, page: 1, limit: 1 }),
+    enabled: enabled && Boolean(customerId),
+  });
+
+export const useCustomerAddresses = (customerId?: UUID, enabled = true) =>
+  useQuery({
+    queryKey: keys.customerAddresses(customerId),
+    queryFn: () => commerceApi.customerAddressesByCustomer(customerId!),
+    enabled: enabled && Boolean(customerId),
+  });
+
 export const useCustomerBanLift = () => {
   const qc = useQueryClient();
   const toast = useToast();
@@ -206,20 +228,17 @@ export const usePaymentsAggregate = (enabled = true) =>
   useQuery({
     queryKey: keys.paymentsAggregate(),
     queryFn: async () => {
-      const orderPayload = await commerceApi.orders.all();
-      const orders = getOrderRows(orderPayload).filter(
-        (order) => normalizePaymentStatus(order.paymentStatus) === "PAID",
-      );
-      return Promise.all(
-        orders.map(async (order) => {
-          if (!order || typeof order !== "object") return [];
-          const orderObj = order as Record<string, unknown>;
-          const orderId = orderObj.id;
-          if (typeof orderId !== "string" || orderId.length === 0) return [];
-          const paymentPayload = await commerceApi.payments.byOrder(orderId);
-          return { paymentPayload, orderObj };
-        }),
-      );
+      const payload = await commerceApi.payments.all({ page: 1, limit: 10000 });
+      const record = typeof payload === "object" && payload !== null ? payload as Record<string, unknown> : {};
+      const payments = Array.isArray(record.payments) ? record.payments : [];
+      return payments.map((payment) => {
+        const item = typeof payment === "object" && payment !== null ? payment as Record<string, unknown> : {};
+        const orderObj = typeof item.order === "object" && item.order !== null ? item.order as Record<string, unknown> : {};
+        return { paymentPayload: [item], orderObj };
+      });
     },
     enabled,
   });
+
+export const usePaymentsList = (q?: ApiListQuery & { paymentStatus?: string; settlementStatus?: string; paymentSource?: string; orderId?: string }, enabled = true) =>
+  useQuery({ queryKey: ["commerce", "payments", "list", q], queryFn: () => commerceApi.payments.all(q), placeholderData: keepPreviousData, enabled });

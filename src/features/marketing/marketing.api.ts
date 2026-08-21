@@ -47,6 +47,7 @@ export const marketingApi = {
   emailRecipientBuckets: makeStandardCrud<Record<string, unknown>, EmailRecipientBucketDto, EmailRecipientBucketDto>({ key: "emailRecipientBuckets", basePath: "/email-recipient-bucket" }),
   emailQueues: makeStandardCrud<Record<string, unknown>, EmailQueueDto, EmailQueueDto>({ key: "emailQueues", basePath: "/email-queue", update: false }),
   emailLogs: makeStandardCrud<Record<string, unknown>, EmailLogDto, EmailLogDto>({ key: "emailLogs", basePath: "/email-log", update: false, destroy: false }),
+  retryEmailLog: async (id: string) => unwrap<unknown>(await api.post(`/email-log/retry/${id}`)),
   webPushSubscriptions: makeStandardCrud<Record<string, unknown>, WebPushSubscriptionDto, WebPushSubscriptionDto>({ key: "webPushSubscriptions", basePath: "/web-push-subscription" }),
   webPushNotifications: makeStandardCrud<Record<string, unknown>, WebPushNotificationDto, WebPushNotificationDto>({ key: "webPushNotifications", basePath: "/web-push-notification" }),
   selectAudience: async (dto: SelectAudienceDto) => unwrap<unknown>(await api.post("/email-recipient/select-audience", dto)),
