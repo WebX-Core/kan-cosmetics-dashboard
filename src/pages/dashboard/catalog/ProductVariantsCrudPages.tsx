@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, RotateCcw, Trash2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { z } from "zod";
@@ -90,6 +90,7 @@ const inputClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
 const MAX_VARIANT_IMAGES = 10;
+const MAX_VARIANT_IMAGE_SIZE = 5 * 1024 * 1024;
 const WEIGHT_UNIT_OPTIONS = [
   { value: "g", label: "g" },
   { value: "kg", label: "kg" },
@@ -99,6 +100,30 @@ const WEIGHT_UNIT_OPTIONS = [
   { value: "oz", label: "oz" },
   { value: "lb", label: "lb" },
 ] as const;
+
+const VariantImageCard: React.FC<Readonly<{ src: string; primary?: boolean; onRemove: () => void }>> = ({ src, primary, onRemove }) => (
+  <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-[#d2d2d7] bg-[#f5f5f7]">
+    <img src={src} alt="Variant" className="h-full w-full object-cover" />
+    <button type="button" onClick={onRemove} className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1d1d1f]/80 text-white transition hover:bg-[#1d1d1f]" aria-label="Remove image">
+      <Trash2 size={14} />
+    </button>
+    {primary ? <span className="absolute bottom-1 left-1 rounded-full bg-[#1d1d1f]/85 px-2 py-1 text-[10px] font-semibold text-white">Primary</span> : null}
+  </div>
+);
+
+const VariantImageDropArea: React.FC<Readonly<{ compact?: boolean; onFiles: (files: FileList | null) => void }>> = ({ compact, onFiles }) => {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  return (
+    <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); onFiles(event.dataTransfer.files); }} className={compact ? "flex h-28 w-28 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] p-2 text-center transition hover:border-[var(--primary)]" : "rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-4 py-8 text-center transition hover:border-[var(--primary)]"}>
+      <UploadCloud size={compact ? 18 : 26} className="mx-auto text-[#86868b]" />
+      {!compact ? <><p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Choose images or drag and drop them here.</p><p className="mt-1 text-[12px] text-[#86868b]">Images up to 5MB · Maximum {MAX_VARIANT_IMAGES}</p></> : null}
+      <button type="button" onClick={() => inputRef.current?.click()} className={compact ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]" : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"}>
+        {compact ? <Plus size={14} /> : "Browse files"}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" aria-label="Variant images" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
+    </div>
+  );
+};
 
 const toRows = (value: unknown): ReadonlyArray<Readonly<Record<string, unknown>>> => {
   if (Array.isArray(value)) return value as ReadonlyArray<Readonly<Record<string, unknown>>>;
@@ -773,6 +798,24 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
   }, [previewImages]);
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const totalVariantImages = existingImages.length + imageFiles.length;
+
+  const addVariantImages = (files: FileList | null) => {
+    const selectedFiles = Array.from(files ?? []);
+    const validFiles = selectedFiles.filter((file) => file.type.startsWith("image/") && file.size <= MAX_VARIANT_IMAGE_SIZE);
+    if (validFiles.length !== selectedFiles.length) {
+      toast.error("Only image files up to 5MB are allowed.");
+    }
+    const availableSlots = MAX_VARIANT_IMAGES - totalVariantImages;
+    if (availableSlots <= 0) {
+      toast.error(`A product variant can have up to ${MAX_VARIANT_IMAGES} images.`);
+      return;
+    }
+    if (validFiles.length > availableSlots) {
+      toast.error(`Only ${availableSlots} more image${availableSlots === 1 ? "" : "s"} can be added.`);
+    }
+    setImageFiles((current) => [...current, ...validFiles.slice(0, availableSlots)]);
+  };
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
@@ -827,7 +870,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                 type="text"
                 value={productName || form.productId}
                 readOnly={Boolean(productFilter)}
-                placeholder="Paste the parent product UUID for this variant"
+                placeholder="Product ID, e.g. f3a81922-9a95-4f9c-98fd-2f75f1961fd0"
                 onChange={(e) => setForm((prev) => ({ ...prev, productId: e.target.value }))}
                 className={`${inputClass} ${productFilter ? "bg-[#f5f5f7]" : ""}`}
               />
@@ -836,7 +879,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.title}
-                placeholder="Customer-facing variant name, e.g. Cherry Red 3.5g"
+                placeholder="Variant name, e.g. Cherry Red"
                 onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                 className={inputClass}
               />
@@ -845,7 +888,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.sku}
-                placeholder="Unique stock code for this variant, e.g. KAN-LIP-001-RED"
+                placeholder="Unique SKU, e.g. KAN-LIP-CHERRY-01"
                 onChange={(e) => setForm((prev) => ({ ...prev, sku: e.target.value }))}
                 className={inputClass}
               />
@@ -854,7 +897,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.price}
-                placeholder="Selling price in NPR, e.g. 1299"
+                placeholder="Selling price, e.g. 1299"
                 onChange={(e) => setForm((prev) => ({ ...prev, price: e.target.value }))}
                 className={inputClass}
               />
@@ -863,7 +906,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.variantType}
-                placeholder="Option group name, e.g. Shade, Size, Volume"
+                placeholder="Variant type, e.g. Color, Size, Volume"
                 onChange={(e) => setForm((prev) => ({ ...prev, variantType: e.target.value }))}
                 className={inputClass}
               />
@@ -872,7 +915,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.variantValue}
-                placeholder="Exact option value, e.g. Ruby Red, 30ml, Medium"
+                placeholder="Variant value, e.g. #FF3366"
                 onChange={(e) => setForm((prev) => ({ ...prev, variantValue: e.target.value }))}
                 className={inputClass}
               />
@@ -881,7 +924,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               <input
                 type="text"
                 value={form.compareAtPrice}
-                placeholder="Old/MRP price shown as struck price, e.g. 1499"
+                placeholder="Original price before discount, e.g. 1499"
                 onChange={(e) => setForm((prev) => ({ ...prev, compareAtPrice: e.target.value }))}
                 className={inputClass}
               />
@@ -893,7 +936,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
                   min="0"
                   step="0.001"
                   value={form.weight}
-                  placeholder="Number only, e.g. 3.5"
+                  placeholder="Weight, e.g. 3.5"
                   onChange={(e) => setForm((prev) => ({ ...prev, weight: e.target.value }))}
                   className={inputClass}
                 />
@@ -910,14 +953,14 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
               </div>
             </FormField>
             <FormField label="VAT Rate (%)" required>
-              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} placeholder="VAT percentage for this variant, e.g. 13" onChange={(e) => setForm((prev) => ({ ...prev, vatRate: e.target.value }))} className={inputClass} />
+              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} placeholder="VAT rate, e.g. 13" onChange={(e) => setForm((prev) => ({ ...prev, vatRate: e.target.value }))} className={inputClass} />
             </FormField>
             {isLipstickProduct ? (
               <FormField label="Color HEX">
                 <input
                   type="text"
                   value={form.colorHex}
-                  placeholder="Lipstick shade swatch color, e.g. #FF3366"
+                  placeholder="HEX color, e.g. #FF3366"
                   onChange={(e) => setForm((prev) => ({ ...prev, colorHex: e.target.value }))}
                   className={inputClass}
                 />
@@ -932,7 +975,7 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
 
           <StringListInput
             label="Key Ingredients"
-            placeholder="Ingredient used in this variant, e.g. Shea Butter, Vitamin E"
+            placeholder="Ingredient, e.g. Shea Butter"
             items={keyIngredients}
             onChange={setKeyIngredients}
           />
@@ -962,100 +1005,66 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
             ) : null}
           </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_360px]">
-            <FormField
-              label="Variant Images"
-              hint={`Upload up to ${MAX_VARIANT_IMAGES} product photos for this variant. The first image becomes the primary variant image.`}
-            >
-              <div className="flex flex-col gap-3">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(event) => {
-                    const selectedFiles = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
-                    const availableSlots = MAX_VARIANT_IMAGES - existingImages.length - imageFiles.length;
-                    if (availableSlots <= 0) {
-                      toast.error(`A product variant can have up to ${MAX_VARIANT_IMAGES} images.`);
-                      event.currentTarget.value = "";
-                      return;
-                    }
-                    const nextFiles = selectedFiles.slice(0, availableSlots);
-                    if (selectedFiles.length > nextFiles.length) {
-                      toast.error(`Only ${availableSlots} more image${availableSlots === 1 ? "" : "s"} can be added.`);
-                    }
-                    setImageFiles((prev) => [...prev, ...nextFiles]);
-                    event.currentTarget.value = "";
-                  }}
-                  className={inputClass}
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImageFiles([]);
-                      setRemovedUrls((prev) => Array.from(new Set([...prev, ...existingImages])));
-                      setExistingImages([]);
-                    }}
-                    className="inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
-                  >
-                    Remove All Images
-                  </button>
-                  {removedUrls.length ? (
-                    <span className="text-xs text-[#86868b]">Removed images will be deleted when you save.</span>
-                  ) : null}
-                </div>
+          <div className="mt-5">
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-medium text-[#1d1d1f]">Variant Images</p>
+                <p className="mt-0.5 text-[12px] text-[#86868b]">The first image is used as the primary variant image.</p>
               </div>
-            </FormField>
-            <div className="rounded-xl border border-[#d2d2d7] bg-[#f5f5f7] p-3">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#86868b]">
-                Image Preview
-              </p>
-              {existingImages.length || previewImages.length ? (
-                <div className="grid max-h-72 grid-cols-2 gap-2 overflow-auto pr-1">
-                  {existingImages.map((url, index) => (
-                    <div key={url} className="relative rounded-lg border border-[#e5e5e7] bg-white p-2">
-                      <img src={url} alt={`Existing variant image ${index + 1}`} className="h-28 w-full rounded-md object-contain" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExistingImages((prev) => prev.filter((entry) => entry !== url));
-                          setRemovedUrls((prev) => (prev.includes(url) ? prev : [...prev, url]));
-                        }}
-                        className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-[#b42318] shadow-sm"
-                      >
-                        Remove
-                      </button>
-                      {index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-[#111827] px-2 py-1 text-[10px] font-semibold text-white">Primary</span> : null}
-                    </div>
-                  ))}
-                  {previewImages.map((url, index) => (
-                    <div key={`${url}-${index}`} className="relative rounded-lg border border-[#e5e5e7] bg-white p-2">
-                      <img src={url} alt={`New variant image ${index + 1}`} className="h-28 w-full rounded-md object-contain" />
-                      <button
-                        type="button"
-                        onClick={() => setImageFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index))}
-                        className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-[#b42318] shadow-sm"
-                      >
-                        Remove
-                      </button>
-                      {!existingImages.length && index === 0 ? <span className="absolute bottom-2 left-2 rounded-full bg-[#111827] px-2 py-1 text-[10px] font-semibold text-white">Primary</span> : null}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-[#d2d2d7] bg-white text-sm text-[#86868b]">
-                  No variant images selected
-                </div>
-              )}
-              <p className="mt-2 text-xs text-[#6e6e73]">
-                {isLipstickProduct
-                  ? "Lipstick-specific fields are enabled."
-                  : selectedProductType
-                    ? "Lipstick-specific fields are hidden for this product type."
-                    : "Enter a valid product UUID to validate lipstick-specific fields."}
-              </p>
+              <span className="text-[12px] font-medium text-[#86868b]">{totalVariantImages}/{MAX_VARIANT_IMAGES}</span>
             </div>
+
+            {totalVariantImages === 0 ? (
+              <VariantImageDropArea onFiles={addVariantImages} />
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                {existingImages.map((url, index) => (
+                  <VariantImageCard
+                    key={url}
+                    src={url}
+                    primary={index === 0}
+                    onRemove={() => {
+                      setExistingImages((current) => current.filter((entry) => entry !== url));
+                      setRemovedUrls((current) => current.includes(url) ? current : [...current, url]);
+                    }}
+                  />
+                ))}
+                {previewImages.map((url, index) => (
+                  <VariantImageCard
+                    key={`${url}-${index}`}
+                    src={url}
+                    primary={existingImages.length === 0 && index === 0}
+                    onRemove={() => setImageFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}
+                  />
+                ))}
+                {totalVariantImages < MAX_VARIANT_IMAGES ? <VariantImageDropArea compact onFiles={addVariantImages} /> : null}
+              </div>
+            )}
+
+            {totalVariantImages > 0 ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFiles([]);
+                    setRemovedUrls((current) => Array.from(new Set([...current, ...existingImages])));
+                    setExistingImages([]);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2d2d7] px-3 py-2 text-[12px] font-medium text-[#6e6e73] transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                >
+                  <Trash2 size={13} /> Remove all images
+                </button>
+                {removedUrls.length ? <span className="text-[12px] text-[#86868b]">Changes are applied when the variant is saved.</span> : null}
+              </div>
+            ) : null}
+
+            <p className="mt-3 text-[12px] text-[#6e6e73]">
+              {isLipstickProduct
+                ? "Lipstick-specific fields are enabled."
+                : selectedProductType
+                  ? "Lipstick-specific fields are hidden for this product type."
+                  : "Enter a valid product UUID to validate lipstick-specific fields."}
+            </p>
           </div>
         </FormSection>
 

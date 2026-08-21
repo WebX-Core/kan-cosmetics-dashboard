@@ -13,7 +13,13 @@ import {
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
-import { OCCASION_TYPES, PRODUCT_TYPES, type OccasionType, type ProductType, type PublicationStatus } from "@/features/catalog/catalog.types";
+import {
+  OCCASION_TYPES,
+  PRODUCT_TYPES,
+  type OccasionType,
+  type ProductType,
+  type PublicationStatus,
+} from "@/features/catalog/catalog.types";
 import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -37,7 +43,10 @@ const schema = z.object({
   productType: z.enum(PRODUCT_TYPES).optional(),
   occasionType: z.enum(OCCASION_TYPES),
   isVatIncluded: z.boolean(),
-  vatRate: z.coerce.number().min(0, "VAT rate cannot be negative").max(100, "VAT rate cannot exceed 100"),
+  vatRate: z.coerce
+    .number()
+    .min(0, "VAT rate cannot be negative")
+    .max(100, "VAT rate cannot exceed 100"),
   sortOrder: z.coerce.number().optional(),
   description: z.string().trim().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
@@ -120,26 +129,41 @@ type ComboProductOption = {
 };
 
 const parseComboItems = (value: unknown): ComboItemForm[] => {
-  const parsed = typeof value === "string"
-    ? (() => { try { return JSON.parse(value) as unknown; } catch { return []; } })()
-    : value;
+  const parsed =
+    typeof value === "string"
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return [];
+          }
+        })()
+      : value;
   if (!Array.isArray(parsed)) return [];
   return parsed.flatMap((entry) => {
     if (typeof entry !== "object" || entry === null) return [];
     const item = entry as Record<string, unknown>;
-    const componentProduct = typeof item.componentProduct === "object" && item.componentProduct !== null
-      ? item.componentProduct as Record<string, unknown>
-      : null;
-    const componentVariant = typeof item.componentProductVariant === "object" && item.componentProductVariant !== null
-      ? item.componentProductVariant as Record<string, unknown>
-      : null;
-    const componentProductId = read(item.componentProductId) || read(componentProduct?.id);
+    const componentProduct =
+      typeof item.componentProduct === "object" &&
+      item.componentProduct !== null
+        ? (item.componentProduct as Record<string, unknown>)
+        : null;
+    const componentVariant =
+      typeof item.componentProductVariant === "object" &&
+      item.componentProductVariant !== null
+        ? (item.componentProductVariant as Record<string, unknown>)
+        : null;
+    const componentProductId =
+      read(item.componentProductId) || read(componentProduct?.id);
     if (!componentProductId) return [];
-    return [{
-      componentProductId,
-      componentProductVariantId: read(item.componentProductVariantId) || read(componentVariant?.id),
-      quantity: item.quantity != null ? String(item.quantity) : "1",
-    }];
+    return [
+      {
+        componentProductId,
+        componentProductVariantId:
+          read(item.componentProductVariantId) || read(componentVariant?.id),
+        quantity: item.quantity != null ? String(item.quantity) : "1",
+      },
+    ];
   });
 };
 
@@ -425,7 +449,7 @@ const DropArea: React.FC<{
         onClick={() => inputRef.current?.click()}
         className={
           compact
-            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-[16px] font-semibold leading-none text-white hover:bg-blue-600"
+            ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[16px] font-semibold leading-none text-white hover:bg-blue-600"
             : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"
         }
       >
@@ -499,12 +523,16 @@ export const ProductCreatePage: React.FC = () => {
   >([]);
   const [freeFrom, setFreeFrom] = React.useState<FreeFromItem[]>([]);
   const [comboItems, setComboItems] = React.useState<ComboItemForm[]>([]);
-  const [comboProductOptions, setComboProductOptions] = React.useState<ComboProductOption[]>([]);
+  const [comboProductOptions, setComboProductOptions] = React.useState<
+    ComboProductOption[]
+  >([]);
   const [comboProductsLoading, setComboProductsLoading] = React.useState(false);
   const [descJson, setDescJson] =
     React.useState<DescriptionJsonForm>(emptyDescJson);
 
-  const isComboType = COMBO_PRODUCT_TYPES.includes(form.productType as ProductType);
+  const isComboType = COMBO_PRODUCT_TYPES.includes(
+    form.productType as ProductType,
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -516,45 +544,67 @@ export const ProductCreatePage: React.FC = () => {
           catalogApi.productVariants.service.list({ page: 1, limit: 1000 }),
         ]);
         if (!active) return;
-        const variantsByProduct = new Map<string, Array<{ id: string; title: string; sku: string }>>();
+        const variantsByProduct = new Map<
+          string,
+          Array<{ id: string; title: string; sku: string }>
+        >();
         variantResult.data.forEach((entry) => {
           if (typeof entry !== "object" || entry === null) return;
           const row = entry as Record<string, unknown>;
-          const product = typeof row.product === "object" && row.product !== null
-            ? row.product as Record<string, unknown>
-            : null;
+          const product =
+            typeof row.product === "object" && row.product !== null
+              ? (row.product as Record<string, unknown>)
+              : null;
           const productId = read(row.productId) || read(product?.id);
           const variantId = read(row.id);
           if (!productId || !variantId) return;
           const current = variantsByProduct.get(productId) ?? [];
-          variantsByProduct.set(productId, [...current, {
-            id: variantId,
-            title: read(row.title) || read(row.variantValue) || "Variant",
-            sku: read(row.sku),
-          }]);
+          variantsByProduct.set(productId, [
+            ...current,
+            {
+              id: variantId,
+              title: read(row.title) || read(row.variantValue) || "Variant",
+              sku: read(row.sku),
+            },
+          ]);
         });
         const options = result.data.flatMap((entry) => {
           if (typeof entry !== "object" || entry === null) return [];
           const row = entry as Record<string, unknown>;
           const productType = read(row.productType);
           const productId = read(row.id);
-          if (!productId || productId === id || COMBO_PRODUCT_TYPES.includes(productType as ProductType)) return [];
+          if (
+            !productId ||
+            productId === id ||
+            COMBO_PRODUCT_TYPES.includes(productType as ProductType)
+          )
+            return [];
           const embeddedVariants = Array.isArray(row.variants)
             ? row.variants.flatMap((variant) => {
                 if (typeof variant !== "object" || variant === null) return [];
                 const value = variant as Record<string, unknown>;
                 const variantId = read(value.id);
-                return variantId ? [{ id: variantId, title: read(value.title) || "Variant", sku: read(value.sku) }] : [];
-            })
+                return variantId
+                  ? [
+                      {
+                        id: variantId,
+                        title: read(value.title) || "Variant",
+                        sku: read(value.sku),
+                      },
+                    ]
+                  : [];
+              })
             : [];
           const variants = variantsByProduct.get(productId) ?? embeddedVariants;
-          return [{
-            id: productId,
-            title: read(row.title) || "Untitled product",
-            sku: read(row.sku),
-            productType,
-            variants,
-          }];
+          return [
+            {
+              id: productId,
+              title: read(row.title) || "Untitled product",
+              sku: read(row.sku),
+              productType,
+              variants,
+            },
+          ];
         });
         setComboProductOptions(options);
       } catch {
@@ -564,7 +614,9 @@ export const ProductCreatePage: React.FC = () => {
       }
     };
     void loadComponentProducts();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   React.useEffect(() => {
@@ -656,11 +708,15 @@ export const ProductCreatePage: React.FC = () => {
       weight: read(row.weight),
       productType: (read(row.productType) as Form["productType"]) || "",
       occasionType: (read(row.occasionType) as OccasionType) || "NONE",
-      isVatIncluded: typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
+      isVatIncluded:
+        typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
       vatRate: row.vatRate != null ? String(row.vatRate) : "13",
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
       description: descriptionText,
-      status: read(row.status) === "PUBLISHED" || read(row.status) === "ARCHIVED" ? read(row.status) as PublicationStatus : "DRAFT",
+      status:
+        read(row.status) === "PUBLISHED" || read(row.status) === "ARCHIVED"
+          ? (read(row.status) as PublicationStatus)
+          : "DRAFT",
     });
 
     setFreeFrom(parseFreeFrom(row.keyFeatures));
@@ -689,9 +745,7 @@ export const ProductCreatePage: React.FC = () => {
     setForm((prev) => ({ ...prev, slug: next }));
   }, [form.title, form.slug, manualSlug]);
 
-  const saving =
-    createMutation.isPending ||
-    updateMutation.isPending;
+  const saving = createMutation.isPending || updateMutation.isPending;
 
   const backPath = prefillCategoryId
     ? `/dashboard/categories/${prefillCategoryId}/subcategories/${prefillSubcategoryId}`
@@ -788,24 +842,34 @@ export const ProductCreatePage: React.FC = () => {
       .filter((item) => item.componentProductId)
       .map((item, index) => ({
         componentProductId: item.componentProductId,
-        ...(item.componentProductVariantId ? { componentProductVariantId: item.componentProductVariantId } : {}),
+        ...(item.componentProductVariantId
+          ? { componentProductVariantId: item.componentProductVariantId }
+          : {}),
         quantity: Number(item.quantity),
         sortOrder: index + 1,
       }));
 
     if (isComboType) {
-      if (normalizedComboItems.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1)) {
-        toast.error("Every combo component quantity must be a whole number of at least 1.");
+      if (
+        normalizedComboItems.some(
+          (item) => !Number.isInteger(item.quantity) || item.quantity < 1,
+        )
+      ) {
+        toast.error(
+          "Every combo component quantity must be a whole number of at least 1.",
+        );
         return;
       }
       if (parsed.status === "PUBLISHED" && normalizedComboItems.length === 0) {
-        toast.error("Published combo products require at least one package item.");
+        toast.error(
+          "Published combo products require at least one package item.",
+        );
         return;
       }
     }
 
     const slug = slugify(parsed.slug || parsed.title);
-      const payload = {
+    const payload = {
       status: parsed.status,
       title: parsed.title,
       slug,
@@ -872,7 +936,8 @@ export const ProductCreatePage: React.FC = () => {
 
       const createdResult = await createMutation.mutateAsync(payload);
       const createdId = read((createdResult as Record<string, unknown>)?.id);
-      const shouldCreateInventory = !isComboType && nextStep === "inventory" && createdId;
+      const shouldCreateInventory =
+        !isComboType && nextStep === "inventory" && createdId;
 
       if (shouldCreateInventory) {
         navigate(
@@ -983,23 +1048,58 @@ export const ProductCreatePage: React.FC = () => {
               >
                 <option value="">— Select type —</option>
                 {PRODUCT_TYPES.map((type) => (
-                  <option key={type} value={type}>{type.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+                  <option key={type} value={type}>
+                    {type
+                      .replaceAll("_", " ")
+                      .toLowerCase()
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </option>
                 ))}
               </select>
             </FormField>
             <FormField label="Occasion">
-              <select value={form.occasionType} onChange={(e) => setForm((p) => ({ ...p, occasionType: e.target.value as OccasionType }))} className={selectClass}>
+              <select
+                value={form.occasionType}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    occasionType: e.target.value as OccasionType,
+                  }))
+                }
+                className={selectClass}
+              >
                 {OCCASION_TYPES.map((type) => (
-                  <option key={type} value={type}>{type.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+                  <option key={type} value={type}>
+                    {type
+                      .replaceAll("_", " ")
+                      .toLowerCase()
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </option>
                 ))}
               </select>
             </FormField>
             <FormField label="VAT Rate (%)" required>
-              <input type="number" min="0" max="100" step="0.01" value={form.vatRate} onChange={(e) => setForm((p) => ({ ...p, vatRate: e.target.value }))} className={inputClass} />
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.vatRate}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, vatRate: e.target.value }))
+                }
+                className={inputClass}
+              />
             </FormField>
             <FormField label="VAT Pricing">
               <label className="flex h-11 items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={form.isVatIncluded} onChange={(e) => setForm((p) => ({ ...p, isVatIncluded: e.target.checked }))} />
+                <input
+                  type="checkbox"
+                  checked={form.isVatIncluded}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, isVatIncluded: e.target.checked }))
+                  }
+                />
                 Price includes VAT
               </label>
             </FormField>
@@ -1014,30 +1114,51 @@ export const ProductCreatePage: React.FC = () => {
             <div className="space-y-3">
               {comboProductsLoading && (
                 <p className="flex items-center gap-2 text-[13px] text-[#86868b]">
-                  <Loader2 size={14} className="animate-spin" /> Loading component products…
+                  <Loader2 size={14} className="animate-spin" /> Loading
+                  component products…
                 </p>
               )}
               {comboItems.map((item, index) => {
-                const selectedProduct = comboProductOptions.find((option) => option.id === item.componentProductId);
+                const selectedProduct = comboProductOptions.find(
+                  (option) => option.id === item.componentProductId,
+                );
                 const selectedElsewhere = new Set(
-                  comboItems.filter((_, itemIndex) => itemIndex !== index).map((entry) => entry.componentProductId),
+                  comboItems
+                    .filter((_, itemIndex) => itemIndex !== index)
+                    .map((entry) => entry.componentProductId),
                 );
                 return (
-                  <div key={index} className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_110px_38px]">
+                  <div
+                    key={index}
+                    className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_110px_38px]"
+                  >
                     <FormField label={`Component ${index + 1}`} required>
                       <select
                         value={item.componentProductId}
-                        onChange={(event) => setComboItems((previous) => previous.map((entry, itemIndex) =>
-                          itemIndex === index
-                            ? { ...entry, componentProductId: event.target.value, componentProductVariantId: "" }
-                            : entry,
-                        ))}
+                        onChange={(event) =>
+                          setComboItems((previous) =>
+                            previous.map((entry, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...entry,
+                                    componentProductId: event.target.value,
+                                    componentProductVariantId: "",
+                                  }
+                                : entry,
+                            ),
+                          )
+                        }
                         className={selectClass}
                       >
                         <option value="">— Select product —</option>
                         {comboProductOptions.map((option) => (
-                          <option key={option.id} value={option.id} disabled={selectedElsewhere.has(option.id)}>
-                            {option.title}{option.sku ? ` (${option.sku})` : ""}
+                          <option
+                            key={option.id}
+                            value={option.id}
+                            disabled={selectedElsewhere.has(option.id)}
+                          >
+                            {option.title}
+                            {option.sku ? ` (${option.sku})` : ""}
                           </option>
                         ))}
                       </select>
@@ -1046,15 +1167,26 @@ export const ProductCreatePage: React.FC = () => {
                       <select
                         value={item.componentProductVariantId}
                         disabled={!selectedProduct?.variants.length}
-                        onChange={(event) => setComboItems((previous) => previous.map((entry, itemIndex) =>
-                          itemIndex === index ? { ...entry, componentProductVariantId: event.target.value } : entry,
-                        ))}
+                        onChange={(event) =>
+                          setComboItems((previous) =>
+                            previous.map((entry, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...entry,
+                                    componentProductVariantId:
+                                      event.target.value,
+                                  }
+                                : entry,
+                            ),
+                          )
+                        }
                         className={selectClass}
                       >
                         <option value="">Default / no variant</option>
                         {(selectedProduct?.variants ?? []).map((variant) => (
                           <option key={variant.id} value={variant.id}>
-                            {variant.title}{variant.sku ? ` (${variant.sku})` : ""}
+                            {variant.title}
+                            {variant.sku ? ` (${variant.sku})` : ""}
                           </option>
                         ))}
                       </select>
@@ -1065,9 +1197,15 @@ export const ProductCreatePage: React.FC = () => {
                         min="1"
                         step="1"
                         value={item.quantity}
-                        onChange={(event) => setComboItems((previous) => previous.map((entry, itemIndex) =>
-                          itemIndex === index ? { ...entry, quantity: event.target.value } : entry,
-                        ))}
+                        onChange={(event) =>
+                          setComboItems((previous) =>
+                            previous.map((entry, itemIndex) =>
+                              itemIndex === index
+                                ? { ...entry, quantity: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
                         className={inputClass}
                       />
                     </FormField>
@@ -1075,7 +1213,13 @@ export const ProductCreatePage: React.FC = () => {
                       <button
                         type="button"
                         title="Remove component"
-                        onClick={() => setComboItems((previous) => previous.filter((_, itemIndex) => itemIndex !== index))}
+                        onClick={() =>
+                          setComboItems((previous) =>
+                            previous.filter(
+                              (_, itemIndex) => itemIndex !== index,
+                            ),
+                          )
+                        }
                         className="flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
                       >
                         <Trash2 size={14} />
@@ -1086,17 +1230,24 @@ export const ProductCreatePage: React.FC = () => {
               })}
               <button
                 type="button"
-                onClick={() => setComboItems((previous) => [...previous, {
-                  componentProductId: "",
-                  componentProductVariantId: "",
-                  quantity: "1",
-                }])}
+                onClick={() =>
+                  setComboItems((previous) => [
+                    ...previous,
+                    {
+                      componentProductId: "",
+                      componentProductVariantId: "",
+                      quantity: "1",
+                    },
+                  ])
+                }
                 className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-2 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
               >
                 <Plus size={12} /> Add package item
               </button>
               {form.status === "PUBLISHED" && comboItems.length === 0 && (
-                <p className="text-[12px] text-amber-700">At least one package item is required before publishing.</p>
+                <p className="text-[12px] text-amber-700">
+                  At least one package item is required before publishing.
+                </p>
               )}
             </div>
           </FormSection>
@@ -1227,14 +1378,32 @@ export const ProductCreatePage: React.FC = () => {
                 ) : (
                   <div className="mt-3 flex items-center gap-3 rounded-lg border border-[#d2d2d7] bg-[#f5f5f7] p-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                      </svg>
                     </div>
                     <div className="flex-1">
                       <p className="text-[13px] font-medium text-[#1d1d1f]">
-                        {pdfFile ? pdfFile.name : existingPdf.split('/').pop()}
+                        {pdfFile ? pdfFile.name : existingPdf.split("/").pop()}
                       </p>
                       <p className="text-[12px] text-[#86868b]">
-                        {pdfFile ? `${(pdfFile.size / 1024).toFixed(1)} KB` : 'PDF document'}
+                        {pdfFile
+                          ? `${(pdfFile.size / 1024).toFixed(1)} KB`
+                          : "PDF document"}
                       </p>
                     </div>
                     <button
@@ -1466,8 +1635,15 @@ export const ProductCreatePage: React.FC = () => {
           </div>
         </FormSection>
 
-        <FormSection title="Publication status" description="Choose whether this product should be private, public, or archived after saving.">
-          <PublicationStatusSelector value={form.status} onChange={(status) => setForm((prev) => ({ ...prev, status }))} disabled={saving} />
+        <FormSection
+          title="Publication status"
+          description="Choose whether this product should be private, public, or archived after saving."
+        >
+          <PublicationStatusSelector
+            value={form.status}
+            onChange={(status) => setForm((prev) => ({ ...prev, status }))}
+            disabled={saving}
+          />
         </FormSection>
 
         <FormActions
