@@ -474,6 +474,8 @@ export const ProductCreatePage: React.FC = () => {
 
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
   const [hoverImageFile, setHoverImageFile] = React.useState<File | null>(null);
+  const [howToUseImageFile, setHowToUseImageFile] =
+    React.useState<File | null>(null);
   const [pdfFile, setPdfFile] = React.useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = React.useState<
     ReadonlyArray<MediaUpload>
@@ -482,6 +484,8 @@ export const ProductCreatePage: React.FC = () => {
   const [existingCoverImage, setExistingCoverImage] =
     React.useState<string>("");
   const [existingHoverImage, setExistingHoverImage] =
+    React.useState<string>("");
+  const [existingHowToUseImage, setExistingHowToUseImage] =
     React.useState<string>("");
   const [existingPdf, setExistingPdf] = React.useState<string>("");
   const [existingGallery, setExistingGallery] = React.useState<
@@ -664,12 +668,14 @@ export const ProductCreatePage: React.FC = () => {
     setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
     setExistingHoverImage(read(row.hoverImage));
+    setExistingHowToUseImage(read(row.howToUseImage));
     setExistingPdf(read(row.pdf));
     setExistingGallery(gallery);
     setRemovedUrls([]);
     setRemovedMediaAssetIds([]);
     setCoverImageFile(null);
     setHoverImageFile(null);
+    setHowToUseImageFile(null);
     setPdfFile(null);
     setGalleryFiles([]);
 
@@ -741,6 +747,9 @@ export const ProductCreatePage: React.FC = () => {
   const previewHover = hoverImageFile
     ? URL.createObjectURL(hoverImageFile)
     : "";
+  const previewHowToUse = howToUseImageFile
+    ? URL.createObjectURL(howToUseImageFile)
+    : "";
   const previewPdf = pdfFile ? URL.createObjectURL(pdfFile) : "";
   const previewGallery = React.useMemo(
     () =>
@@ -752,6 +761,9 @@ export const ProductCreatePage: React.FC = () => {
   );
   const hasCoverImage = Boolean(coverImageFile || existingCoverImage);
   const hasHoverImage = Boolean(hoverImageFile || existingHoverImage);
+  const hasHowToUseImage = Boolean(
+    howToUseImageFile || existingHowToUseImage,
+  );
   const hasPdf = Boolean(pdfFile || existingPdf);
   const totalGalleryImages = previewGallery.length + existingGallery.length;
   const canAddGalleryImage = totalGalleryImages < MAX_GALLERY_IMAGES;
@@ -760,10 +772,11 @@ export const ProductCreatePage: React.FC = () => {
     () => () => {
       if (previewCover) URL.revokeObjectURL(previewCover);
       if (previewHover) URL.revokeObjectURL(previewHover);
+      if (previewHowToUse) URL.revokeObjectURL(previewHowToUse);
       if (previewPdf) URL.revokeObjectURL(previewPdf);
       previewGallery.forEach((item) => URL.revokeObjectURL(item.preview));
     },
-    [previewCover, previewHover, previewPdf, previewGallery],
+    [previewCover, previewHover, previewHowToUse, previewPdf, previewGallery],
   );
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
@@ -836,6 +849,7 @@ export const ProductCreatePage: React.FC = () => {
       comboItems: isComboType ? normalizedComboItems : undefined,
       coverImage: coverImageFile ?? undefined,
       hoverImage: hoverImageFile ?? undefined,
+      howToUseImage: howToUseImageFile ?? undefined,
       pdf: pdfFile ?? undefined,
       gallery: galleryFiles.length
         ? galleryFiles.map((item) => item.file)
@@ -1153,6 +1167,41 @@ export const ProductCreatePage: React.FC = () => {
                         onRemove={() => {
                           markRemovedUrl(existingHoverImage);
                           setExistingHoverImage("");
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 text-[13px] font-medium text-[#1d1d1f]">
+                  How To Use Image
+                </p>
+                {!hasHowToUseImage ? (
+                  <DropArea
+                    label="How to use image"
+                    helperText="Instruction or usage guide image, up to 5MB"
+                    promptText="Choose how-to-use image or drag and drop it here."
+                    onFiles={(files) => {
+                      const valid = imageFileErrors(files);
+                      setHowToUseImageFile(valid[0] ?? null);
+                    }}
+                  />
+                ) : (
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                    {howToUseImageFile && (
+                      <ImageCard
+                        src={previewHowToUse}
+                        onRemove={() => setHowToUseImageFile(null)}
+                      />
+                    )}
+                    {!howToUseImageFile && existingHowToUseImage && (
+                      <ImageCard
+                        src={existingHowToUseImage}
+                        onRemove={() => {
+                          markRemovedUrl(existingHowToUseImage);
+                          setExistingHowToUseImage("");
                         }}
                       />
                     )}

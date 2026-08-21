@@ -54,7 +54,7 @@ export const catalogApi = {
     { key: "products", basePath: "/product", publicationLifecycle: true, dashboardStatusList: true },
     {
       create: (dto) => {
-        const { coverImage, hoverImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
+        const { coverImage, hoverImage, howToUseImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
@@ -64,13 +64,14 @@ export const catalogApi = {
           files: {
             coverImage: (coverImage ?? undefined) as FormFileValue,
             hoverImage: (hoverImage ?? undefined) as FormFileValue,
+            howToUseImage: (howToUseImage ?? undefined) as FormFileValue,
             pdf: (pdf ?? undefined) as FormFileValue,
             gallery: (gallery?.length ? gallery : undefined) as FormFileValue,
           },
         };
       },
       update: (dto) => {
-        const { coverImage, hoverImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
+        const { coverImage, hoverImage, howToUseImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
@@ -80,6 +81,7 @@ export const catalogApi = {
           files: {
             coverImage: (coverImage ?? undefined) as FormFileValue,
             hoverImage: (hoverImage ?? undefined) as FormFileValue,
+            howToUseImage: (howToUseImage ?? undefined) as FormFileValue,
             pdf: (pdf ?? undefined) as FormFileValue,
             gallery: (gallery?.length ? gallery : undefined) as FormFileValue,
           },

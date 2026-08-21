@@ -88,6 +88,7 @@ export type ProductDto = Readonly<{
   sortOrder?: number;
   coverImage?: File | null;
   hoverImage?: File | null;
+  howToUseImage?: File | null;
   pdf?: File | null;
   gallery?: ReadonlyArray<File>;
   comboItems?: ReadonlyArray<ComboPackageItemDto>;

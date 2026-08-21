@@ -341,6 +341,7 @@ export const ProductDetailsPage: React.FC = () => {
 
   const coverImage = readText(product?.coverImage ?? product?.image ?? product?.thumbnail);
   const hoverImage = readText(product?.hoverImage);
+  const howToUseImage = readText(product?.howToUseImage);
 
   const mediaAssetItems = parseArray(product?.mediaAssets)
     .map(mediaFromUnknown)
@@ -671,10 +672,11 @@ export const ProductDetailsPage: React.FC = () => {
         </div>
 
         {/* Cover / Hover / Preview — bg-tint cells, no item borders */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "Cover", src: coverImage },
             { label: "Hover", src: hoverImage },
+            { label: "How To Use", src: howToUseImage },
           ].map(({ label, src }) => (
             <div key={label}>
               <p className="mb-2 text-[12px] font-medium text-[#86868b]">{label}</p>
