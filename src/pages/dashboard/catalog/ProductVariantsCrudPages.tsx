@@ -392,19 +392,6 @@ export const ProductVariantsPage: React.FC = () => {
       ),
     },
     { key: "status", label: "Status", render: (row: VariantRow) => <PublicationStatusBadge status={row.status} /> },
-    ...(!isDeletedView ? [{ key: "actions", label: "Actions", render: (row: VariantRow) => <DropdownMenu>
-      <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}><Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal size={15} /></Button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={(event) => { event.stopPropagation(); navigate(`/dashboard/product-variants/${row.id}/edit${location.search}`); }}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe2 className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
-        {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
-        {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm("delete", [row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu> }] : []),
     ...(!isDeletedView && productFilter
       ? [
           {
@@ -521,6 +508,19 @@ export const ProductVariantsPage: React.FC = () => {
           },
         ]
       : []),
+    ...(!isDeletedView ? [{ key: "actions", label: "Actions", render: (row: VariantRow) => <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}><Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal size={15} /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onClick={(event) => { event.stopPropagation(); navigate(`/dashboard/product-variants/${row.id}/edit${location.search}`); }}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe2 className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
+        {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
+        {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm("delete", [row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu> }] : []),
     ...(isDeletedView
       ? [
           {

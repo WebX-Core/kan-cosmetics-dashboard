@@ -54,7 +54,7 @@ const TOAST_THEME: Readonly<
 
 export const ToastProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [toasts, setToasts] = React.useState<ReadonlyArray<ToastItem>>([]);
-  const lastToastRef = React.useRef<Readonly<{ kind: ToastKind; message: string; at: number }> | null>(null);
+  const lastToastRef = React.useRef<Readonly<{ id: number; kind: ToastKind; message: string; at: number }> | null>(null);
   const timeoutHandlesRef = React.useRef<Map<number, number>>(new Map());
 
   const removeToast = React.useCallback((id: number) => {
@@ -73,8 +73,20 @@ export const ToastProvider: React.FC<React.PropsWithChildren> = ({ children }) =
       return;
     }
 
-    lastToastRef.current = { kind, message, at: now };
+    // CRUD hooks and their page-level handlers can complete in the same tick.
+    // Keep the later, more specific success message instead of stacking two toasts.
+    if (last && kind === "success" && last.kind === "success" && now - last.at < 800) {
+      const previousHandle = timeoutHandlesRef.current.get(last.id);
+      if (previousHandle) window.clearTimeout(previousHandle);
+      setToasts((current) => current.map((item) => item.id === last.id ? { ...item, message } : item));
+      const timeoutHandle = window.setTimeout(() => removeToast(last.id), 4200);
+      timeoutHandlesRef.current.set(last.id, timeoutHandle);
+      lastToastRef.current = { id: last.id, kind, message, at: now };
+      return;
+    }
+
     const id = Date.now() + Math.floor(Math.random() * 10000);
+    lastToastRef.current = { id, kind, message, at: now };
     setToasts((prev) => [...prev, { id, kind, message }]);
 
     const timeoutHandle = window.setTimeout(() => {
