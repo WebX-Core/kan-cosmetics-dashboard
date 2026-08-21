@@ -359,12 +359,6 @@ export const CategoriesPage: React.FC = () => {
       searchPlaceholder="Search categories..."
     >
       {!isDeletedView ? (
-        <PublicationTabs
-          value={publicationView}
-          onChange={(status) => navigate(`/dashboard/categories?status=${status}`)}
-        />
-      ) : null}
-      {!isDeletedView ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Categories`} value={stats.total} icon={FolderTree} colorVariant="blue" />
           <StatCardV2 label="Published on this page" value={stats.active} icon={Tag} colorVariant="emerald" />
@@ -373,6 +367,7 @@ export const CategoriesPage: React.FC = () => {
         </div>
       ) : null}
       <DataTableV2
+        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/categories?status=${status}`)} /> : undefined}
         columns={columns}
         data={rows}
         actions={

@@ -9,6 +9,9 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
+import type { PublicationStatus } from "@/features/catalog/catalog.types";
+import { readPublicationStatus } from "@/shared/components/catalog/PublicationLifecycle";
+import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -16,12 +19,14 @@ const subcategoryFormSchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
   slug: z.string().trim().min(1, "Slug is required"),
   description: z.string().optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
 });
 
 type FormData = Readonly<{
   title: string;
   slug: string;
   description: string;
+  status: PublicationStatus;
 }>;
 
 const read = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -104,7 +109,7 @@ export const SubcategoryEditPage: React.FC = () => {
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
   const [existingCoverImage, setExistingCoverImage] = React.useState("");
   const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>([]);
-  const [form, setForm] = React.useState<FormData>({ title: "", slug: "", description: "" });
+  const [form, setForm] = React.useState<FormData>({ title: "", slug: "", description: "", status: "DRAFT" });
 
   React.useEffect(() => {
     if (!data) return;
@@ -113,6 +118,7 @@ export const SubcategoryEditPage: React.FC = () => {
       title: read(row.title ?? row.name),
       slug: read(row.slug),
       description: read(row.description),
+      status: readPublicationStatus(row.status),
     });
     setExistingCoverImage(read(row.coverImage));
     setCoverImageFile(null);
@@ -166,6 +172,7 @@ export const SubcategoryEditPage: React.FC = () => {
           title: parsed.title,
           slug: slugify(parsed.slug || parsed.title),
           description: parsed.description?.trim() ?? "",
+          status: parsed.status,
           coverImage: coverImageFile ?? undefined,
           removeUrls: removedUrls.length ? removedUrls : undefined,
         },
@@ -234,6 +241,10 @@ export const SubcategoryEditPage: React.FC = () => {
               ) : null}
             </div>
           )}
+        </FormSection>
+
+        <FormSection title="Publication status" description="Choose whether this subcategory is private, public, or archived.">
+          <PublicationStatusSelector value={form.status} onChange={(status) => setForm((current) => ({ ...current, status }))} disabled={loading} />
         </FormSection>
 
         <FormActions

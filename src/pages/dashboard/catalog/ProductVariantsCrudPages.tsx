@@ -617,12 +617,12 @@ export const ProductVariantsPage: React.FC = () => {
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder="Search title, SKU..."
     >
-      {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(searchParams); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : null}
       <div className="grid grid-cols-1 gap-4">
         <StatCardV2 label="Total Variants" value={rows.length} icon={Layers} colorVariant="blue" />
       </div>
 
       <DataTableV2
+        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(searchParams); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : undefined}
         columns={columns}
         data={rows}
         actions={

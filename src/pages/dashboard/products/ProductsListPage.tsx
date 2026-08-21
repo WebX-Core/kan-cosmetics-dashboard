@@ -430,6 +430,10 @@ export const ProductsListPage: React.FC = () => {
                   SEO
                 </DropdownMenuItem>
               )}
+              {canProductUpdate ? <DropdownMenuSeparator /> : null}
+              {canProductUpdate && r.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "PUBLISHED"); }}><Globe className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
+              {canProductUpdate && r.status !== "DRAFT" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
+              {canProductUpdate && r.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
               {canProductDelete && (
                 <>
                   <DropdownMenuSeparator />
@@ -445,10 +449,6 @@ export const ProductsListPage: React.FC = () => {
                   </DropdownMenuItem>
                 </>
               )}
-              {canProductUpdate ? <DropdownMenuSeparator /> : null}
-              {canProductUpdate && r.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "PUBLISHED"); }}><Globe className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
-              {canProductUpdate && r.status !== "DRAFT" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
-              {canProductUpdate && r.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -478,7 +478,6 @@ export const ProductsListPage: React.FC = () => {
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search products..."
     >
-      {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(location.search); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : null}
       {!isDeletedView && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Products`} value={stats.total} icon={Package} colorVariant="blue" />
@@ -488,6 +487,7 @@ export const ProductsListPage: React.FC = () => {
         </div>
       )}
       <DataTableV2
+        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(location.search); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : undefined}
         tabs={!isDeletedView ? tabs : undefined}
         activeTab={!isDeletedView ? activeTab : undefined}
         onTabChange={!isDeletedView ? (t) => { setActiveTab(t); setState((p) => ({ ...p, page: 1 })); } : undefined}

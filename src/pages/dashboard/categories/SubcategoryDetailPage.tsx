@@ -20,6 +20,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import { PublicationTabs, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 
 type ProductRow = Readonly<{
   id: string;
@@ -91,6 +92,7 @@ export const SubcategoryDetailPage: React.FC = () => {
   const toast = useToast();
 
   const isDeletedView = location.pathname.endsWith("/deleted-products");
+  const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
   const returnPath = location.pathname;
 
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
@@ -103,7 +105,15 @@ export const SubcategoryDetailPage: React.FC = () => {
   const subcategoryQuery = catalogApi.subcategories.hooks.useGet(subcategoryId);
   const productsQuery = catalogApi.products.hooks.useList(
     { subcategory: subcategoryId, limit: 100 },
-    !isDeletedView && Boolean(subcategoryId)
+    !isDeletedView && Boolean(subcategoryId) && publicationView === "published"
+  );
+  const draftProductsQuery = catalogApi.products.hooks.useDraft(
+    { subcategory: subcategoryId, limit: 100 },
+    !isDeletedView && Boolean(subcategoryId) && publicationView === "draft"
+  );
+  const archivedProductsQuery = catalogApi.products.hooks.useArchived(
+    { subcategory: subcategoryId, limit: 100 },
+    !isDeletedView && Boolean(subcategoryId) && publicationView === "archived"
   );
   const inventoryQuery = catalogApi.inventory.hooks.useList(
     { page: 1, limit: 1000 },
@@ -126,10 +136,17 @@ export const SubcategoryDetailPage: React.FC = () => {
   const subcategoryName = toText(subcategory?.title ?? subcategory?.name, "Subcategory");
 
   const sourceRows = React.useMemo(() => {
-    if (!isDeletedView) return productsQuery.data?.data ?? [];
+    if (!isDeletedView) {
+      const lifecycleData = publicationView === "draft"
+        ? draftProductsQuery.data?.data
+        : publicationView === "archived"
+          ? archivedProductsQuery.data?.data
+          : productsQuery.data?.data;
+      return (lifecycleData ?? []).filter((entry) => getSubcategoryIdFromProduct(entry) === subcategoryId);
+    }
     const deletedRows = deletedProductsQuery.data?.data ?? [];
     return deletedRows.filter((entry) => getSubcategoryIdFromProduct(entry) === subcategoryId);
-  }, [isDeletedView, productsQuery.data?.data, deletedProductsQuery.data?.data, subcategoryId]);
+  }, [archivedProductsQuery.data?.data, deletedProductsQuery.data?.data, draftProductsQuery.data?.data, isDeletedView, productsQuery.data?.data, publicationView, subcategoryId]);
 
   const rows = React.useMemo(() => sourceRows.map(toProductRow), [sourceRows]);
 
@@ -505,6 +522,7 @@ export const SubcategoryDetailPage: React.FC = () => {
       </div>
 
       <DataTableV2
+        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`${location.pathname}?status=${status}`)} /> : undefined}
         columns={columns}
         data={filteredRows}
         actions={
@@ -555,7 +573,13 @@ export const SubcategoryDetailPage: React.FC = () => {
             : undefined
         }
         emptyMessage={
-          (isDeletedView ? deletedProductsQuery.isLoading : productsQuery.isLoading)
+          (isDeletedView
+            ? deletedProductsQuery.isLoading
+            : publicationView === "draft"
+              ? draftProductsQuery.isLoading
+              : publicationView === "archived"
+                ? archivedProductsQuery.isLoading
+                : productsQuery.isLoading)
             ? "Loading products..."
             : isDeletedView
             ? "No deleted products found."

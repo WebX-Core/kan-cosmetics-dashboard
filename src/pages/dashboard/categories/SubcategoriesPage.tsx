@@ -380,7 +380,6 @@ export const SubcategoriesPage: React.FC = () => {
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder="Search subcategories..."
     >
-      {!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/subcategories?status=${status}`)} /> : null}
       {!isDeletedView ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Subcategories`} value={stats.total} icon={ShoppingBag} colorVariant="blue" />
@@ -391,6 +390,7 @@ export const SubcategoriesPage: React.FC = () => {
       ) : null}
 
       <DataTableV2
+        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/subcategories?status=${status}`)} /> : undefined}
         columns={columns}
         data={rows}
         actions={

@@ -324,28 +324,20 @@ export const InventoryPage: React.FC = () => {
       <div className="rounded-xl border border-[#e5e5e7] bg-white">
         {!isDeletedView && (
           <div className="border-b border-[#e5e5e7] px-[21px] py-[10px]">
-            <div className="flex items-center gap-[8px] overflow-x-auto pb-px [scrollbar-width:none]" style={{ msOverflowStyle: "none" }}>
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(tab.key);
-                      setState((p) => ({ ...p, page: 1 }));
-                    }}
-                    className={`flex shrink-0 items-center rounded-full border px-[13px] py-[4px] text-[13px] font-medium transition-colors ${
-                      isActive
-                        ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm"
-                        : "border-[#d2d2d7] bg-white text-[#1d1d1f] hover:border-[#b8bcc2] hover:bg-[#f5f5f7]"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            <label className="inline-flex min-h-[34px] items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-[13px] text-[13px] font-medium text-[#1d1d1f] transition focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
+              <span className="text-[#6e6e73]">Status</span>
+              <select
+                value={activeTab}
+                onChange={(event) => {
+                  setActiveTab(event.target.value);
+                  setState((current) => ({ ...current, page: 1 }));
+                }}
+                className="cursor-pointer bg-transparent outline-none"
+                aria-label="Inventory status"
+              >
+                {tabs.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
+              </select>
+            </label>
           </div>
         )}
 

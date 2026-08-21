@@ -10,6 +10,7 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { PublicationTabs, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,6 +96,7 @@ export const CategoryDetailPage: React.FC = () => {
   const toast = useToast();
 
   const isDeletedView = location.pathname.endsWith("/deleted-subcategories");
+  const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
 
   const { state, setState, debouncedSearch } = useListQueryState({
     page: 1,
@@ -110,7 +112,15 @@ export const CategoryDetailPage: React.FC = () => {
   const categoryQuery = catalogApi.categories.hooks.useGet(id);
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList(
     { category: id, limit: 100 },
-    !isDeletedView && Boolean(id)
+    !isDeletedView && Boolean(id) && publicationView === "published"
+  );
+  const draftSubcategoriesQuery = catalogApi.subcategories.hooks.useDraft(
+    { category: id, limit: 100 },
+    !isDeletedView && Boolean(id) && publicationView === "draft"
+  );
+  const archivedSubcategoriesQuery = catalogApi.subcategories.hooks.useArchived(
+    { category: id, limit: 100 },
+    !isDeletedView && Boolean(id) && publicationView === "archived"
   );
   const deletedSubcategoriesQuery = catalogApi.subcategories.hooks.useDeleted(
     { page: 1, limit: 1000 },
@@ -137,10 +147,17 @@ export const CategoryDetailPage: React.FC = () => {
   }, [productsQuery.data?.data]);
 
   const sourceRows = React.useMemo(() => {
-    if (!isDeletedView) return subcategoriesQuery.data?.data ?? [];
+    if (!isDeletedView) {
+      const lifecycleData = publicationView === "draft"
+        ? draftSubcategoriesQuery.data?.data
+        : publicationView === "archived"
+          ? archivedSubcategoriesQuery.data?.data
+          : subcategoriesQuery.data?.data;
+      return (lifecycleData ?? []).filter((entry) => getCategoryIdFromSubcategory(entry) === id);
+    }
     const deletedRows = deletedSubcategoriesQuery.data?.data ?? [];
     return deletedRows.filter((entry) => getCategoryIdFromSubcategory(entry) === id);
-  }, [isDeletedView, subcategoriesQuery.data?.data, deletedSubcategoriesQuery.data?.data, id]);
+  }, [archivedSubcategoriesQuery.data?.data, deletedSubcategoriesQuery.data?.data, draftSubcategoriesQuery.data?.data, id, isDeletedView, publicationView, subcategoriesQuery.data?.data]);
 
   const rows = React.useMemo(
     () => sourceRows.map((entry) => toSubcategoryRow(entry, productCountMap)),
@@ -390,6 +407,7 @@ export const CategoryDetailPage: React.FC = () => {
       ) : null}
 
       <DataTableV2
+        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`${location.pathname}?status=${status}`)} /> : undefined}
         columns={columns}
         data={filteredRows}
         actions={selectedIds.length > 0 ? (
@@ -428,7 +446,13 @@ export const CategoryDetailPage: React.FC = () => {
         searchValue={state.search}
         onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/categories/${id}/subcategories/${row.id}`) : undefined}
         emptyMessage={
-          (isDeletedView ? deletedSubcategoriesQuery.isLoading : subcategoriesQuery.isLoading)
+          (isDeletedView
+            ? deletedSubcategoriesQuery.isLoading
+            : publicationView === "draft"
+              ? draftSubcategoriesQuery.isLoading
+              : publicationView === "archived"
+                ? archivedSubcategoriesQuery.isLoading
+                : subcategoriesQuery.isLoading)
             ? "Loading subcategories..."
             : isDeletedView
             ? "No deleted subcategories found."

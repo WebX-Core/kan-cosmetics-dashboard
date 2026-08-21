@@ -32,6 +32,7 @@ type Props<T> = {
   tabs?: ReadonlyArray<Tab>;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  toolbarLeading?: React.ReactNode;
   columns: ReadonlyArray<Column<T>>;
   data: ReadonlyArray<T>;
   searchPlaceholder?: string;
@@ -62,6 +63,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
   tabs,
   activeTab,
   onTabChange,
+  toolbarLeading,
   columns,
   data,
   searchPlaceholder = "Search…",
@@ -183,7 +185,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
 
   const hasTabs = tabs && tabs.length > 0;
   const hasSearch = Boolean(onSearchChange);
-  const hasToolbar = hasTabs || hasSearch || actions;
+  const hasToolbar = hasTabs || Boolean(toolbarLeading) || hasSearch || actions;
   const tabItems = tabs ?? [];
   const isLoadingState = data.length === 0 && /loading/i.test(String(emptyMessage));
   const effectiveData = data;
@@ -241,9 +243,11 @@ export function DataTableV2<T extends Record<string, unknown>>({
 
       {/* Tabs + Search toolbar */}
       {hasToolbar && (
-        <div className={`flex flex-col gap-[10px] border-b border-[#e5e5e7] px-[21px] py-[10px] ${hasTabs ? "lg:flex-row lg:items-center lg:justify-between" : "lg:flex-row lg:items-center lg:justify-end"}`}>
-          {hasTabs ? (
-            <label className="inline-flex min-h-[34px] items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-[13px] text-[13px] font-medium text-[#1d1d1f]">
+        <div className={`flex flex-col gap-[10px] border-b border-[#e5e5e7] px-[21px] py-[10px] ${hasTabs || toolbarLeading ? "lg:flex-row lg:items-center lg:justify-between" : "lg:flex-row lg:items-center lg:justify-end"}`}>
+          {hasTabs || toolbarLeading ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {toolbarLeading}
+              {hasTabs ? <label className="inline-flex min-h-[34px] items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-[13px] text-[13px] font-medium text-[#1d1d1f]">
               <span className="text-[#6e6e73]">Filter</span>
               <select
                 value={activeTab ?? tabItems[0]?.key ?? "all"}
@@ -257,7 +261,8 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   </option>
                 ))}
               </select>
-            </label>
+              </label> : null}
+            </div>
           ) : null}
 
           <div className="flex shrink-0 flex-wrap items-center gap-[8px]">
