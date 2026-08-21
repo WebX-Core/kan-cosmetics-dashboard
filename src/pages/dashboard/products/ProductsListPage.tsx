@@ -97,6 +97,14 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
     });
 };
 
+const getProductIdFromVariant = (value: unknown): string => {
+  const row = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  const direct = text(row.productId ?? row.product_id);
+  if (direct) return direct;
+  const product = (typeof row.product === "object" && row.product !== null ? row.product : {}) as Record<string, unknown>;
+  return text(product.id);
+};
+
 export const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -143,6 +151,18 @@ export const ProductsListPage: React.FC = () => {
     { page: 1, limit: 1000 },
     !isDeletedView && canInventoryManage,
   );
+  const variantsQuery = catalogApi.productVariants.hooks.useList(
+    { page: 1, limit: 1000 },
+    !isDeletedView && canInventoryManage,
+  );
+  const draftVariantsQuery = catalogApi.productVariants.hooks.useDraft(
+    { page: 1, limit: 1000 },
+    !isDeletedView && canInventoryManage,
+  );
+  const archivedVariantsQuery = catalogApi.productVariants.hooks.useArchived(
+    { page: 1, limit: 1000 },
+    !isDeletedView && canInventoryManage,
+  );
   const softDelete = catalogApi.products.hooks.useSoftDelete();
   const recover = catalogApi.products.hooks.useRecover();
   const destroy = catalogApi.products.hooks.useDestroy();
@@ -179,18 +199,18 @@ export const ProductsListPage: React.FC = () => {
     });
     return map;
   }, [inventoryQuery.data?.data]);
-  const productIdsWithVariantInventory = React.useMemo(() => {
+  const productIdsWithVariants = React.useMemo(() => {
     const ids = new Set<string>();
-    const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
-    source.forEach((entry) => {
-      const product = entry.product as Record<string, unknown> | undefined;
-      const variant = entry.productVariant as Record<string, unknown> | undefined;
-      const productId = typeof product?.id === "string" ? product.id : "";
-      const variantId = typeof variant?.id === "string" ? variant.id : "";
-      if (productId && variantId) ids.add(productId);
+    [
+      ...(variantsQuery.data?.data ?? []),
+      ...(draftVariantsQuery.data?.data ?? []),
+      ...(archivedVariantsQuery.data?.data ?? []),
+    ].forEach((entry) => {
+      const productId = getProductIdFromVariant(entry);
+      if (productId) ids.add(productId);
     });
     return ids;
-  }, [inventoryQuery.data?.data]);
+  }, [archivedVariantsQuery.data?.data, draftVariantsQuery.data?.data, variantsQuery.data?.data]);
   const navigateProductInventory = React.useCallback(
     (row: ProductRow) => {
       const existing = productInventoryByProductId.get(row.id);
@@ -285,7 +305,7 @@ export const ProductsListPage: React.FC = () => {
             key: "inventory",
             label: "Inventory",
             render: (r: ProductRow) => {
-              if (!canInventoryManage || productIdsWithVariantInventory.has(r.id)) {
+              if (!canInventoryManage || productIdsWithVariants.has(r.id)) {
                 return <span className="text-[#86868b]">—</span>;
               }
 
