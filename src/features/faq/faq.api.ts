@@ -3,7 +3,7 @@ import type { CrudPaths } from "../../shared/api/crudFactory";
 import type { Faq, FaqCreateDto, FaqUpdateDto } from "./faq.types";
 
 const paths: CrudPaths = {
-  getAll: "/faq/dashboard/get-all",
+  getAll: ["/faq/dashboard/get-all", "/faq/get-all"],
   getOne: (id) => `/faq/get/${id}`,
 
   create: "/faq/create",

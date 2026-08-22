@@ -10,7 +10,7 @@ import { parseApiError } from "@/shared/utils/apiError";
    Route definitions
 ------------------------- */
 export type CrudPaths = Readonly<{
-  getAll: string;
+  getAll: string | readonly string[];
   draftList?: string;
   archivedList?: string;
   getOne?: (id: UUID) => string;
@@ -163,8 +163,23 @@ export function makeCrud<TItem, TCreate, TUpdate>(
 
   const service = {
     list: async (q?: ApiListQuery) => {
-      const res = await api.get(paths.getAll, { params: q });
-      return normalizeList(unwrap<unknown>(res));
+      const getAllPaths = Array.isArray(paths.getAll) ? paths.getAll : [paths.getAll];
+
+      for (let index = 0; index < getAllPaths.length; index += 1) {
+        const path = getAllPaths[index];
+        try {
+          const res = await api.get(path, { params: q });
+          return normalizeList(unwrap<unknown>(res));
+        } catch (error) {
+          const status = typeof error === "object" && error !== null && "response" in error
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined;
+          const hasFallback = index < getAllPaths.length - 1;
+          if (status !== 404 || !hasFallback) throw error;
+        }
+      }
+
+      return { data: [] };
     },
 
     draft: async (q?: ApiListQuery) => {

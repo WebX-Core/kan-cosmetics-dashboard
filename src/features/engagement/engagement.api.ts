@@ -12,7 +12,7 @@ import type {
 } from "./engagement.types";
 
 const faqPaths: CrudPaths = {
-  getAll: "/faq/dashboard/get-all",
+  getAll: ["/faq/dashboard/get-all", "/faq/get-all"],
   getOne: (id) => `/faq/get/${id}`,
   create: "/faq/create",
   update: (id) => `/faq/update/${id}`,
@@ -21,6 +21,14 @@ const faqPaths: CrudPaths = {
   recover: "/faq/recover",
   destroy: (ids) => `/faq/destroy/${ids}`,
 };
+
+const faqCrud = makeCrud<Record<string, unknown>, FaqDto, FaqDto>("faqs", faqPaths);
+
+const isNotFoundError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "response" in error &&
+  (error as { response?: { status?: number } }).response?.status === 404;
 
 export const engagementApi = {
   inquiries: {
@@ -36,7 +44,17 @@ export const engagementApi = {
     site: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/review/get-site", { params: q })),
     byProduct: async (productId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/review/get-product/${productId}`, { params: q })),
   },
-  faqs: makeCrud<Record<string, unknown>, FaqDto, FaqDto>("faqs", faqPaths),
+  faqs: {
+    ...faqCrud,
+    byProduct: async (identifier: UUID | string, q?: ApiListQuery) => {
+      try {
+        return unwrap<unknown>(await api.get(`/faq/dashboard/get-product/${identifier}`, { params: q }));
+      } catch (error) {
+        if (!isNotFoundError(error)) throw error;
+        return unwrap<unknown>(await api.get(`/faq/get-product/${identifier}`, { params: q }));
+      }
+    },
+  },
   seo: {
     byPage: async (routeKey: string) => unwrap<unknown>(await api.get("/seo/page", { params: { routeKey } })),
     byEntity: async (entityType: string, entityId: UUID) => unwrap<unknown>(await api.get(`/seo/${entityType}/${entityId}`)),

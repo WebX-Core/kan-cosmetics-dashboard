@@ -4,23 +4,22 @@ import { MessageSquare, Plus } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
-import { engagementApi } from "@/features/engagement";
+import { engagementApi, useProductFaqList } from "@/features/engagement";
 import { catalogApi } from "@/features/catalog";
 import { confirmAction } from "@/shared/utils/confirm";
 
 const read = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;
-const normalizeId = (value: string): string => value.trim().toLowerCase();
-const extractProductId = (row: Readonly<Record<string, unknown>>): string => {
-  const direct = read(row.productId);
-  if (direct) return direct;
-  const relation =
-    (typeof row.product === "object" && row.product !== null
-      ? row.product
-      : typeof row.productRef === "object" && row.productRef !== null
-        ? row.productRef
-        : {}) as Record<string, unknown>;
-  return read(relation.id ?? relation._id ?? relation.productId);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const extractFaqRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
+  if (!isRecord(payload)) return [];
+  if (Array.isArray(payload.faqs)) return payload.faqs as ReadonlyArray<Record<string, unknown>>;
+  if (isRecord(payload.data) && Array.isArray(payload.data.faqs)) {
+    return payload.data.faqs as ReadonlyArray<Record<string, unknown>>;
+  }
+  return [];
 };
 
 type ProductFaqRow = Readonly<{
@@ -38,7 +37,15 @@ export const ProductFaqsPage: React.FC = () => {
   const [search, setSearch] = React.useState("");
 
   const productQuery = catalogApi.products.hooks.useGet(productId, Boolean(productId));
-  const faqListQuery = engagementApi.faqs.hooks.useList({ page: 1, limit: 1000, search: search.trim() || undefined }, true);
+  const productFaqQuery = useProductFaqList(
+    productId,
+    {
+      page: 1,
+      limit: 1000,
+      search: search.trim() || undefined,
+    },
+    Boolean(productId),
+  );
   const deleteFaq = engagementApi.faqs.hooks.useSoftDelete();
   const updateFaq = engagementApi.faqs.hooks.useUpdate();
 
@@ -48,23 +55,20 @@ export const ProductFaqsPage: React.FC = () => {
   }, [productQuery.data]);
 
   const rows = React.useMemo(() => {
-    const list = (faqListQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
-    const target = normalizeId(productId);
-    return list
-      .filter((row) => normalizeId(extractProductId(row)) === target)
-      .map((row) => ({
-        id: read(row.id, crypto.randomUUID()),
-        title: read(row.title, "Untitled FAQ"),
-        description:
-          typeof row.description === "string"
-            ? row.description
-            : typeof row.description === "object" && row.description !== null
-              ? read((row.description as Record<string, unknown>).text, "—")
-              : "—",
-        isActive: Boolean(row.isActive ?? true),
-        createdAt: read(row.createdAt),
-      }));
-  }, [faqListQuery.data?.data, productId]);
+    const list = extractFaqRows(productFaqQuery.data);
+    return list.map((row) => ({
+      id: read(row.id, crypto.randomUUID()),
+      title: read(row.title, "Untitled FAQ"),
+      description:
+        typeof row.description === "string"
+          ? row.description
+          : typeof row.description === "object" && row.description !== null
+            ? read((row.description as Record<string, unknown>).text, "—")
+            : "—",
+      isActive: Boolean(row.isActive ?? true),
+      createdAt: read(row.createdAt),
+    }));
+  }, [productFaqQuery.data]);
 
   const stats = React.useMemo(
     () => ({
@@ -95,13 +99,13 @@ export const ProductFaqsPage: React.FC = () => {
             type="button"
             role="switch"
             aria-checked={row.isActive}
-              onClick={async (event) => {
+            onClick={async (event) => {
               event.stopPropagation();
               await updateFaq.mutateAsync({
                 id: row.id,
                 dto: { title: row.title, isActive: !row.isActive },
               });
-              await faqListQuery.refetch();
+              await productFaqQuery.refetch();
             }}
             className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
               row.isActive ? "bg-emerald-500" : "bg-zinc-300"
@@ -125,7 +129,7 @@ export const ProductFaqsPage: React.FC = () => {
     const ok = await confirmAction("Delete this product FAQ?");
     if (!ok) return;
     await deleteFaq.mutateAsync(row.id);
-    await faqListQuery.refetch();
+    await productFaqQuery.refetch();
   };
 
   return (
@@ -157,7 +161,7 @@ export const ProductFaqsPage: React.FC = () => {
         data={rows}
         onEdit={(row) => navigate(`/dashboard/products/${productId}/faqs/${row.id}/edit`)}
         onDelete={(row) => void remove(row)}
-        emptyMessage={faqListQuery.isLoading ? "Loading FAQs..." : "No product FAQs found."}
+        emptyMessage={productFaqQuery.isLoading ? "Loading FAQs..." : "No product FAQs found."}
       />
     </PageLayout>
   );
