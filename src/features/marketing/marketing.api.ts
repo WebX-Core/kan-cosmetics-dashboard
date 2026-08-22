@@ -40,6 +40,7 @@ export const marketingApi = {
       },
     }
   ),
+  
   advertisements: makeStandardCrud<Record<string, unknown>, AdvertisementDto, AdvertisementDto>({ key: "advertisements", basePath: "/advertisement" }),
   advertisementsMatch: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/advertisement/match", { params: q })),
   emailCampaigns: makeStandardCrud<Record<string, unknown>, EmailCampaignDto, EmailCampaignDto>({ key: "emailCampaigns", basePath: "/email-campaign" }),
