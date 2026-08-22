@@ -13,7 +13,7 @@ import type {
 
 export const catalogApi = {
   categories: makeStandardCrud<Record<string, unknown>, CategoryDto, CategoryDto>(
-    { key: "categories", basePath: "/category", publicationLifecycle: true, dashboardStatusList: true },
+    { key: "categories", basePath: "/category", publicationLifecycle: true, dashboardStatusList: true, dashboardGetOne: true },
     {
       create: (dto) => {
         const { coverImage, ...rest } = dto;
@@ -32,7 +32,7 @@ export const catalogApi = {
     }
   ),
   subcategories: makeStandardCrud<Record<string, unknown>, SubcategoryDto, SubcategoryDto>(
-    { key: "subcategories", basePath: "/subcategory", publicationLifecycle: true, dashboardStatusList: true },
+    { key: "subcategories", basePath: "/subcategory", publicationLifecycle: true, dashboardStatusList: true, dashboardGetOne: true },
     {
       create: (dto) => {
         const { coverImage, ...rest } = dto;
@@ -51,7 +51,7 @@ export const catalogApi = {
     }
   ),
   products: makeStandardCrud<Record<string, unknown>, ProductDto, ProductDto>(
-    { key: "products", basePath: "/product", publicationLifecycle: true, dashboardStatusList: true },
+    { key: "products", basePath: "/product", publicationLifecycle: true, dashboardStatusList: true, dashboardGetOne: true },
     {
       create: (dto) => {
         const { coverImage, hoverImage, howToUseImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;

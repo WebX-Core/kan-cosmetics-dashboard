@@ -15,6 +15,7 @@ type CrudOptions = Readonly<{
   destroy?: boolean;
   publicationLifecycle?: boolean;
   dashboardStatusList?: boolean;
+  dashboardGetOne?: boolean;
 }>;
 
 const toCrudPaths = ({
@@ -25,6 +26,7 @@ const toCrudPaths = ({
   recover = true,
   publicationLifecycle = false,
   dashboardStatusList = false,
+  dashboardGetOne = false,
 }: CrudOptions): CrudPaths => ({
   getAll: dashboardStatusList
     ? `${basePath}/dashboard/get-all?status=PUBLISHED`
@@ -39,7 +41,7 @@ const toCrudPaths = ({
       ? `${basePath}/dashboard/get-all?status=ARCHIVED`
       : `${basePath}/archived`
     : undefined,
-  getOne: getOne ? (id) => `${basePath}/get/${id}` : undefined,
+  getOne: getOne ? (id) => `${basePath}${dashboardGetOne ? "/dashboard" : ""}/get/${id}` : undefined,
   create: `${basePath}/create`,
   update: update ? (id) => `${basePath}/update/${id}` : undefined,
   softDelete: (ids) => `${basePath}/destroy/${ids}`,
