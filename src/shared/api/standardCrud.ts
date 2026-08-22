@@ -23,7 +23,6 @@ const toCrudPaths = ({
   update = true,
   deleted = true,
   recover = true,
-  destroy = true,
   publicationLifecycle = false,
   dashboardStatusList = false,
 }: CrudOptions): CrudPaths => ({
@@ -46,7 +45,7 @@ const toCrudPaths = ({
   softDelete: (ids) => `${basePath}/destroy/${ids}`,
   deletedList: deleted ? `${basePath}/deleted` : `${basePath}/get-all`,
   recover: recover ? `${basePath}/recover` : `${basePath}/create`,
-  destroy: destroy ? (ids) => `${basePath}/destroy/${ids}` : (ids) => `${basePath}/delete/${ids}`,
+  destroy: (ids) => `${basePath}/destroy/${ids}`,
 });
 
 export const makeStandardCrud = <
