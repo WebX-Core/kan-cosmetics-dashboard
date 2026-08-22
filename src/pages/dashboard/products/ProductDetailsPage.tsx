@@ -218,8 +218,11 @@ export const ProductDetailsPage: React.FC = () => {
   const sku = readText(product?.sku, "—");
   const slug = readText(product?.slug, "—");
   const price = readText(product?.price, "0");
-  const salePrice = readText(product?.salePrice, price);
+  const compareAtPrice = readText(product?.compareAtPrice, "");
+  const salePrice = readText(product?.salePrice, "");
+  const secondaryPrice = compareAtPrice || salePrice;
   const weight = readText(product?.weight, "—");
+  const weightUnit = readText(product?.weightUnit, "g");
   const productType = readText(product?.productType, "—");
   const occasionType = readText(product?.occasionType, "NONE");
   const vatRate = readText(product?.vatRate, "13");
@@ -453,9 +456,9 @@ export const ProductDetailsPage: React.FC = () => {
                 <span className="text-[22px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
                   {formatCurrency(price)}
                 </span>
-                {salePrice !== price && (
+                {secondaryPrice && secondaryPrice !== price && (
                   <span className="text-[14px] font-medium text-[var(--primary)]">
-                    {formatCurrency(salePrice)} sale
+                    {compareAtPrice ? `${formatCurrency(secondaryPrice)} was` : `${formatCurrency(secondaryPrice)} sale`}
                   </span>
                 )}
               </div>
@@ -465,7 +468,7 @@ export const ProductDetailsPage: React.FC = () => {
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               {[
                 { label: "SKU", value: sku },
-                { label: "Weight", value: weight !== "—" ? `${weight} g` : "—" },
+                { label: "Weight", value: weight !== "—" ? `${weight} ${weightUnit}` : "—" },
                 { label: "Occasion", value: occasionType.replaceAll("_", " ") },
                 { label: "VAT", value: `${vatRate}% ${isVatIncluded ? "included" : "excluded"}` },
                 { label: "Category", value: categoryTitle },

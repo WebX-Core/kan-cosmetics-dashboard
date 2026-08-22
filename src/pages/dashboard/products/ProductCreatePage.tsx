@@ -39,7 +39,9 @@ const schema = z.object({
   subcategoryId: z.string().uuid("Subcategory must be a valid UUID"),
   sku: z.string().trim().min(1, "SKU is required"),
   price: z.string().trim().min(1, "Price is required"),
+  compareAtPrice: z.string().trim().optional(),
   weight: z.string().trim().optional(),
+  weightUnit: z.enum(["g", "kg", "mg", "ml", "l", "oz", "lb"]),
   productType: z.enum(PRODUCT_TYPES).optional(),
   occasionType: z.enum(OCCASION_TYPES),
   isVatIncluded: z.boolean(),
@@ -58,7 +60,9 @@ type Form = Readonly<{
   subcategoryId: string;
   sku: string;
   price: string;
+  compareAtPrice: string;
   weight: string;
+  weightUnit: string;
   productType: "" | ProductType;
   occasionType: OccasionType;
   isVatIncluded: boolean;
@@ -74,7 +78,9 @@ const initial: Form = {
   subcategoryId: "",
   sku: "",
   price: "",
+  compareAtPrice: "",
   weight: "",
+  weightUnit: "g",
   productType: "",
   occasionType: "NONE",
   isVatIncluded: true,
@@ -348,6 +354,16 @@ const inputClass =
 
 const selectClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+
+const WEIGHT_UNIT_OPTIONS = [
+  { value: "g", label: "g" },
+  { value: "kg", label: "kg" },
+  { value: "mg", label: "mg" },
+  { value: "ml", label: "ml" },
+  { value: "l", label: "l" },
+  { value: "oz", label: "oz" },
+  { value: "lb", label: "lb" },
+] as const;
 
 const ImageCard: React.FC<{
   src: string;
@@ -705,7 +721,9 @@ export const ProductCreatePage: React.FC = () => {
       subcategoryId: subId,
       sku: read(row.sku),
       price: read(row.price),
+      compareAtPrice: read(row.compareAtPrice),
       weight: read(row.weight),
+      weightUnit: read(row.weightUnit) || "g",
       productType: (read(row.productType) as Form["productType"]) || "",
       occasionType: (read(row.occasionType) as OccasionType) || "NONE",
       isVatIncluded:
@@ -876,7 +894,9 @@ export const ProductCreatePage: React.FC = () => {
       subcategoryId: parsed.subcategoryId || undefined,
       sku: parsed.sku,
       price: parsed.price,
+      compareAtPrice: parsed.compareAtPrice || undefined,
       weight: parsed.weight || undefined,
+      weightUnit: parsed.weightUnit,
       productType: parsed.productType || undefined,
       occasionType: parsed.occasionType,
       isVatIncluded: parsed.isVatIncluded,
@@ -1024,16 +1044,45 @@ export const ProductCreatePage: React.FC = () => {
                 className={inputClass}
               />
             </FormField>
-            <FormField label="Weight">
+            <FormField label="Compare At Price (Rs)">
               <input
                 type="text"
-                value={form.weight}
-                placeholder="e.g. 50g"
+                value={form.compareAtPrice}
+                placeholder="Original price before discount, e.g. 1499"
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, weight: e.target.value }))
+                  setForm((p) => ({ ...p, compareAtPrice: e.target.value }))
                 }
                 className={inputClass}
               />
+            </FormField>
+            <FormField label="Package Weight">
+              <div className="grid grid-cols-[1fr_112px] gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={form.weight}
+                  placeholder="Weight, e.g. 50"
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, weight: e.target.value }))
+                  }
+                  className={inputClass}
+                />
+                <select
+                  value={form.weightUnit}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, weightUnit: e.target.value }))
+                  }
+                  className={selectClass}
+                  aria-label="Weight unit"
+                >
+                  {WEIGHT_UNIT_OPTIONS.map((unit) => (
+                    <option key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </FormField>
             <FormField label="Product Type">
               <select

@@ -76,8 +76,10 @@ export type ProductDto = Readonly<{
   descriptionJson?: ProductDescriptionJson | Record<string, unknown>;
   keyFeatures?: ReadonlyArray<ProductFreeFrom>;
   weight?: string;
+  weightUnit?: string;
   sku?: string;
   price?: string;
+  compareAtPrice?: string;
   productType?: ProductType;
   occasionType?: OccasionType;
   isVatIncluded?: boolean;
