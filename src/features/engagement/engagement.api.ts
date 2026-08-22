@@ -1,5 +1,6 @@
 import { api, unwrap } from "@/shared/api/api";
 import type { ApiListQuery, UUID } from "@/shared/types/common.types";
+import { makeCrud, type CrudPaths } from "@/shared/api/crudFactory";
 import { makeStandardCrud } from "@/shared/api/standardCrud";
 import type {
   InquiryDto,
@@ -9,6 +10,17 @@ import type {
   ReviewDto,
   FaqDto,
 } from "./engagement.types";
+
+const faqPaths: CrudPaths = {
+  getAll: "/faq/dashboard/get-all",
+  getOne: (id) => `/faq/get/${id}`,
+  create: "/faq/create",
+  update: (id) => `/faq/update/${id}`,
+  softDelete: (ids) => `/faq/destroy/${ids}`,
+  deletedList: "/faq/deleted",
+  recover: "/faq/recover",
+  destroy: (ids) => `/faq/destroy/${ids}`,
+};
 
 export const engagementApi = {
   inquiries: {
@@ -24,7 +36,7 @@ export const engagementApi = {
     site: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/review/get-site", { params: q })),
     byProduct: async (productId: UUID, q?: ApiListQuery) => unwrap<unknown>(await api.get(`/review/get-product/${productId}`, { params: q })),
   },
-  faqs: makeStandardCrud<Record<string, unknown>, FaqDto, FaqDto>({ key: "faqs", basePath: "/faq" }),
+  faqs: makeCrud<Record<string, unknown>, FaqDto, FaqDto>("faqs", faqPaths),
   seo: {
     byPage: async (routeKey: string) => unwrap<unknown>(await api.get("/seo/page", { params: { routeKey } })),
     byEntity: async (entityType: string, entityId: UUID) => unwrap<unknown>(await api.get(`/seo/${entityType}/${entityId}`)),
