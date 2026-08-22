@@ -12,6 +12,7 @@ import type {
   CouponApplyDto,
   OrderCreateDto,
   OrderCreateByAdminDto,
+  OrderDeliverySyncDto,
   OrderStatusUpdateDto,
   OrderBulkPickupNotificationDto,
   PaymentUpdateDto,
@@ -66,7 +67,8 @@ export const commerceApi = {
     salesAnalytics: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/sales-analytics", { params: q })),
     get: async (id: UUID) => unwrap<unknown>(await api.get(`/order/get/${id}`)),
     updateStatus: async (id: UUID, payload: OrderStatusUpdateDto) => unwrap<unknown>(await api.patch(`/order/status/${id}`, payload)),
-    syncDelivery: async (id: UUID) => unwrap<unknown>(await api.post(`/order/sync-delivery/${id}`)),
+    syncDelivery: async (id: UUID, payload?: OrderDeliverySyncDto) =>
+      unwrap<unknown>(await api.post(`/order/sync-delivery/${id}`, payload ?? {})),
     deliveryWebhook: async (payload: Record<string, unknown>) => unwrap<unknown>(await api.post("/order/delivery-webhook", payload)),
     syncBranches: async () => unwrap<unknown>(await api.post("/order/sync-branches")),
     pickupNotification: async (id: UUID) => unwrap<unknown>(await api.post(`/order/pickup-notification/${id}`)),

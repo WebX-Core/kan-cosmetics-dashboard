@@ -101,6 +101,11 @@ export type OrderCreateByAdminDto = OrderCreateDto & Readonly<{
 
 export type OrderStatusUpdateDto = Readonly<{
   orderStatus: string;
+  preventStatusDowngrade?: boolean;
+}>;
+
+export type OrderDeliverySyncDto = Readonly<{
+  preventStatusDowngrade?: boolean;
 }>;
 
 export type OrderBulkPickupNotificationDto = Readonly<{

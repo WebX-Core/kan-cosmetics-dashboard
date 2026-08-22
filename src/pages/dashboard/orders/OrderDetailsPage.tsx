@@ -389,6 +389,7 @@ export const OrderDetailsPage: React.FC = () => {
 
   const [orderStatus, setOrderStatus] = React.useState("PENDING");
   const [paymentStatus, setPaymentStatus] = React.useState("UNPAID");
+  const [preventStatusDowngrade, setPreventStatusDowngrade] = React.useState(false);
   const [paymentId, setPaymentId] = React.useState<string | null>(null);
   const [syncingPickup, setSyncingPickup] = React.useState(false);
   const [printing, setPrinting] = React.useState<BillType | null>(null);
@@ -508,7 +509,7 @@ export const OrderDetailsPage: React.FC = () => {
 
   const handleSyncDelivery = async () => {
     try {
-      await syncDelivery.mutateAsync(id);
+      await syncDelivery.mutateAsync({ orderId: id, preventStatusDowngrade });
       await query.refetch();
     } catch (error) {
       toast.error(parseApiError(error).message);
@@ -606,7 +607,7 @@ export const OrderDetailsPage: React.FC = () => {
                   try {
                     await updateOrderStatus.mutateAsync({
                       id,
-                      payload: { orderStatus: parsed },
+                      payload: { orderStatus: parsed, preventStatusDowngrade },
                     });
                     await query.refetch();
                   } catch (error) {
@@ -663,6 +664,15 @@ export const OrderDetailsPage: React.FC = () => {
                 </select>
               </label>
             )}
+            <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245]">
+              <input
+                type="checkbox"
+                checked={preventStatusDowngrade}
+                onChange={(event) => setPreventStatusDowngrade(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-[#d2d2d7] accent-[#17174f]"
+              />
+              Prevent downgrade
+            </label>
             <button
               type="button"
               onClick={() => void handleSyncDelivery()}

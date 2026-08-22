@@ -145,7 +145,13 @@ export const useSyncOrderDelivery = () => {
   const toast = useToast();
 
   return useMutation({
-    mutationFn: (orderId: UUID) => commerceApi.orders.syncDelivery(orderId),
+    mutationFn: ({
+      orderId,
+      preventStatusDowngrade,
+    }: {
+      orderId: UUID;
+      preventStatusDowngrade?: boolean;
+    }) => commerceApi.orders.syncDelivery(orderId, { preventStatusDowngrade }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["commerce", "orders"] });
       toast.success("Delivery synced successfully.");

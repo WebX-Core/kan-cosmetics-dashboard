@@ -77,6 +77,7 @@ export const ShipmentViewPage: React.FC = () => {
   const { id } = useParams();
   const toast = useToast();
   const qc = useQueryClient();
+  const [preventStatusDowngrade, setPreventStatusDowngrade] = React.useState(false);
 
   const shipmentQuery = deliveryApi.shipments.hooks.useGet(id);
   const shipment = readRecord(shipmentQuery.data);
@@ -116,7 +117,8 @@ export const ShipmentViewPage: React.FC = () => {
   }, [id, trackingNumber, trackingQuery.data?.data]);
 
   const syncDelivery = useMutation({
-    mutationFn: () => commerceApi.orders.syncDelivery(orderId),
+    mutationFn: () =>
+      commerceApi.orders.syncDelivery(orderId, { preventStatusDowngrade }),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["commerce", "order", orderId] }),
@@ -209,6 +211,15 @@ export const ShipmentViewPage: React.FC = () => {
               <RefreshCw size={14} />
               Refresh
             </Button>
+            <label className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245]">
+              <input
+                type="checkbox"
+                checked={preventStatusDowngrade}
+                onChange={(event) => setPreventStatusDowngrade(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-[#d2d2d7] accent-[#17174f]"
+              />
+              Prevent downgrade
+            </label>
             <Button
               type="button"
               variant="outline"
