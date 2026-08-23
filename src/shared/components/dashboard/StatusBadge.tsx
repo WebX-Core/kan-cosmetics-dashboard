@@ -3,6 +3,7 @@ import React from "react";
 const statusMap: Record<string, { dot: string; text: string; bg: string }> = {
   /* positive */
   active:         { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" },
+  verified:       { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" },
   completed:      { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" },
   fulfilled:      { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" },
   delivered:      { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" },
