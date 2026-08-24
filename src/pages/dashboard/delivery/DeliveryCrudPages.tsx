@@ -52,6 +52,28 @@ const asText = (value: unknown): string => (typeof value === "string" ? value : 
 const asNumber = (value: unknown): string => (typeof value === "number" ? String(value) : "");
 const asBool = (value: unknown): boolean => Boolean(value);
 
+const shipmentListLabels: Record<string, string> = {
+  orderNumber: "Order",
+  courierName: "Courier",
+  providerTrackingNumber: "Tracking",
+  status: "Status",
+  codAmount: "COD",
+  destinationBranch: "Destination",
+  createdAt: "Created",
+};
+
+const renderTableValue = (column: string, value: unknown): string => {
+  if (value === null || value === undefined || value === "") return "-";
+  if (column === "createdAt" || column === "updatedAt" || column.endsWith("At")) {
+    const parsed = new Date(String(value));
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleString("en-NP", { dateStyle: "medium", timeStyle: "short" });
+    }
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+};
+
 const toRows = (value: unknown): ReadonlyArray<Row> => {
   if (Array.isArray(value)) return value.filter((x) => x && typeof x === "object") as ReadonlyArray<Row>;
   if (!value || typeof value !== "object") return [];
@@ -145,7 +167,10 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
 
   const columns = React.useMemo(() => {
     const keys = new Set<string>(["id", ...config.fields.map((field) => field.key)]);
-    const visibleKeys = Array.from(keys).slice(0, 7);
+    const visibleKeys =
+      config.key === "shipments"
+        ? ["orderNumber", "courierName", "providerTrackingNumber", "status", "codAmount", "destinationBranch", "createdAt"]
+        : Array.from(keys).slice(0, 7);
     return [
       {
         key: "select",
@@ -173,15 +198,18 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
       },
       ...visibleKeys.map((column) => ({
         key: column,
-        label: config.fields.find((field) => field.key === column)?.label ?? (column === "id" ? "ID" : column),
+        label:
+          shipmentListLabels[column] ??
+          config.fields.find((field) => field.key === column)?.label ??
+          (column === "id" ? "ID" : column),
         render: (row: Row) => (
           <span className="text-sm text-zinc-700">
-            {typeof row[column] === "object" ? JSON.stringify(row[column]) : String(row[column] ?? "-")}
+            {renderTableValue(column, row[column])}
           </span>
         ),
       })),
     ];
-  }, [config.fields, config.label, isAllVisibleSelected, selectedIds]);
+  }, [config.fields, config.key, config.label, isAllVisibleSelected, selectedIds]);
 
   const handleDelete = async (id: string) => {
     await remove.mutateAsync(id);

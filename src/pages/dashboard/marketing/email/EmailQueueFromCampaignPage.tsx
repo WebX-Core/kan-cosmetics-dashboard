@@ -11,6 +11,10 @@ const inputClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 const checkboxClass = "h-4 w-4 rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]";
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
+const numericValue = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? Number(trimmed) : undefined;
+};
 
 export const EmailQueueFromCampaignPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +31,11 @@ export const EmailQueueFromCampaignPage: React.FC = () => {
   const [campaignId, setCampaignId] = React.useState("");
   const [scheduledAt, setScheduledAt] = React.useState("");
   const [limit, setLimit] = React.useState("");
-  const [batchSize, setBatchSize] = React.useState("");
+  const [batchSize, setBatchSize] = React.useState("100");
+  const [batchDelayMinutes, setBatchDelayMinutes] = React.useState("2");
+  const [workerConcurrency, setWorkerConcurrency] = React.useState("5");
+  const [workerRateLimitMax, setWorkerRateLimitMax] = React.useState("60");
+  const [workerRateLimitDurationMs, setWorkerRateLimitDurationMs] = React.useState("60000");
   const [dryRun, setDryRun] = React.useState(true);
   const [skipExistingQueued, setSkipExistingQueued] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
@@ -51,8 +59,12 @@ export const EmailQueueFromCampaignPage: React.FC = () => {
       const response = await marketingApi.createQueueFromCampaign({
         campaignId,
         scheduledAt: withoutUtcSuffix(scheduledAt),
-        limit: limit ? Number(limit) : undefined,
-        batchSize: batchSize ? Number(batchSize) : undefined,
+        limit: numericValue(limit),
+        batchSize: numericValue(batchSize),
+        batchDelayMinutes: numericValue(batchDelayMinutes),
+        workerConcurrency: numericValue(workerConcurrency),
+        workerRateLimitMax: numericValue(workerRateLimitMax),
+        workerRateLimitDurationMs: numericValue(workerRateLimitDurationMs),
         dryRun,
         skipExistingQueued,
       });
@@ -97,7 +109,19 @@ export const EmailQueueFromCampaignPage: React.FC = () => {
               <input type="number" min={1} value={limit} placeholder="No limit" onChange={(e) => setLimit(e.target.value)} className={inputClass} />
             </FormField>
             <FormField label="Batch Size">
-              <input type="number" min={1} value={batchSize} placeholder="Default" onChange={(e) => setBatchSize(e.target.value)} className={inputClass} />
+              <input type="number" min={1} max={1000} value={batchSize} placeholder="100 recipients per batch" onChange={(e) => setBatchSize(e.target.value)} className={inputClass} />
+            </FormField>
+            <FormField label="Batch Delay Minutes">
+              <input type="number" min={0} max={1440} value={batchDelayMinutes} placeholder="2 minutes between batches" onChange={(e) => setBatchDelayMinutes(e.target.value)} className={inputClass} />
+            </FormField>
+            <FormField label="Worker Concurrency">
+              <input type="number" min={1} max={100} value={workerConcurrency} placeholder="5 parallel email jobs" onChange={(e) => setWorkerConcurrency(e.target.value)} className={inputClass} />
+            </FormField>
+            <FormField label="Rate Limit Max">
+              <input type="number" min={1} max={10000} value={workerRateLimitMax} placeholder="60 emails per window" onChange={(e) => setWorkerRateLimitMax(e.target.value)} className={inputClass} />
+            </FormField>
+            <FormField label="Rate Limit Duration Ms">
+              <input type="number" min={1000} max={86400000} value={workerRateLimitDurationMs} placeholder="60000 ms window" onChange={(e) => setWorkerRateLimitDurationMs(e.target.value)} className={inputClass} />
             </FormField>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-[13px] text-[#1d1d1f]">

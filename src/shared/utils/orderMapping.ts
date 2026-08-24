@@ -77,6 +77,9 @@ const extractCustomerRecord = (row: OrderRecord): OrderRecord =>
     "account",
   ]);
 
+const extractShippingAddressRecord = (row: OrderRecord): OrderRecord =>
+  getNestedRecord(row, ["shippingAddress", "shipping", "deliveryAddress"]);
+
 const collectOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> => {
   const orderRecord = extractOrderRecord(payload);
   if (Object.keys(orderRecord).length > 0) {
@@ -173,11 +176,15 @@ export const getListRows = (payload: unknown): ReadonlyArray<ListRecord> =>
 export const getOrderCustomerName = (record: unknown): string => {
   const row = extractOrderRecord(record);
   const customer = extractCustomerRecord(row);
+  const shippingAddress = extractShippingAddressRecord(row);
   const nestedName = extractName(customer);
   if (nestedName) return nestedName;
 
   const directName = extractName(row);
   if (directName) return directName;
+
+  const shippingName = extractName(shippingAddress);
+  if (shippingName) return shippingName;
 
   return text(row.customerName ?? row.fullname ?? row.name, "Customer");
 };

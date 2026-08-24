@@ -168,6 +168,10 @@ export type CreateQueueFromCampaignDto = Readonly<{
   scheduledAt?: string;
   limit?: number;
   batchSize?: number;
+  batchDelayMinutes?: number;
+  workerConcurrency?: number;
+  workerRateLimitMax?: number;
+  workerRateLimitDurationMs?: number;
   dryRun?: boolean;
   skipExistingQueued?: boolean;
 }>;
@@ -178,6 +182,10 @@ export type CreateQueueFromBucketDto = Readonly<{
   scheduledAt?: string;
   limit?: number;
   batchSize?: number;
+  batchDelayMinutes?: number;
+  workerConcurrency?: number;
+  workerRateLimitMax?: number;
+  workerRateLimitDurationMs?: number;
   dryRun?: boolean;
   skipExistingQueued?: boolean;
 }>;

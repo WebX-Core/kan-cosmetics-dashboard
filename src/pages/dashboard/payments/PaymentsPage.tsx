@@ -70,13 +70,17 @@ const getOrderCustomer = (orderRef: Record<string, unknown>): Record<string, unk
 
 const getCustomerName = (orderRef: Record<string, unknown>): string => {
   const customer = getOrderCustomer(orderRef);
+  const shippingAddress =
+    orderRef.shippingAddress && typeof orderRef.shippingAddress === "object" && !Array.isArray(orderRef.shippingAddress)
+      ? orderRef.shippingAddress as Record<string, unknown>
+      : {};
   const firstName = toText(customer.firstname, "");
   const lastName = toText(customer.lastname, "");
   const directName = [firstName, lastName].filter(Boolean).join(" ");
   if (directName) return directName;
 
   return toText(
-    customer.fullname ?? customer.name ?? orderRef.customerName ?? orderRef.fullname ?? orderRef.name,
+    customer.fullname ?? customer.name ?? orderRef.customerName ?? shippingAddress.fullName ?? orderRef.fullname ?? orderRef.name,
     "Unknown",
   );
 };
@@ -84,7 +88,7 @@ const getCustomerName = (orderRef: Record<string, unknown>): string => {
 const getCustomerEmail = (orderRef: Record<string, unknown>): string => {
   const customer = getOrderCustomer(orderRef);
   return toText(
-    customer.email ?? orderRef.customerEmail ?? orderRef.email,
+    customer.email ?? orderRef.customerEmail ?? orderRef.guestEmail ?? orderRef.email,
     "—",
   );
 };
