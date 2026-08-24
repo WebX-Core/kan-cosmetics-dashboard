@@ -1,11 +1,6 @@
 import React from "react";
 import { Award, Crown, Medal, Trophy } from "lucide-react";
 
-export const text = (value: unknown, fallback = "—") => typeof value === "string" && value.trim() ? value : fallback;
-export const number = (value: unknown) => typeof value === "number" ? value : Number(value ?? 0) || 0;
-export const date = (value: unknown) => { const raw = text(value, ""); if (!raw) return "—"; const parsed = new Date(raw); return Number.isNaN(parsed.getTime()) ? "—" : new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "2-digit" }).format(parsed); };
-export const customerName = (value: unknown) => { const row = typeof value === "object" && value !== null ? value as Record<string, unknown> : {}; return [row.firstname, row.middlename, row.lastname].map((item) => text(item, "")).filter(Boolean).join(" ") || text(row.name, "Unknown customer"); };
-
 export const RankBadge: React.FC<{ rank: number }> = ({ rank }) => {
   const Icon = rank === 1 ? Crown : rank <= 3 ? Medal : Trophy;
   return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${rank === 1 ? "bg-amber-100 text-amber-800" : rank <= 3 ? "bg-slate-100 text-slate-700" : "bg-blue-50 text-blue-700"}`}><Icon size={13} />#{rank}</span>;

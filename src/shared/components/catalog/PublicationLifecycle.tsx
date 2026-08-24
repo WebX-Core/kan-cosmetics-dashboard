@@ -3,11 +3,6 @@ import type { PublicationStatus } from "@/features/catalog/catalog.types";
 
 export type PublicationView = "published" | "draft" | "archived";
 
-export const readPublicationStatus = (value: unknown): PublicationStatus =>
-  value === "DRAFT" || value === "ARCHIVED" || value === "PUBLISHED"
-    ? value
-    : "PUBLISHED";
-
 export const PublicationStatusBadge: React.FC<{
   status: PublicationStatus;
 }> = ({ status }) => {
@@ -31,7 +26,7 @@ export const PublicationTabs: React.FC<{
   onChange: (value: PublicationView) => void;
 }> = ({ value, onChange }) => (
   <div className="flex" aria-label="Publication status filter">
-    <label className="inline-flex min-h-[34px] items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-[13px] text-[13px] font-medium text-[#1d1d1f] transition focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
+    <label className="inline-flex min-h-8.5 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3.25 text-[13px] font-medium text-[#1d1d1f] transition focus-within:border-(--primary) focus-within:ring-2 focus-within:ring-(--primary)/10">
       <span className="text-[#6e6e73]">Status</span>
       <select
         value={value}

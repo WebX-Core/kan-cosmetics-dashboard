@@ -10,6 +10,7 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { ModernFormLayout, FormActions, FormField, FormSection } from "@/shared/components/forms/ModernFormLayout";
 
 const input = "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 
@@ -78,9 +79,12 @@ export const ProductTagsPage: React.FC = () => {
   );
 
   const totalPages = q.data?.totalPages ?? 1;
+  const hasTag = Boolean(productId) && rows.length > 0;
   const pageTitle = productName ? `${productName} Tags` : "Product Tags";
   const pageSubtitle = productName
-    ? "Manage tags attached to this product."
+    ? hasTag
+      ? "Each product can only have one tag."
+      : "Manage tags attached to this product."
     : "Keyword tags attached to products.";
   const createPath = productId
     ? `/dashboard/product-tags/create?productId=${encodeURIComponent(productId)}&productName=${encodeURIComponent(productName || "")}`
@@ -99,14 +103,14 @@ export const ProductTagsPage: React.FC = () => {
 
   const columns = [
     { key: "tag", label: "Tag", render: (r: TagRow) => <span className="font-medium text-gray-900">{r.tag}</span> },
-    { key: "productId", label: "Product ID", render: (r: TagRow) => <span className="text-xs text-gray-500">{r.productId}</span> },
   ];
 
   return (
     <PageLayout
       title={pageTitle}
       subtitle={pageSubtitle}
-      onNew={() => navigate(createPath)}
+      onBack={() => navigate("/dashboard/products")}
+      onNew={hasTag ? undefined : () => navigate(createPath)}
       newButtonLabel="New Tag"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
@@ -136,14 +140,19 @@ export const ProductTagCreatePage: React.FC = () => {
   const create = catalogApi.productTags.hooks.useCreate();
   const scopedProductId = readQueryParam(searchParams, "productId");
   const scopedProductName = readQueryParam(searchParams, "productName");
-  const [productId, setProductId] = React.useState(scopedProductId);
+  const existingTags = catalogApi.productTags.hooks.useList(
+    { productId: scopedProductId || undefined, limit: 1 },
+    Boolean(scopedProductId),
+  );
+  const hasExistingTag = Boolean(scopedProductId) && toRows(existingTags.data?.data).length > 0;
   const [tag, setTag] = React.useState("");
   const [sortOrder] = React.useState("0");
-  React.useEffect(() => {
-    if (scopedProductId) setProductId(scopedProductId);
-  }, [scopedProductId]);
   const submit = async () => {
-    const parsed = validateOrToast(tagSchema, { productId, tag, sortOrder }, toast);
+    if (hasExistingTag) {
+      toast.error("This product already has a tag. Delete it before adding a new one.");
+      return;
+    }
+    const parsed = validateOrToast(tagSchema, { productId: scopedProductId, tag, sortOrder }, toast);
     if (!parsed) return;
     await create.mutateAsync(parsed);
     navigate(
@@ -153,16 +162,21 @@ export const ProductTagCreatePage: React.FC = () => {
     );
   };
   return (
-    <PageLayout
-      title="New Product Tag"
-      subtitle={scopedProductName ? `Add a keyword tag to ${scopedProductName}.` : "Add a keyword tag to a product."}
-    >
-      <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
-        <input className={input} placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
-        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Create Tag</button>
-      </div>
-    </PageLayout>
+    <ModernFormLayout title="New Product Tag" subtitle={scopedProductName ? `Add a tag to ${scopedProductName}.` : "Add a tag to a product."} onBack={() => navigate(-1)}>
+      <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="space-y-[21px]">
+        {hasExistingTag && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            This product already has a tag. Each product can only have one — delete the existing tag first.
+          </p>
+        )}
+        <FormSection title="Tag Details">
+          <FormField label="Tag name" required>
+            <input autoFocus disabled={hasExistingTag} className={input} placeholder="e.g. Best seller" value={tag} onChange={(e) => setTag(e.target.value)} />
+          </FormField>
+        </FormSection>
+        <FormActions submitLabel="Create Tag" isSubmitting={create.isPending} onCancel={() => navigate(-1)} />
+      </form>
+    </ModernFormLayout>
   );
 };
 
@@ -200,16 +214,16 @@ export const ProductTagEditPage: React.FC = () => {
     );
   };
   return (
-    <PageLayout
-      title="Edit Product Tag"
-      subtitle={scopedProductName ? `Update tags for ${scopedProductName}.` : "Update tag details."}
-    >
-      <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
-        <input className={input} placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
-        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Update Tag</button>
-      </div>
-    </PageLayout>
+    <ModernFormLayout title="Edit Product Tag" subtitle={scopedProductName ? `Update the tag for ${scopedProductName}.` : "Update tag details."} onBack={() => navigate(-1)}>
+      <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="space-y-[21px]">
+        <FormSection title="Tag Details">
+          <FormField label="Tag name" required>
+            <input autoFocus className={input} placeholder="e.g. Best seller" value={tag} onChange={(e) => setTag(e.target.value)} />
+          </FormField>
+        </FormSection>
+        <FormActions submitLabel="Update Tag" isSubmitting={update.isPending || get.isLoading} onCancel={() => navigate(-1)} />
+      </form>
+    </ModernFormLayout>
   );
 };
 
@@ -270,13 +284,13 @@ export const ProductAttributesPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "productId", label: "Product ID", render: (r: AttrRow) => <span className="text-xs text-gray-500">{r.productId}</span> },
   ];
 
   return (
     <PageLayout
       title={pageTitle}
       subtitle={pageSubtitle}
+      onBack={() => navigate("/dashboard/products")}
       onNew={() => navigate(createPath)}
       newButtonLabel="New Attribute"
       searchValue={state.search}
@@ -307,15 +321,11 @@ export const ProductAttributeCreatePage: React.FC = () => {
   const scopedProductId = readQueryParam(searchParams, "productId");
   const scopedProductName = readQueryParam(searchParams, "productName");
   const create = catalogApi.productAttributes.hooks.useCreate();
-  const [productId, setProductId] = React.useState(scopedProductId);
   const [name, setName] = React.useState("");
   const [value, setValue] = React.useState("");
   const [sortOrder] = React.useState("0");
-  React.useEffect(() => {
-    if (scopedProductId) setProductId(scopedProductId);
-  }, [scopedProductId]);
   const submit = async () => {
-    const parsed = validateOrToast(attributeSchema, { productId, name, value, sortOrder }, toast);
+    const parsed = validateOrToast(attributeSchema, { productId: scopedProductId, name, value, sortOrder }, toast);
     if (!parsed) return;
     await create.mutateAsync(parsed);
     navigate(
@@ -325,17 +335,21 @@ export const ProductAttributeCreatePage: React.FC = () => {
     );
   };
   return (
-    <PageLayout
-      title="New Product Attribute"
-      subtitle={scopedProductName ? `Add a custom attribute to ${scopedProductName}.` : "Add a custom attribute to a product."}
-    >
-      <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
-        <input className={input} placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className={input} placeholder="value" value={value} onChange={(e) => setValue(e.target.value)} />
-        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Create Attribute</button>
-      </div>
-    </PageLayout>
+    <ModernFormLayout title="New Product Attribute" subtitle={scopedProductName ? `Add an attribute to ${scopedProductName}.` : "Add an attribute to a product."} onBack={() => navigate(-1)}>
+      <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="space-y-[21px]">
+        <FormSection title="Attribute Details">
+          <div className="grid gap-[13px] md:grid-cols-2">
+            <FormField label="Attribute name" required>
+              <input autoFocus className={input} placeholder="e.g. Skin type" value={name} onChange={(e) => setName(e.target.value)} />
+            </FormField>
+            <FormField label="Attribute value" required>
+              <input className={input} placeholder="e.g. All skin types" value={value} onChange={(e) => setValue(e.target.value)} />
+            </FormField>
+          </div>
+        </FormSection>
+        <FormActions submitLabel="Create Attribute" isSubmitting={create.isPending} onCancel={() => navigate(-1)} />
+      </form>
+    </ModernFormLayout>
   );
 };
 
@@ -375,16 +389,20 @@ export const ProductAttributeEditPage: React.FC = () => {
     );
   };
   return (
-    <PageLayout
-      title="Edit Product Attribute"
-      subtitle={scopedProductName ? `Update attributes for ${scopedProductName}.` : "Update attribute details."}
-    >
-      <div className="grid max-w-lg gap-3">
-        <input className={input} placeholder="productId" value={productId} onChange={(e) => setProductId(e.target.value)} readOnly={Boolean(scopedProductId)} />
-        <input className={input} placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className={input} placeholder="value" value={value} onChange={(e) => setValue(e.target.value)} />
-        <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]" onClick={() => void submit()}>Update Attribute</button>
-      </div>
-    </PageLayout>
+    <ModernFormLayout title="Edit Product Attribute" subtitle={scopedProductName ? `Update the attribute for ${scopedProductName}.` : "Update attribute details."} onBack={() => navigate(-1)}>
+      <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="space-y-[21px]">
+        <FormSection title="Attribute Details">
+          <div className="grid gap-[13px] md:grid-cols-2">
+            <FormField label="Attribute name" required>
+              <input autoFocus className={input} placeholder="e.g. Skin type" value={name} onChange={(e) => setName(e.target.value)} />
+            </FormField>
+            <FormField label="Attribute value" required>
+              <input className={input} placeholder="e.g. All skin types" value={value} onChange={(e) => setValue(e.target.value)} />
+            </FormField>
+          </div>
+        </FormSection>
+        <FormActions submitLabel="Update Attribute" isSubmitting={update.isPending || get.isLoading} onCancel={() => navigate(-1)} />
+      </form>
+    </ModernFormLayout>
   );
 };

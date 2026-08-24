@@ -295,12 +295,12 @@ const StringListInput: React.FC<{
               onChange={(e) => update(index, e.target.value)}
               onKeyDown={(e) => onKeyDown(e, index)}
               placeholder={placeholder}
-              className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
+              className="h-9.5 flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10"
             />
             <button
               type="button"
               onClick={() => remove(index)}
-              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+              className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
             >
               <X size={13} />
             </button>
@@ -309,7 +309,7 @@ const StringListInput: React.FC<{
         <button
           type="button"
           onClick={add}
-          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-(--primary) hover:text-(--primary)"
         >
           <Plus size={12} />
           Add item
@@ -350,10 +350,10 @@ const readMedia = (value: unknown): ExistingMedia | null => {
 };
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10";
 
 const selectClass =
-  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+  "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10";
 
 const WEIGHT_UNIT_OPTIONS = [
   { value: "g", label: "g" },
@@ -514,8 +514,9 @@ export const ProductCreatePage: React.FC = () => {
 
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
   const [hoverImageFile, setHoverImageFile] = React.useState<File | null>(null);
-  const [howToUseImageFile, setHowToUseImageFile] =
-    React.useState<File | null>(null);
+  const [howToUseImageFile, setHowToUseImageFile] = React.useState<File | null>(
+    null,
+  );
   const [pdfFile, setPdfFile] = React.useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = React.useState<
     ReadonlyArray<MediaUpload>
@@ -833,9 +834,7 @@ export const ProductCreatePage: React.FC = () => {
   );
   const hasCoverImage = Boolean(coverImageFile || existingCoverImage);
   const hasHoverImage = Boolean(hoverImageFile || existingHoverImage);
-  const hasHowToUseImage = Boolean(
-    howToUseImageFile || existingHowToUseImage,
-  );
+  const hasHowToUseImage = Boolean(howToUseImageFile || existingHowToUseImage);
   const hasPdf = Boolean(pdfFile || existingPdf);
   const totalGalleryImages = previewGallery.length + existingGallery.length;
   const canAddGalleryImage = totalGalleryImages < MAX_GALLERY_IMAGES;
@@ -980,7 +979,7 @@ export const ProductCreatePage: React.FC = () => {
 
   if (isEdit && getQuery.isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center text-[14px] text-[#86868b]">
+      <div className="flex min-h-100 items-center justify-center text-[14px] text-[#86868b]">
         <Loader2 size={18} className="mr-2 animate-spin" /> Loading product…
       </div>
     );
@@ -996,9 +995,9 @@ export const ProductCreatePage: React.FC = () => {
       }
       onBack={() => navigate(backPath)}
     >
-      <form onSubmit={onSubmit} className="space-y-[21px]">
+      <form onSubmit={onSubmit} className="space-y-5.25">
         <FormSection title="Main Details">
-          <div className="grid gap-[13px] md:grid-cols-2">
+          <div className="grid gap-3.25 md:grid-cols-2">
             <FormField label="Title" required>
               <input
                 type="text"
@@ -1269,7 +1268,7 @@ export const ProductCreatePage: React.FC = () => {
                             ),
                           )
                         }
-                        className="flex h-[38px] w-[38px] items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                        className="flex h-9.5 w-9.5 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1289,7 +1288,7 @@ export const ProductCreatePage: React.FC = () => {
                     },
                   ])
                 }
-                className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-2 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-2 text-[12px] text-[#86868b] transition hover:border-(--primary) hover:text-(--primary)"
               >
                 <Plus size={12} /> Add package item
               </button>
@@ -1583,7 +1582,7 @@ export const ProductCreatePage: React.FC = () => {
             }
             placeholder="Describe this product…"
             rows={4}
-            className="w-full rounded-lg border border-[#d2d2d7] bg-white px-3 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#86868b] focus:border-[var(--primary)] focus:outline-none resize-none"
+            className="w-full rounded-lg border border-[#d2d2d7] bg-white px-3 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#86868b] focus:border-(--primary) focus:outline-none resize-none"
           />
         </FormSection>
 
@@ -1633,7 +1632,7 @@ export const ProductCreatePage: React.FC = () => {
                   setDescJson((p) => ({ ...p, howToUseProTip: e.target.value }))
                 }
                 placeholder="e.g. Use twice a week for visible smoothness"
-                className="h-[38px] w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
+                className="h-9.5 w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10"
               />
             </div>
           </div>
@@ -1660,7 +1659,7 @@ export const ProductCreatePage: React.FC = () => {
                     )
                   }
                   placeholder="e.g. Paraben Free"
-                  className="h-[38px] flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
+                  className="h-9.5 flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10"
                 />
                 <button
                   type="button"
@@ -1668,7 +1667,7 @@ export const ProductCreatePage: React.FC = () => {
                   onClick={() =>
                     setFreeFrom((prev) => prev.filter((_, i) => i !== idx))
                   }
-                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                  className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
                 >
                   <X size={13} />
                 </button>
@@ -1677,7 +1676,7 @@ export const ProductCreatePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setFreeFrom((prev) => [...prev, { title: "" }])}
-              className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-(--primary) hover:text-(--primary)"
             >
               <Plus size={12} /> Add item
             </button>

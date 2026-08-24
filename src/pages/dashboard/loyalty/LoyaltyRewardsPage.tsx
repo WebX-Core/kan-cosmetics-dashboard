@@ -6,7 +6,7 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
-import { customerName, date, text } from "./loyaltyUi";
+import { customerName, date, text } from "./loyaltyUtils";
 
 export const LoyaltyRewardsPage: React.FC = () => {
   const navigate = useNavigate();

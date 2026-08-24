@@ -9,8 +9,45 @@ type Form = Omit<CompanySettingDto, "logo"> & { logo: File | null };
 const empty: Form = { companyName: "", legalName: "", senderName: "", logoUrl: "", logo: null, address: "", city: "", district: "", country: "Nepal", phone: "", email: "", website: "", vatNumber: "", panNumber: "", registrationNumber: "", invoicePrefix: "KAN", fiscalYear: "", invoiceStartNumber: 1, billingNote: "", termsAndConditions: "", isActive: true };
 const inputClass = "h-9 w-full rounded-lg border border-[#d2d2d7] bg-white px-3 text-[12px] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 const textareaClass = "min-h-24 w-full rounded-lg border border-[#d2d2d7] bg-white p-3 text-[12px] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+const companyDetailPlaceholders = {
+  city: "e.g. Kathmandu",
+  district: "e.g. Kathmandu",
+  country: "e.g. Nepal",
+  phone: "e.g. +977 9800000000",
+  email: "e.g. billing@kan.com.np",
+  website: "e.g. https://kan.com.np",
+} as const;
+const invoicePlaceholders = {
+  vatNumber: "e.g. 600000000",
+  panNumber: "e.g. 600000000",
+  registrationNumber: "e.g. 123456/080/081",
+  invoicePrefix: "e.g. KAN",
+  fiscalYear: "e.g. 2081/82",
+} as const;
 
-const toForm = (row: CompanySetting): Form => ({ ...empty, ...row, logoUrl: row.logoUrl ?? "", logo: null });
+const toForm = (row: CompanySetting): Form => ({
+  companyName: row.companyName,
+  legalName: row.legalName ?? "",
+  senderName: row.senderName ?? "",
+  logoUrl: row.logoUrl ?? "",
+  logo: null,
+  address: row.address,
+  city: row.city ?? "",
+  district: row.district ?? "",
+  country: row.country ?? "Nepal",
+  phone: row.phone ?? "",
+  email: row.email ?? "",
+  website: row.website ?? "",
+  vatNumber: row.vatNumber ?? "",
+  panNumber: row.panNumber ?? "",
+  registrationNumber: row.registrationNumber ?? "",
+  invoicePrefix: row.invoicePrefix,
+  fiscalYear: row.fiscalYear ?? "",
+  invoiceStartNumber: row.invoiceStartNumber,
+  billingNote: row.billingNote ?? "",
+  termsAndConditions: row.termsAndConditions ?? "",
+  isActive: row.isActive,
+});
 
 type LogoUploaderProps = Readonly<{
   file: File | null;
@@ -72,25 +109,24 @@ export const CompanySettingFormPage: React.FC = () => {
     <form onSubmit={submit} className="space-y-[21px]">
       <FormSection title="Company Details" description="Business identity shown on shipping labels and VAT bills.">
         <div className="grid gap-[13px] md:grid-cols-2">
-          <FormField label="Company name" required><input required value={form.companyName} onChange={(e) => set("companyName", e.target.value)} className={inputClass}/></FormField>
-          <FormField label="Legal name"><input value={form.legalName ?? ""} onChange={(e) => set("legalName", e.target.value)} className={inputClass}/></FormField>
-          <FormField label="Sender name"><input value={form.senderName ?? ""} onChange={(e) => set("senderName", e.target.value)} className={inputClass}/></FormField>
-          <FormField label="Address" required><input required value={form.address} onChange={(e) => set("address", e.target.value)} className={inputClass}/></FormField>
-          {([ ["city", "City"], ["district", "District"], ["country", "Country"], ["phone", "Phone"], ["email", "Email"], ["website", "Website"] ] as const).map(([key, label]) => <FormField key={key} label={label}><input type={key === "email" ? "email" : key === "website" ? "url" : "text"} value={form[key] ?? ""} onChange={(e) => set(key, e.target.value)} className={inputClass}/></FormField>)}
+          <FormField label="Company name" required><input required value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="e.g. KAN Cosmetics" className={inputClass}/></FormField>
+          <FormField label="Legal name"><input value={form.legalName ?? ""} onChange={(e) => set("legalName", e.target.value)} placeholder="e.g. KAN Cosmetics Pvt. Ltd." className={inputClass}/></FormField>
+          <FormField label="Sender name"><input value={form.senderName ?? ""} onChange={(e) => set("senderName", e.target.value)} placeholder="e.g. KAN Fulfillment" className={inputClass}/></FormField>
+          <FormField label="Address" required><input required value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="e.g. Lazimpat, Kathmandu" className={inputClass}/></FormField>
+          {([ ["city", "City"], ["district", "District"], ["country", "Country"], ["phone", "Phone"], ["email", "Email"], ["website", "Website"] ] as const).map(([key, label]) => <FormField key={key} label={label}><input type={key === "email" ? "email" : key === "website" ? "url" : "text"} value={form[key] ?? ""} onChange={(e) => set(key, e.target.value)} placeholder={companyDetailPlaceholders[key]} className={inputClass}/></FormField>)}
         </div>
       </FormSection>
       <FormSection title="Registration & Invoicing" description="Tax registration and invoice-numbering configuration.">
         <div className="grid gap-[13px] md:grid-cols-2">
-          {([ ["vatNumber", "VAT number"], ["panNumber", "PAN number"], ["registrationNumber", "Registration number"], ["invoicePrefix", "Invoice prefix"], ["fiscalYear", "Fiscal year"] ] as const).map(([key, label]) => <FormField key={key} label={label} required={key === "invoicePrefix"}><input required={key === "invoicePrefix"} value={form[key] ?? ""} onChange={(e) => set(key, e.target.value)} className={inputClass}/></FormField>)}
-          <FormField label="Invoice start number"><input type="number" min={1} value={form.invoiceStartNumber} onChange={(e) => set("invoiceStartNumber", Number(e.target.value))} className={inputClass}/></FormField>
+          {([ ["vatNumber", "VAT number"], ["panNumber", "PAN number"], ["registrationNumber", "Registration number"], ["invoicePrefix", "Invoice prefix"], ["fiscalYear", "Fiscal year"] ] as const).map(([key, label]) => <FormField key={key} label={label} required={key === "invoicePrefix"}><input required={key === "invoicePrefix"} value={form[key] ?? ""} onChange={(e) => set(key, e.target.value)} placeholder={invoicePlaceholders[key]} className={inputClass}/></FormField>)}
+          <FormField label="Invoice start number"><input type="number" min={1} value={form.invoiceStartNumber} onChange={(e) => set("invoiceStartNumber", Number(e.target.value))} placeholder="e.g. 1" className={inputClass}/></FormField>
         </div>
       </FormSection>
       <FormSection title="Branding & Bill Content" description="Add the company logo and optional text printed on invoices.">
         <div className="grid gap-[13px] md:grid-cols-2">
-          <FormField label="Logo URL"><input type="url" value={form.logoUrl ?? ""} onChange={(e) => set("logoUrl", e.target.value)} className={inputClass}/></FormField>
-          <div className="md:col-span-2"><FormField label="Company logo" hint="The uploaded file takes priority over the logo URL."><LogoUploader file={form.logo} existingUrl={form.logoUrl ?? ""} onChange={(file) => set("logo", file)} onClearExisting={() => set("logoUrl", "")}/></FormField></div>
-          <div className="md:col-span-2"><FormField label="Billing note"><textarea value={form.billingNote ?? ""} onChange={(e) => set("billingNote", e.target.value)} className={textareaClass}/></FormField></div>
-          <div className="md:col-span-2"><FormField label="Terms and conditions"><textarea value={form.termsAndConditions ?? ""} onChange={(e) => set("termsAndConditions", e.target.value)} className={textareaClass}/></FormField></div>
+          <div className="md:col-span-2"><FormField label="Company logo"><LogoUploader file={form.logo} existingUrl={form.logoUrl ?? ""} onChange={(file) => set("logo", file)} onClearExisting={() => set("logoUrl", "")}/></FormField></div>
+          <div className="md:col-span-2"><FormField label="Billing note"><textarea value={form.billingNote ?? ""} onChange={(e) => set("billingNote", e.target.value)} placeholder="e.g. Thank you for shopping with KAN Cosmetics." className={textareaClass}/></FormField></div>
+          <div className="md:col-span-2"><FormField label="Terms and conditions"><textarea value={form.termsAndConditions ?? ""} onChange={(e) => set("termsAndConditions", e.target.value)} placeholder="e.g. Goods once sold are subject to the return policy." className={textareaClass}/></FormField></div>
           <label className="flex items-center gap-2 text-[12px] font-medium text-gray-700"><input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} className="h-4 w-4 rounded border-[#d2d2d7]"/> Use as active billing profile</label>
         </div>
       </FormSection>

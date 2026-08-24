@@ -8,6 +8,7 @@ import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { validateOrToast } from "@/shared/utils/validation";
 import { marketingApi } from "@/features/marketing";
+import { withoutUtcSuffix } from "./emailDateTime";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,7 +89,7 @@ export const EmailCampaignFormPage: React.FC = () => {
       content: parsed.content,
       type: parsed.type,
       status: parsed.status,
-      scheduledAt: parsed.scheduledAt?.trim() || undefined,
+      scheduledAt: withoutUtcSuffix(parsed.scheduledAt),
     };
     try {
       if (isEdit && id) {

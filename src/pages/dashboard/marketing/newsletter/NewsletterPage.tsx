@@ -1,11 +1,14 @@
 import React from "react";
-import { Mail, UserCheck, AlertTriangle, Users } from "lucide-react";
+import { Mail, UserCheck, AlertTriangle, Users, Trash2 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { parseApiError } from "@/shared/utils/apiError";
+import { confirmAction } from "@/shared/utils/confirm";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 
@@ -39,7 +42,9 @@ const mapRows = (payload: unknown): ReadonlyArray<Row> => {
 };
 
 export const NewsletterPage: React.FC = () => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = React.useState("all");
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
 
   const query = marketingApi.newsletters.hooks.useList({
@@ -47,6 +52,7 @@ export const NewsletterPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
+  const remove = marketingApi.newsletters.hooks.useSoftDelete();
 
   const rows = React.useMemo(() => mapRows(query.data), [query.data]);
   const totalPages = query.data?.totalPages ?? 1;
@@ -66,7 +72,24 @@ export const NewsletterPage: React.FC = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    setSelectedIds(new Set());
     setState((p) => ({ ...p, page: 1 }));
+  };
+
+  const deleteSelected = async (ids: Set<string>, clearSelection: () => void) => {
+    const count = ids.size;
+    const confirmed = await confirmAction(`Delete ${count} selected subscriber${count === 1 ? "" : "s"}?`);
+    if (!confirmed) return;
+
+    try {
+      await remove.mutateAsync([...ids].join(","));
+      clearSelection();
+      setSelectedIds(new Set());
+      await query.refetch();
+      toast.success(`${count} subscriber${count === 1 ? "" : "s"} deleted.`);
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
   };
 
   const tabs = [
@@ -109,7 +132,22 @@ export const NewsletterPage: React.FC = () => {
         data={tabFiltered}
         searchValue={state.search}
         emptyMessage={query.isLoading ? "Loading subscribers..." : "No subscribers found."}
+        rowId={(row) => row.id}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        bulkActions={(ids, clearSelection) => (
+          <button
+            type="button"
+            onClick={() => void deleteSelected(ids, clearSelection)}
+            disabled={remove.isPending}
+            className="inline-flex h-8 items-center gap-2 rounded-full bg-red-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            <Trash2 size={12} />
+            {remove.isPending ? "Deleting…" : `Delete (${ids.size})`}
+          </button>
+        )}
         showPagination={true}
+        alwaysShowPagination={true}
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}

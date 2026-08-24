@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Megaphone, RotateCcw, Trash2, Target, Search } from "lucide-react";
+import { Megaphone, RotateCcw, Trash2, Target, Search, Archive } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -20,6 +20,7 @@ import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { catalogApi } from "@/features/catalog";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 
@@ -38,6 +39,7 @@ type AdRow = Readonly<{
   date: string;
   sortOrder: number;
   createdAt: string;
+  image: string;
 }>;
 
 const toAdRows = (payload: unknown): ReadonlyArray<AdRow> => {
@@ -53,6 +55,7 @@ const toAdRows = (payload: unknown): ReadonlyArray<AdRow> => {
       date: text(item.date, ""),
       sortOrder: typeof item.sortOrder === "number" ? item.sortOrder : 0,
       createdAt: text(item.createdAt, ""),
+      image: text(item.image, ""),
     }));
 };
 
@@ -64,14 +67,25 @@ export const AdvertisementsPage: React.FC = () => {
 
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const [matchQuery, setMatchQuery] = React.useState("");
-  const [submittedMatchQuery, setSubmittedMatchQuery] = React.useState("");
+  const [matchContext, setMatchContext] = React.useState({ categoryId: "", subcategoryId: "", productId: "", variantId: "" });
+  const [submittedMatchQuery, setSubmittedMatchQuery] = React.useState<typeof matchContext | null>(null);
   const confirm = useConfirmAction();
+
+  const categoriesQuery = catalogApi.categories.hooks.useList({ page: 1, limit: 1000 });
+  const subcategoriesQuery = catalogApi.subcategories.hooks.useList({ page: 1, limit: 1000 });
+  const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 });
+  const variantsQuery = catalogApi.productVariants.hooks.useList({ page: 1, limit: 1000 });
+  const catalogOptions = (items: ReadonlyArray<Record<string, unknown>>) => items.map((item) => ({ id: text(item.id), label: text(item.title ?? item.name ?? item.sku, "Untitled") })).filter((item) => item.id);
 
   const matchResults = useQuery({
     queryKey: ["advertisements", "match", submittedMatchQuery],
-    queryFn: () => marketingApi.advertisementsMatch(submittedMatchQuery ? { search: submittedMatchQuery } : undefined),
-    enabled: submittedMatchQuery.length > 0,
+    queryFn: () => marketingApi.advertisementsMatch(submittedMatchQuery ? {
+      categoryId: submittedMatchQuery.categoryId || undefined,
+      subcategoryId: submittedMatchQuery.subcategoryId || undefined,
+      productId: submittedMatchQuery.productId || undefined,
+      variantId: submittedMatchQuery.variantId || undefined,
+    } : undefined),
+    enabled: Boolean(submittedMatchQuery),
   });
 
   const query = marketingApi.advertisements.hooks.useList(
@@ -153,9 +167,12 @@ export const AdvertisementsPage: React.FC = () => {
       key: "title",
       label: "Advertisement",
       render: (r: AdRow) => (
-        <div>
+        <div className="flex items-center gap-3">
+          {r.image ? <img src={r.image} alt="" className="h-10 w-16 rounded-lg border border-[#e5e5ea] object-cover" /> : null}
+          <div>
           <div className="font-medium text-gray-900">{r.title}</div>
           {r.date ? <div className="text-xs text-gray-400">{fmt(r.date)}</div> : null}
+          </div>
         </div>
       ),
     },
@@ -225,6 +242,7 @@ export const AdvertisementsPage: React.FC = () => {
       onBack={isDeletedView ? () => navigate("/dashboard/advertisements") : undefined}
       onNew={!isDeletedView ? () => navigate("/dashboard/advertisements/create") : undefined}
       newButtonLabel="New Ad"
+      actions={!isDeletedView ? <button type="button" onClick={() => navigate("/dashboard/advertisements/deleted")} className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"><Archive size={13} /> Deleted Ads</button> : undefined}
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search advertisements..."
@@ -239,24 +257,24 @@ export const AdvertisementsPage: React.FC = () => {
 
           <div className="rounded-xl border border-[#d2d2d7] bg-white p-4 space-y-2">
             <p className="text-sm font-medium text-[#1d1d1f]">Match Advertisements</p>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              {([
+                ["categoryId", "Category", catalogOptions(categoriesQuery.data?.data ?? [])],
+                ["subcategoryId", "Subcategory", catalogOptions(subcategoriesQuery.data?.data ?? [])],
+                ["productId", "Product", catalogOptions(productsQuery.data?.data ?? [])],
+                ["variantId", "Variant", catalogOptions(variantsQuery.data?.data ?? [])],
+              ] as const).map(([key, label, options]) => <select key={key} value={matchContext[key]} onChange={(event) => setMatchContext((previous) => ({ ...previous, [key]: event.target.value }))} className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-3 text-sm text-[#1d1d1f] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"><option value="">{label}: Any</option>{options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select>)}
+            </div>
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={matchQuery}
-                onChange={(e) => setMatchQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") setSubmittedMatchQuery(matchQuery); }}
-                placeholder="Query to match ads (e.g. season, target type)…"
-                className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
-              />
               <button
                 type="button"
-                onClick={() => setSubmittedMatchQuery(matchQuery)}
+                onClick={() => setSubmittedMatchQuery(matchContext)}
                 className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
               >
                 <Search size={14} /> Match
               </button>
               {submittedMatchQuery && (
-                <button type="button" onClick={() => { setMatchQuery(""); setSubmittedMatchQuery(""); }} className="flex h-10 shrink-0 items-center rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
+                <button type="button" onClick={() => { setMatchContext({ categoryId: "", subcategoryId: "", productId: "", variantId: "" }); setSubmittedMatchQuery(null); }} className="flex h-10 shrink-0 items-center rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
                   Clear
                 </button>
               )}

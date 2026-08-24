@@ -1,5 +1,4 @@
 import { api, unwrap } from "@/shared/api/api";
-import type { ApiListQuery } from "@/shared/types/common.types";
 import { makeStandardCrud } from "@/shared/api/standardCrud";
 import type { FormFieldValue, FormFileValue } from "@/shared/api/api";
 import type {
@@ -17,6 +16,7 @@ import type {
   CreateFromSubscribersDto,
   CreateQueueFromCampaignDto,
   CreateQueueFromBucketDto,
+  AdvertisementMatchQuery,
 } from "./marketing.types";
 
 export const marketingApi = {
@@ -41,8 +41,37 @@ export const marketingApi = {
     }
   ),
   
-  advertisements: makeStandardCrud<Record<string, unknown>, AdvertisementDto, AdvertisementDto>({ key: "advertisements", basePath: "/advertisement" }),
-  advertisementsMatch: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/advertisement/match", { params: q })),
+  advertisements: makeStandardCrud<Record<string, unknown>, AdvertisementDto, AdvertisementDto>(
+    { key: "advertisements", basePath: "/advertisement" },
+    {
+      create: (dto) => {
+        const { image, ...rest } = dto;
+        return {
+          fields: {
+            ...(rest as Readonly<Record<string, FormFieldValue>>),
+            image: typeof image === "string" ? image : undefined,
+          },
+          files: { image: image instanceof File ? image : undefined },
+        };
+      },
+      update: (dto) => {
+        const { image, ...rest } = dto;
+        return {
+          fields: {
+            ...(rest as Readonly<Record<string, FormFieldValue>>),
+            image: typeof image === "string" ? image : undefined,
+          },
+          files: { image: image instanceof File ? image : undefined },
+        };
+      },
+    },
+  ),
+  getAdvertisement: async (id: string) => {
+    const response = await api.get(`/advertisement/get/${id}`);
+    const body = response.data as { advertisement?: Record<string, unknown> };
+    return body.advertisement ?? {};
+  },
+  advertisementsMatch: async (q?: AdvertisementMatchQuery) => unwrap<unknown>(await api.get("/advertisement/match", { params: q })),
   emailCampaigns: makeStandardCrud<Record<string, unknown>, EmailCampaignDto, EmailCampaignDto>({ key: "emailCampaigns", basePath: "/email-campaign" }),
   emailRecipients: makeStandardCrud<Record<string, unknown>, EmailRecipientDto, EmailRecipientDto>({ key: "emailRecipients", basePath: "/email-recipient" }),
   emailRecipientBuckets: makeStandardCrud<Record<string, unknown>, EmailRecipientBucketDto, EmailRecipientBucketDto>({ key: "emailRecipientBuckets", basePath: "/email-recipient-bucket" }),

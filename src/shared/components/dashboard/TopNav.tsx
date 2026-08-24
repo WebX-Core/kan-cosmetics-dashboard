@@ -43,13 +43,13 @@ export const TopNav: React.FC<Props> = ({
   }, [profilePicture]);
 
   return (
-    <header className="sticky top-0 z-30 h-[55px] border-b border-[#e5e5e7] bg-white">
-      <div className="flex h-full items-center gap-[13px] px-[21px]">
+    <header className="sticky top-0 z-30 h-13.75 border-b border-l border-[#e5e5e7] bg-white">
+      <div className="flex h-full items-center gap-3.25 px-5.25">
         {/* Mobile menu */}
         <button
           type="button"
           onClick={onOpenMobile}
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7] md:hidden"
+          className="flex h-8.5 w-8.5 items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] hover:bg-[#f5f5f7] md:hidden"
         >
           <Menu size={16} strokeWidth={2} />
         </button>
@@ -59,7 +59,7 @@ export const TopNav: React.FC<Props> = ({
         </div>
 
         {/* Right actions */}
-        <div className="ml-auto flex items-center gap-[8px]">
+        <div className="ml-auto flex items-center gap-2">
           <GlobalSearch />
 
           {/* Notifications */}
@@ -67,11 +67,11 @@ export const TopNav: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setNotificationsOpen((v) => !v)}
-              className="relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
+              className="relative flex h-8.5 w-8.5 items-center justify-center rounded-full border border-[#e5e5e7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
             >
               <Bell size={15} strokeWidth={2} />
               {unreadContactsCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-500 px-[3px] text-[9px] font-bold text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.75 text-[9px] font-bold text-white">
                   {unreadContactsCount > 9 ? "9+" : unreadContactsCount}
                 </span>
               )}
@@ -83,26 +83,26 @@ export const TopNav: React.FC<Props> = ({
                   className="fixed inset-0 z-40"
                   onClick={() => setNotificationsOpen(false)}
                 />
-                <div className="absolute right-0 top-[42px] z-50 w-[320px] overflow-hidden rounded-xl border border-[#e5e5e7] bg-white shadow-lg">
-                  <div className="border-b border-[#f0f0f2] px-[21px] py-[13px]">
+                <div className="absolute right-0 top-10.5 z-50 w-[320px] overflow-hidden rounded-xl border border-[#e5e5e7] bg-white shadow-lg">
+                  <div className="border-b border-[#f0f0f2] px-5.25 py-3.25">
                     <p className="text-[14px] font-semibold text-[#1d1d1f]">
                       Unread Contacts
                     </p>
                   </div>
                   {unreadContacts.length === 0 ? (
-                    <div className="px-[21px] py-[34px] text-center text-[13px] text-[#6e6e73]">
+                    <div className="px-5.25 py-8.5 text-center text-[13px] text-[#6e6e73]">
                       No unread contacts.
                     </div>
                   ) : (
-                    <div className="max-h-[280px] overflow-auto">
+                    <div className="max-h-70 overflow-auto">
                       {unreadContacts.slice(0, 8).map((contact) => (
                         <Link
                           to={`/dashboard/support/contacts/${contact.id}`}
                           key={contact.id}
-                          className="block border-b border-[#f5f5f7] px-[21px] py-[13px] transition-colors hover:bg-[#fafafa] last:border-0"
+                          className="block border-b border-[#f5f5f7] px-5.25 py-3.25 transition-colors hover:bg-[#fafafa] last:border-0"
                           onClick={() => setNotificationsOpen(false)}
                         >
-                          <div className="flex items-start justify-between gap-[8px]">
+                          <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-[13px] font-medium text-[#1d1d1f]">
                                 {contact.name || contact.email}
@@ -111,12 +111,12 @@ export const TopNav: React.FC<Props> = ({
                                 {contact.email}
                               </p>
                               {contact.createdAt && (
-                                <p className="mt-[3px] text-[11px] text-[#86868b]">
+                                <p className="mt-0.75 text-[11px] text-[#86868b]">
                                   {new Date(contact.createdAt).toLocaleString()}
                                 </p>
                               )}
                             </div>
-                            <span className="shrink-0 rounded-full bg-red-50 px-[8px] py-px text-[10px] font-semibold text-red-600">
+                            <span className="shrink-0 rounded-full bg-red-50 px-2 py-px text-[10px] font-semibold text-red-600">
                               New
                             </span>
                           </div>
@@ -124,11 +124,11 @@ export const TopNav: React.FC<Props> = ({
                       ))}
                     </div>
                   )}
-                  <div className="border-t border-[#f0f0f2] p-[8px]">
+                  <div className="border-t border-[#f0f0f2] p-2">
                     <Link
                       to="/dashboard/support/contacts"
                       onClick={() => setNotificationsOpen(false)}
-                      className="block rounded-full bg-blue-500 px-[21px] py-[8px] text-center text-[13px] font-medium text-white! hover:bg-blue-600"
+                      className="block rounded-full bg-blue-500 px-5.25 py-2 text-center text-[13px] font-medium text-white! hover:bg-blue-600"
                     >
                       View All Contacts
                     </Link>
@@ -143,17 +143,17 @@ export const TopNav: React.FC<Props> = ({
             <button
               onClick={() => setOpen((v) => !v)}
               type="button"
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#e5e5e7] pl-[5px] pr-[13px] transition-colors hover:bg-[#f5f5f7]"
+              className="flex h-8.5 items-center gap-2 rounded-full border border-[#e5e5e7] pl-1.25 pr-3.25 transition-colors hover:bg-[#f5f5f7]"
             >
               {profilePicture && !avatarBroken ? (
                 <img
                   src={profilePicture}
                   alt={displayName}
-                  className="h-[24px] w-[24px] rounded-full object-cover"
+                  className="h-6 w-6 rounded-full object-cover"
                   onError={() => setAvatarBroken(true)}
                 />
               ) : (
-                <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-[11px] font-semibold text-white">
                   {(displayName[0] ?? "K").toUpperCase()}
                 </span>
               )}
@@ -175,26 +175,26 @@ export const TopNav: React.FC<Props> = ({
                   className="fixed inset-0 z-40"
                   onClick={() => setOpen(false)}
                 />
-                <div className="absolute right-0 top-[42px] z-50 w-[220px] overflow-hidden rounded-xl border border-[#e5e5e7] bg-white shadow-lg">
-                  <div className="border-b border-[#f0f0f2] px-[21px] py-[13px]">
+                <div className="absolute right-0 top-10.5 z-50 w-55 overflow-hidden rounded-xl border border-[#e5e5e7] bg-white shadow-lg">
+                  <div className="border-b border-[#f0f0f2] px-5.25 py-3.25">
                     <p className="text-[14px] font-semibold text-[#1d1d1f]">
                       {displayName}
                     </p>
-                    <p className="mt-[3px] text-[12px] text-[#6e6e73]">
+                    <p className="mt-0.75 text-[12px] text-[#6e6e73]">
                       {email ?? "—"}
                     </p>
-                    <p className="mt-[4px] text-[8px] text-[#6e6e73] leading-none">
+                    <p className="mt-1 text-[8px] text-[#6e6e73] leading-none">
                       {roleLabel}
                     </p>
                   </div>
-                  <div className="p-[8px]">
+                  <div className="p-2">
                     <button
                       type="button"
                       onClick={() => {
                         onProfile();
                         setOpen(false);
                       }}
-                      className="flex h-[34px] w-full items-center gap-[8px] rounded-lg px-[13px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+                      className="flex h-8.5 w-full items-center gap-2 rounded-lg px-3.25 text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
                     >
                       <User size={14} strokeWidth={2} />
                       View Profile
@@ -206,7 +206,7 @@ export const TopNav: React.FC<Props> = ({
                         setOpen(false);
                       }}
                       disabled={isLoggingOut}
-                      className="mt-[2px] flex h-[34px] w-full items-center gap-[8px] rounded-lg px-[13px] text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                      className="mt-0.5 flex h-8.5 w-full items-center gap-2 rounded-lg px-3.25 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
                     >
                       <LogOut size={14} strokeWidth={2} />
                       {isLoggingOut ? "Logging out…" : "Log Out"}

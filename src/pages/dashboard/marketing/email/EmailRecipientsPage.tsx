@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Users, CheckCircle, Clock, AlertCircle, RotateCcw, Trash2 } from "lucide-react";
+import { Users, CheckCircle, Clock, AlertCircle, RotateCcw, Trash2, UserCheck, MailPlus } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -179,6 +179,24 @@ export const EmailRecipientsPage: React.FC = () => {
       onBack={isDeletedView ? () => navigate("/dashboard/marketing/email-recipients") : undefined}
       onNew={!isDeletedView ? () => navigate("/dashboard/marketing/email-recipients/create") : undefined}
       newButtonLabel="Add Recipient"
+      actions={!isDeletedView ? (
+        <>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/marketing/email-recipients/select-audience")}
+            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <UserCheck size={13} strokeWidth={2} /> Select Audience
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/marketing/email-recipients/from-subscribers")}
+            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[14px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <MailPlus size={13} strokeWidth={2} /> Import Subscribers
+          </button>
+        </>
+      ) : undefined}
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search recipients..."

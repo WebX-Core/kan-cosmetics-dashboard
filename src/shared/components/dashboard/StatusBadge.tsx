@@ -18,6 +18,7 @@ const statusMap: Record<string, { dot: string; text: string; bg: string }> = {
   "in stock":     { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" },
   /* warning / in-progress */
   pending:        { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
+  new:            { dot: "bg-orange-500",  text: "text-orange-800",  bg: "bg-orange-100"  },
   due:            { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   processing:     { dot: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   },
   readyforshipment: { dot: "bg-amber-400", text: "text-amber-700", bg: "bg-amber-50" },

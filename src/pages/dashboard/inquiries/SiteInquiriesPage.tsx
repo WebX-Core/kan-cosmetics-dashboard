@@ -21,6 +21,7 @@ import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
+import { TableActionsMenu } from "@/shared/components/dashboard/TableActionsMenu";
 
 const text = (value: unknown, fallback = ""): string => (typeof value === "string" ? value : fallback);
 const toRowsArray = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
@@ -166,7 +167,7 @@ export const SiteInquiriesPage: React.FC = () => {
     },
     { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
     {
-      key: "actions", label: "",
+      key: "actions", label: "Actions",
       render: (r: Row) => (
         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
           {isDeletedView ? (
@@ -179,14 +180,10 @@ export const SiteInquiriesPage: React.FC = () => {
               </button>
             </>
           ) : (
-            <>
-              <button type="button" onClick={() => navigate(`/dashboard/support/site-inquiries/${r.id}`)} className="flex items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
-                View
-              </button>
-              <button type="button" onClick={() => confirm.prompt("delete", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                <Trash2 size={11} /> Delete
-              </button>
-            </>
+            <TableActionsMenu
+              onView={() => navigate(`/dashboard/support/site-inquiries/${r.id}`)}
+              onDelete={() => confirm.prompt("delete", [r.id])}
+            />
           )}
         </div>
       ),

@@ -48,6 +48,7 @@ type Props<T> = {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   showPagination?: boolean;
+  alwaysShowPagination?: boolean;
   /** Row selection — provide rowId to extract a unique key from each row */
   rowId?: (row: T) => string;
   selectedIds?: ReadonlySet<string>;
@@ -79,6 +80,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
   totalPages = 1,
   onPageChange,
   showPagination = true,
+  alwaysShowPagination = false,
   rowId,
   selectedIds: controlledSelectedIds,
   onSelectionChange,
@@ -455,7 +457,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
         </table>
       </div>
       {/* Pagination — golden ratio heights and spacing */}
-      {showPagination && totalPages > 1 && (
+      {showPagination && (alwaysShowPagination || totalPages > 1) && (
         <div className="flex items-center justify-between border-t border-[#f0f0f2] px-[21px] py-[13px]">
           <p className="text-[12px] text-[#86868b]">
             Page {currentPage} of {totalPages}

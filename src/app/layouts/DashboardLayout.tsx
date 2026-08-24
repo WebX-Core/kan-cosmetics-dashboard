@@ -26,6 +26,7 @@ const SIDEBAR_BACKEND_MODULES: Readonly<Record<string, ReadonlyArray<string>>> =
   faqs:                      ["faq"],
   "blog-posts":              ["blog"],
   newsletter:                ["newsletter"],
+  advertisements:            ["advertisement"],
   "email-campaigns":         ["email-campaign"],
   "email-recipients":        ["email-recipient"],
   "email-recipient-buckets": ["email-recipient-bucket"],

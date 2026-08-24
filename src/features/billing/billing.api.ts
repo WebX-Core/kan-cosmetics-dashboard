@@ -3,7 +3,14 @@ import type { BillPayload, BillType, BulkBillPayload, CompanySetting, CompanySet
 
 const companyBody = (dto: CompanySettingDto) => {
   const { logo, ...fields } = dto;
-  return toFormData(fields, { logo });
+  // Backend validates logoUrl/email with @IsUrl/@IsEmail; @IsOptional only skips
+  // null/undefined, not "" — sending an empty string 400s, so omit it entirely.
+  const clean = {
+    ...fields,
+    logoUrl: fields.logoUrl === "" ? undefined : fields.logoUrl,
+    email: fields.email === "" ? undefined : fields.email,
+  };
+  return toFormData(clean, { logo });
 };
 
 export const billingApi = {

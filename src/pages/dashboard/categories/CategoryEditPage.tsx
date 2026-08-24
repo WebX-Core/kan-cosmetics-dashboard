@@ -10,7 +10,7 @@ import { parseApiError } from "@/shared/utils/apiError";
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
 import type { PublicationStatus } from "@/features/catalog/catalog.types";
-import { readPublicationStatus } from "@/shared/components/catalog/PublicationLifecycle";
+import { readPublicationStatus } from "@/shared/components/catalog/publicationLifecycle.utils";
 import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;

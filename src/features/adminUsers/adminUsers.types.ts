@@ -15,6 +15,7 @@ export type User = Readonly<{
   gender: Gender;
   role: Role;
   isVerified: boolean;
+  isEmailReceivable?: boolean;
   sortOrder?: number;
   profileUrl?: string;
 
@@ -35,6 +36,7 @@ export type CreateUserDto = Readonly<{
   roleIds?: ReadonlyArray<string>;
   permissionIds?: ReadonlyArray<string>;
   isVerified?: boolean;
+  isEmailReceivable?: boolean;
   sortOrder?: number;
 }>;
 

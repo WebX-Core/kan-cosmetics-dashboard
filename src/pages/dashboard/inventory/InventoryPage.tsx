@@ -5,6 +5,7 @@ import {
   Archive,
   CheckCircle,
   Edit2,
+  MoreHorizontal,
   Package,
   RotateCcw,
   Search,
@@ -14,6 +15,15 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
+import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -239,12 +249,6 @@ export const InventoryPage: React.FC = () => {
     ? (deletedQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1
     : (inventoryQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
 
-  const pageNumbers = React.useMemo(() => {
-    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const start = Math.max(1, Math.min(state.page - 2, totalPages - 4));
-    return Array.from({ length: 5 }, (_, i) => start + i);
-  }, [state.page, totalPages]);
-
   const handleConfirm = async () => {
     const { action, ids } = confirm;
     if (!ids.length) return;
@@ -281,6 +285,57 @@ export const InventoryPage: React.FC = () => {
     { key: "instock", label: "In Stock" },
     { key: "lowstock", label: "Low Stock" },
     { key: "outofstock", label: "Out of Stock" },
+  ];
+
+  const productColumn = (row: InventoryRow | DeletedInventoryRow) => (
+    <div className="flex items-center gap-[10px]">
+      <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#f0f0f2] bg-white">
+        {row.coverImage ? (
+          <img src={row.coverImage} alt={row.productName} className="max-h-[36px] w-auto object-contain" />
+        ) : (
+          <Package size={16} className="text-[#d2d2d7]" />
+        )}
+      </div>
+      <div>
+        <p className="text-[14px] font-medium text-[#1d1d1f]">{row.productName}</p>
+        {"isLimitedStock" in row && (
+          <p className="text-[12px] text-[#86868b]">
+            {row.isLimitedStock ? "Limited stock" : row.isLowStock ? "Low stock" : "Inventory record"}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  const activeColumns = [
+    { key: "product", label: "Product / Variant", render: productColumn },
+    { key: "sku", label: "SKU", render: (row: InventoryRow) => <span className="text-[13px] text-[#6e6e73]">{row.sku}</span> },
+    { key: "stock", label: "Stock", render: (row: InventoryRow) => <span className="text-[14px] font-medium text-[#1d1d1f]">{row.stockQty}</span> },
+    { key: "reserved", label: "Reserved", render: (row: InventoryRow) => <span className="text-[14px] text-[#6e6e73]">{row.reservedQty}</span> },
+    {
+      key: "available",
+      label: "Available",
+      render: (row: InventoryRow) => (
+        <span className={`text-[14px] font-medium ${row.available <= 0 ? "text-red-600" : row.status === "Low Stock" ? "text-amber-600" : "text-emerald-600"}`}>
+          {row.available}
+        </span>
+      ),
+    },
+    { key: "status", label: "Status", render: (row: InventoryRow) => <StatusBadge status={row.status} /> },
+  ];
+
+  const deletedColumns = [
+    { key: "product", label: "Product / Variant", render: productColumn },
+    { key: "sku", label: "SKU", render: (row: DeletedInventoryRow) => <span className="text-[13px] text-[#6e6e73]">{row.sku}</span> },
+    { key: "stock", label: "Stock", render: (row: DeletedInventoryRow) => <span className="text-[14px] font-medium text-[#1d1d1f]">{row.stockQty}</span> },
+    { key: "reserved", label: "Reserved", render: (row: DeletedInventoryRow) => <span className="text-[14px] text-[#6e6e73]">{row.reservedQty}</span> },
+    {
+      key: "available",
+      label: "Available",
+      render: (row: DeletedInventoryRow) => (
+        <span className={`text-[14px] font-medium ${row.available <= 0 ? "text-red-600" : "text-emerald-600"}`}>{row.available}</span>
+      ),
+    },
   ];
 
   return (
@@ -321,168 +376,108 @@ export const InventoryPage: React.FC = () => {
         </div>
       )}
 
-      <div className="rounded-xl border border-[#e5e5e7] bg-white">
-        {!isDeletedView && (
-          <div className="border-b border-[#e5e5e7] px-[21px] py-[10px]">
-            <label className="inline-flex min-h-[34px] items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-[13px] text-[13px] font-medium text-[#1d1d1f] transition focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/10">
-              <span className="text-[#6e6e73]">Status</span>
-              <select
-                value={activeTab}
-                onChange={(event) => {
-                  setActiveTab(event.target.value);
-                  setState((current) => ({ ...current, page: 1 }));
-                }}
-                className="cursor-pointer bg-transparent outline-none"
-                aria-label="Inventory status"
-              >
-                {tabs.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
-              </select>
-            </label>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#f0f0f2]">
-                <th className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">Product / Variant</th>
-                <th className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">SKU</th>
-                <th className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">Stock</th>
-                <th className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">Reserved</th>
-                <th className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">Available</th>
-                {!isDeletedView && (
-                  <th className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">Status</th>
-                )}
-                <th className="px-[21px] py-[10px] text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">
-                  {isDeletedView ? "Actions" : "Action"}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 6 }).map((_, rowIndex) => (
-                  <tr key={`inventory-skeleton-${rowIndex}`} className="border-b border-[#f5f5f7] last:border-0">
-                    <td className="px-[21px] py-[13px]" colSpan={isDeletedView ? 7 : 8}>
-                      <div className="h-[14px] w-full animate-pulse rounded bg-[#f3f3f5]" />
-                    </td>
-                  </tr>
-                ))
-              ) : (isDeletedView ? deletedRows : visibleRows).length === 0 ? (
-                <tr>
-                  <td colSpan={isDeletedView ? 7 : 8} className="px-[21px] py-[55px] text-center">
-                    <div className="flex flex-col items-center gap-[13px]">
-                      <div className="flex h-[55px] w-[55px] items-center justify-center rounded-full bg-[#f5f5f7]">
-                        <Package size={22} className="text-[#86868b]" />
-                      </div>
-                      <p className="text-[14px] font-medium text-[#1d1d1f]">
-                        {isDeletedView ? "No deleted inventory records." : "No inventory records found."}
-                      </p>
-                      <p className="text-[13px] text-[#6e6e73]">
-                        {isDeletedView ? "Deleted inventory records will appear here." : "Try adjusting your search."}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : isDeletedView ? (
-                deletedRows.map((row) => (
-                  <tr key={row.id} className="border-b border-[#f5f5f7] transition-colors hover:bg-[#fafafa] last:border-0">
-                    <td className="px-[21px] py-[13px]">
-                      <div className="flex items-center gap-[10px]">
-                        <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#f0f0f2] bg-white">
-                          {row.coverImage ? <img src={row.coverImage} alt={row.productName} className="max-h-[36px] w-auto object-contain" /> : <Package size={16} className="text-[#d2d2d7]" />}
-                        </div>
-                        <p className="text-[14px] font-medium text-[#1d1d1f]">{row.productName}</p>
-                      </div>
-                    </td>
-                    <td className="px-[21px] py-[13px] text-[13px] text-[#6e6e73]">{row.sku}</td>
-                    <td className="px-[21px] py-[13px] text-[14px] font-medium text-[#1d1d1f]">{row.stockQty}</td>
-                    <td className="px-[21px] py-[13px] text-[14px] text-[#6e6e73]">{row.reservedQty}</td>
-                    <td className="px-[21px] py-[13px]">
-                      <span className={`text-[14px] font-medium ${row.available <= 0 ? "text-red-600" : "text-emerald-600"}`}>{row.available}</span>
-                    </td>
-                    <td className="px-[21px] py-[13px]">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button type="button" onClick={() => confirm.prompt("recover", [row.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                          <RotateCcw size={11} /> Recover
-                        </button>
-                        <button type="button" onClick={() => confirm.prompt("destroy", [row.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                          <Trash2 size={11} /> Delete Permanently
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                visibleRows.map((row) => (
-                  <tr key={row.id} className="border-b border-[#f5f5f7] transition-colors hover:bg-[#fafafa] last:border-0">
-                    <td className="px-[21px] py-[13px]">
-                      <div className="flex items-center gap-[10px]">
-                        <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#f0f0f2] bg-white">
-                          {row.coverImage ? <img src={row.coverImage} alt={row.productName} className="max-h-[36px] w-auto object-contain" /> : <Package size={16} className="text-[#d2d2d7]" />}
-                        </div>
-                        <div>
-                          <p className="text-[14px] font-medium text-[#1d1d1f]">{row.productName}</p>
-                          <p className="text-[12px] text-[#86868b]">{row.isLimitedStock ? "Limited stock" : row.isLowStock ? "Low stock" : "Inventory record"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-[21px] py-[13px] text-[13px] text-[#6e6e73]">{row.sku}</td>
-                    <td className="px-[21px] py-[13px] text-[14px] font-medium text-[#1d1d1f]">{row.stockQty}</td>
-                    <td className="px-[21px] py-[13px] text-[14px] text-[#6e6e73]">{row.reservedQty}</td>
-                    <td className="px-[21px] py-[13px]">
-                      <span className={`text-[14px] font-medium ${row.available <= 0 ? "text-red-600" : row.status === "Low Stock" ? "text-amber-600" : "text-emerald-600"}`}>{row.available}</span>
-                    </td>
-                    {!isDeletedView && (
-                      <td className="px-[21px] py-[13px]">
-                        <StatusBadge status={row.status} />
-                      </td>
-                    )}
-                    <td className="px-[21px] py-[13px]">
-                      <div className="flex items-center justify-end gap-[8px]">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/dashboard/inventory/${row.id}`)}
-                          className="flex h-[28px] items-center gap-[5px] rounded-full border border-[#d2d2d7] bg-white px-[13px] text-[12px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-                        >
-                          <Edit2 size={11} strokeWidth={2} />
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => confirm.prompt("delete", [row.id])}
-                          className="flex h-[28px] items-center rounded-full border border-[#d2d2d7] bg-white px-[13px] text-[12px] font-medium text-red-600 transition-colors hover:border-red-200 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#f0f0f2] px-[21px] py-[13px]">
-            <p className="text-[13px] text-[#86868b]">Page {state.page} of {totalPages}</p>
-            <div className="flex items-center gap-[5px]">
-              <button type="button" disabled={state.page <= 1} onClick={() => setState((p) => ({ ...p, page: p.page - 1 }))} className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[12px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] disabled:opacity-40">‹</button>
-              {pageNumbers.map((page) => (
-                <button
-                  key={page}
+      {isDeletedView ? (
+        <DataTableV2
+          columns={deletedColumns}
+          data={deletedRows}
+          rowId={(row) => row.id}
+          rowActions={(row) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
                   type="button"
-                  onClick={() => setState((p) => ({ ...p, page }))}
-                  className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[11px] font-medium transition-colors ${state.page === page ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[#d2d2d7] text-[#6e6e73] hover:bg-[#f5f5f7]"}`}
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  {page}
-                </button>
-              ))}
-              <button type="button" disabled={state.page >= totalPages} onClick={() => setState((p) => ({ ...p, page: p.page + 1 }))} className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[12px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] disabled:opacity-40">›</button>
-            </div>
-          </div>
-        )}
-      </div>
+                  <MoreHorizontal size={15} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    confirm.prompt("recover", [row.id]);
+                  }}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Recover
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    confirm.prompt("destroy", [row.id]);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Permanently
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          emptyMessage={loading ? "Loading inventory..." : "No deleted inventory records."}
+          currentPage={state.page}
+          totalPages={totalPages}
+          onPageChange={(page) => setState((p) => ({ ...p, page }))}
+          showPagination
+        />
+      ) : (
+        <DataTableV2
+          columns={activeColumns}
+          data={visibleRows}
+          rowId={(row) => row.id}
+          onRowClick={(row) => navigate(`/dashboard/inventory/${row.id}`)}
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setState((current) => ({ ...current, page: 1 }));
+          }}
+          rowActions={(row) => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <MoreHorizontal size={15} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/dashboard/inventory/${row.id}`);
+                  }}
+                >
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    confirm.prompt("delete", [row.id]);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          emptyMessage={loading ? "Loading inventory..." : "No inventory records found."}
+          currentPage={state.page}
+          totalPages={totalPages}
+          onPageChange={(page) => setState((p) => ({ ...p, page }))}
+          showPagination
+        />
+      )}
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">

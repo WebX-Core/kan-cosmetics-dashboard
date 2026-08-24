@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, FolderOpen, Globe, Layers, MoreHorizontal, Pencil, Plus, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Archive, FilePenLine, FolderOpen, Globe, Layers, MoreHorizontal, Pencil, Plus, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { catalogApi } from "@/features/catalog";
@@ -11,6 +11,7 @@ import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { PublicationTabs, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
+import { readPublicationStatus } from "@/shared/components/catalog/publicationLifecycle.utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ type SubcategoryRow = Readonly<{
   coverImage: string;
   products: number;
   status: "Active" | "Inactive";
+  publicationStatus: "PUBLISHED" | "DRAFT" | "ARCHIVED";
   createdAt: string;
 }>;
 
@@ -85,6 +87,7 @@ const toSubcategoryRow = (record: unknown, productCountMap: ReadonlyMap<string, 
     coverImage: readString(row.coverImage ?? row.image ?? row.thumbnail),
     products: productCountMap.get(id) ?? 0,
     status: isDeleted ? "Inactive" : "Active",
+    publicationStatus: readPublicationStatus(row.status),
     createdAt: readString(row.createdAt ?? row.created_at),
   };
 };
@@ -131,6 +134,7 @@ export const CategoryDetailPage: React.FC = () => {
   const softDeleteSubcategory = catalogApi.subcategories.hooks.useSoftDelete();
   const recoverSubcategory = catalogApi.subcategories.hooks.useRecover();
   const destroySubcategory = catalogApi.subcategories.hooks.useDestroy();
+  const updateSubcategory = catalogApi.subcategories.hooks.useUpdate();
 
   const category = categoryQuery.data as Record<string, unknown> | undefined;
   const categoryName = readString(category?.title ?? category?.name, "Category");
@@ -208,6 +212,29 @@ export const CategoryDetailPage: React.FC = () => {
     setPendingAction(action);
     setPendingIds(ids);
     setConfirmOpen(true);
+  };
+
+  const changeStatus = async (
+    subcategoryId: string,
+    status: "PUBLISHED" | "DRAFT" | "ARCHIVED"
+  ) => {
+    try {
+      await updateSubcategory.mutateAsync({ id: subcategoryId, dto: { status } });
+      await Promise.all([
+        subcategoriesQuery.refetch(),
+        draftSubcategoriesQuery.refetch(),
+        archivedSubcategoriesQuery.refetch(),
+      ]);
+      toast.success(
+        status === "PUBLISHED"
+          ? "Subcategory published."
+          : status === "DRAFT"
+          ? "Subcategory moved to draft."
+          : "Subcategory archived."
+      );
+    } catch {
+      toast.error("Could not update subcategory status.");
+    }
   };
 
   const handleConfirmAction = async () => {
@@ -350,6 +377,22 @@ export const CategoryDetailPage: React.FC = () => {
                 <Globe className="mr-2 h-4 w-4" /> SEO
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {row.publicationStatus !== "PUBLISHED" ? (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}>
+                  <Globe className="mr-2 h-4 w-4" /> Publish
+                </DropdownMenuItem>
+              ) : null}
+              {row.publicationStatus !== "DRAFT" ? (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}>
+                  <FilePenLine className="mr-2 h-4 w-4" /> Move to Draft
+                </DropdownMenuItem>
+              ) : null}
+              {row.publicationStatus !== "ARCHIVED" ? (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}>
+                  <Archive className="mr-2 h-4 w-4" /> Archive
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-[#b42318] focus:text-[#b42318]"
                 onClick={(e) => { e.stopPropagation(); openConfirm("delete", [row.id]); }}
@@ -379,16 +422,6 @@ export const CategoryDetailPage: React.FC = () => {
             >
               <Plus size={13} strokeWidth={2} />
               New Subcategory
-            </button>
-          ) : null}
-          {!isDeletedView ? (
-            <button
-              type="button"
-              onClick={() => navigate(`/dashboard/categories/${id}/edit`)}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              <Edit2 size={13} strokeWidth={2} />
-              Edit Category
             </button>
           ) : null}
         </div>

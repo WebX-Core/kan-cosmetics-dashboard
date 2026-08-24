@@ -5,7 +5,8 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
-import { RankBadge, TierBadge, customerName, date, number, text } from "./loyaltyUi";
+import { RankBadge, TierBadge } from "./loyaltyUi";
+import { customerName, date, number, text } from "./loyaltyUtils";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { useNavigate } from "react-router-dom";
 

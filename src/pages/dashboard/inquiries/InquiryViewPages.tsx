@@ -199,8 +199,8 @@ const InquiryView: React.FC<Readonly<{ kind: InquiryKind }>> = ({ kind }) => {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <section className="rounded-xl border border-[#e5e5e7] bg-white p-4">
           <h3 className="text-[15px] font-semibold text-[#1d1d1f]">Inquiry Details</h3>
-          <div className="mt-3 space-y-3 text-[13px]">
-            <div className="rounded-xl border border-[#f0f0f2] bg-[#fafafa] p-3">
+          <div className="mt-3 divide-y divide-[#e5e5e7] text-[13px]">
+            <div className="py-3 first:pt-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6e6e73]">
                 Customer
               </p>
@@ -209,7 +209,7 @@ const InquiryView: React.FC<Readonly<{ kind: InquiryKind }>> = ({ kind }) => {
               </p>
               <p className="text-[#6e6e73]">{currentInquiry.email}</p>
             </div>
-            <div className="rounded-xl border border-[#f0f0f2] bg-[#fafafa] p-3">
+            <div className="py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6e6e73]">
                 Subject
               </p>
@@ -220,7 +220,7 @@ const InquiryView: React.FC<Readonly<{ kind: InquiryKind }>> = ({ kind }) => {
                 {currentInquiry.message}
               </p>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-[#f0f0f2] bg-[#fafafa] p-3">
+            <div className="flex items-center justify-between pt-4">
               <span className="text-[#6e6e73]">Status</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${

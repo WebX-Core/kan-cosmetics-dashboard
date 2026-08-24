@@ -8,7 +8,8 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
-import { RankBadge, TierBadge, customerName, number, text } from "./loyaltyUi";
+import { RankBadge, TierBadge } from "./loyaltyUi";
+import { customerName, number, text } from "./loyaltyUtils";
 
 export const LoyaltyOverviewPage: React.FC = () => {
   const navigate = useNavigate();

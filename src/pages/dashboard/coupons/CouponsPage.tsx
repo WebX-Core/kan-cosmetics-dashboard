@@ -158,7 +158,7 @@ export const CouponsPage: React.FC = () => {
         columns={columns}
         data={tabFiltered}
         searchValue={state.search}
-        onEdit={isDeletedView ? undefined : (row) => navigate(`/dashboard/coupons/${row.id}`)}
+        onEdit={isDeletedView ? undefined : (row) => navigate(`/dashboard/coupons/${row.id}/edit`)}
         onDelete={isDeletedView ? undefined : (row) => void handleDelete(row.id)}
         emptyMessage={couponsQuery.isLoading ? "Loading coupons..." : "No coupons found."}
         showPagination={true}

@@ -359,6 +359,7 @@ export const AppRouter: React.FC = () => {
             element={<ProductMediaPage />}
           />
           <Route path="/dashboard/advertisements" element={<AdvertisementsPage />} />
+          <Route path="/dashboard/advertisements/deleted" element={<AdvertisementsPage />} />
           <Route path="/dashboard/advertisements/create" element={<AdvertisementFormPage />} />
           <Route path="/dashboard/advertisements/:id/edit" element={<AdvertisementFormPage />} />
           <Route path="/dashboard/carts" element={<CartsPage />} />

@@ -5,7 +5,7 @@ import { useAdjustLoyaltyPoints, useLoyaltyCustomer } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { FormField, FormSection } from "@/shared/components/forms/ModernFormLayout";
-import { customerName, number, text } from "./loyaltyUi";
+import { customerName, number, text } from "./loyaltyUtils";
 
 const input = "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-sm outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
 export const LoyaltyCustomerDetailPage: React.FC = () => {

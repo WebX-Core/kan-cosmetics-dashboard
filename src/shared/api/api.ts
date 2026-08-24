@@ -124,7 +124,12 @@ function appendFormValue(
       return;
     }
 
-    fd.append(key, JSON.stringify(value));
+    for (const item of value) {
+      if (item instanceof Date) fd.append(key, item.toISOString());
+      else if (item instanceof Blob) fd.append(key, item);
+      else if (typeof item === "object") fd.append(key, JSON.stringify(item));
+      else fd.append(key, String(item));
+    }
     return;
   }
 

@@ -1,13 +1,37 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, FilePenLine, Package, PackagePlus, Tag, Layers, AlertTriangle, MoreHorizontal, Pencil, Trash2, MessageSquare, Boxes, Globe, Star, RotateCcw, SlidersHorizontal } from "lucide-react";
+import {
+  Archive,
+  FilePenLine,
+  Package,
+  PackagePlus,
+  Tag,
+  Layers,
+  AlertTriangle,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  MessageSquare,
+  Boxes,
+  Globe,
+  Star,
+  RotateCcw,
+  SlidersHorizontal,
+} from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { catalogApi } from "@/features/catalog";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { Button } from "@/shared/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { usePermission } from "@/shared/hooks/usePermission";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
@@ -23,7 +47,16 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
 import type { PublicationStatus } from "@/features/catalog/catalog.types";
-import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
+import {
+  PublicationStatusBadge,
+  PublicationTabs,
+  type PublicationView,
+} from "@/shared/components/catalog/PublicationLifecycle";
+
+const readPublicationStatus = (value: unknown): PublicationStatus =>
+  value === "DRAFT" || value === "ARCHIVED" || value === "PUBLISHED"
+    ? value
+    : "PUBLISHED";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown, fb = 0): number => (typeof v === "number" ? v : fb);
@@ -54,12 +87,22 @@ type ProductRow = Readonly<{
 }>;
 
 const fmtPrice = (n: number): string =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "NPR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "NPR",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 const fmt = (v: string): string => {
   if (!v) return "—";
   const d = new Date(v);
-  return isNaN(d.getTime()) ? "—" : new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "2-digit" }).format(d);
+  return isNaN(d.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+      }).format(d);
 };
 
 const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
@@ -67,21 +110,35 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
     ? payload
     : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
   return items
-    .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
+    .filter(
+      (i): i is Record<string, unknown> => typeof i === "object" && i !== null,
+    )
     .map((item) => {
-      const subcategory = (typeof item.subcategory === "object" && item.subcategory !== null
-        ? item.subcategory
-        : {}) as Record<string, unknown>;
-      const category = (typeof subcategory.category === "object" && subcategory.category !== null
-        ? subcategory.category
-        : {}) as Record<string, unknown>;
+      const subcategory = (
+        typeof item.subcategory === "object" && item.subcategory !== null
+          ? item.subcategory
+          : {}
+      ) as Record<string, unknown>;
+      const category = (
+        typeof subcategory.category === "object" &&
+        subcategory.category !== null
+          ? subcategory.category
+          : {}
+      ) as Record<string, unknown>;
       return {
         id: text(item.id, crypto.randomUUID()),
         name: text(item.name ?? item.title, "Untitled Product"),
         slug: text(item.slug, ""),
         sku: text(item.sku, "—"),
         productType: text(item.productType, ""),
-        image: text(item.coverImage ?? item.mainImage ?? item.image ?? item.thumbnail ?? item.imageUrl, ""),
+        image: text(
+          item.coverImage ??
+            item.mainImage ??
+            item.image ??
+            item.thumbnail ??
+            item.imageUrl,
+          "",
+        ),
         price:
           toNumber(item.price) ??
           toNumber(item.basePrice) ??
@@ -89,7 +146,13 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
           toNumber(item.mrp) ??
           0,
         stock: num(item.stock ?? item.totalStock),
-        category: text(category.title ?? category.name ?? subcategory.title ?? subcategory.name, "—"),
+        category: text(
+          category.title ??
+            category.name ??
+            subcategory.title ??
+            subcategory.name,
+          "—",
+        ),
         createdAt: text(item.createdAt, ""),
         status: readPublicationStatus(item.status),
         publishedAt: text(item.publishedAt, ""),
@@ -98,10 +161,14 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
 };
 
 const getProductIdFromVariant = (value: unknown): string => {
-  const row = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  const row = (
+    typeof value === "object" && value !== null ? value : {}
+  ) as Record<string, unknown>;
   const direct = text(row.productId ?? row.product_id);
   if (direct) return direct;
-  const product = (typeof row.product === "object" && row.product !== null ? row.product : {}) as Record<string, unknown>;
+  const product = (
+    typeof row.product === "object" && row.product !== null ? row.product : {}
+  ) as Record<string, unknown>;
   return text(product.id);
 };
 
@@ -109,42 +176,69 @@ export const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const searchParams = React.useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
   const isDeletedView = location.pathname === "/dashboard/products/deleted";
-  const publicationView = (searchParams.get("status") ?? "published") as PublicationView;
+  const publicationView = (searchParams.get("status") ??
+    "published") as PublicationView;
   const categoryId = searchParams.get("categoryId") ?? "";
   const subcategoryId = searchParams.get("subcategoryId") ?? "";
-  const showAddProductButton = !isDeletedView && Boolean(categoryId && subcategoryId);
+  const showAddProductButton =
+    !isDeletedView && Boolean(categoryId && subcategoryId);
 
-  const canProductUpdate  = usePermission("product:update");
-  const canProductDelete  = usePermission("product:delete");
-  const canReviewView     = usePermission("review:view");
-  const canFaqView        = usePermission("faq:view");
-  const canVariantView    = usePermission("product-variant:view");
-  const canSeoView        = usePermission("seo:view");
+  const canProductUpdate = usePermission("product:update");
+  const canProductDelete = usePermission("product:delete");
+  const canReviewView = usePermission("review:view");
+  const canFaqView = usePermission("faq:view");
+  const canVariantView = usePermission("product-variant:view");
+  const canSeoView = usePermission("seo:view");
   const canInventoryCreate = usePermission("inventory:create");
   const canInventoryUpdate = usePermission("inventory:update");
   const canInventoryManage = canInventoryCreate || canInventoryUpdate;
   const [activeTab, setActiveTab] = React.useState("all");
-  const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
-  const [selectedIds, setSelectedIds] = React.useState<ReadonlySet<string>>(new Set());
+  const { state, setState, debouncedSearch } = useListQueryState({
+    page: 1,
+    limit: 20,
+    search: "",
+  });
+  const [selectedIds, setSelectedIds] = React.useState<ReadonlySet<string>>(
+    new Set(),
+  );
   const confirm = useConfirmAction();
   const returnPath = `${location.pathname}${location.search}`;
 
   const query = catalogApi.products.hooks.useList(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    {
+      page: state.page,
+      limit: state.limit,
+      search: debouncedSearch || undefined,
+    },
     !isDeletedView && publicationView === "published",
   );
   const draftQuery = catalogApi.products.hooks.useDraft(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    {
+      page: state.page,
+      limit: state.limit,
+      search: debouncedSearch || undefined,
+    },
     !isDeletedView && publicationView === "draft",
   );
   const archivedQuery = catalogApi.products.hooks.useArchived(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    {
+      page: state.page,
+      limit: state.limit,
+      search: debouncedSearch || undefined,
+    },
     !isDeletedView && publicationView === "archived",
   );
   const deletedQuery = catalogApi.products.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
+    {
+      page: state.page,
+      limit: state.limit,
+      search: debouncedSearch || undefined,
+    },
     isDeletedView,
   );
   const inventoryQuery = catalogApi.inventory.hooks.useList(
@@ -168,33 +262,52 @@ export const ProductsListPage: React.FC = () => {
   const destroy = catalogApi.products.hooks.useDestroy();
   const updateProduct = catalogApi.products.hooks.useUpdate();
 
-  const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
+  const lifecycleQuery =
+    publicationView === "draft"
+      ? draftQuery
+      : publicationView === "archived"
+        ? archivedQuery
+        : query;
   const sourceData = isDeletedView ? deletedQuery.data : lifecycleQuery.data;
   const rows = React.useMemo(() => toRows(sourceData), [sourceData]);
-  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
+  const totalPages =
+    (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total =
+    (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
   const filtered = React.useMemo(() => {
     if (isDeletedView) return rows;
-    if (activeTab === "low-stock") return rows.filter((r) => r.stock > 0 && r.stock <= 5);
+    if (activeTab === "low-stock")
+      return rows.filter((r) => r.stock > 0 && r.stock <= 5);
     if (activeTab === "out-of-stock") return rows.filter((r) => r.stock === 0);
     return rows;
   }, [rows, activeTab, isDeletedView]);
 
-  const stats = React.useMemo(() => ({
-    total,
-    inStock: rows.filter((r) => r.stock > 0).length,
-    lowStock: rows.filter((r) => r.stock > 0 && r.stock <= 5).length,
-    outOfStock: rows.filter((r) => r.stock === 0).length,
-  }), [rows, total]);
+  const stats = React.useMemo(
+    () => ({
+      total,
+      inStock: rows.filter((r) => r.stock > 0).length,
+      lowStock: rows.filter((r) => r.stock > 0 && r.stock <= 5).length,
+      outOfStock: rows.filter((r) => r.stock === 0).length,
+    }),
+    [rows, total],
+  );
   const productInventoryByProductId = React.useMemo(() => {
     const map = new Map<string, Record<string, unknown>>();
-    const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
+    const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<
+      Record<string, unknown>
+    >;
     source.forEach((entry) => {
       const product = entry.product as Record<string, unknown> | undefined;
-      const variant = entry.productVariant as Record<string, unknown> | undefined;
-      const productId = text(product?.id ?? entry.productId ?? entry.product_id);
-      const variantId = text(variant?.id ?? entry.productVariantId ?? entry.product_variant_id);
+      const variant = entry.productVariant as
+        | Record<string, unknown>
+        | undefined;
+      const productId = text(
+        product?.id ?? entry.productId ?? entry.product_id,
+      );
+      const variantId = text(
+        variant?.id ?? entry.productVariantId ?? entry.product_variant_id,
+      );
       if (productId && !variantId) map.set(productId, entry);
     });
     return map;
@@ -210,14 +323,20 @@ export const ProductsListPage: React.FC = () => {
       if (productId) ids.add(productId);
     });
     return ids;
-  }, [archivedVariantsQuery.data?.data, draftVariantsQuery.data?.data, variantsQuery.data?.data]);
+  }, [
+    archivedVariantsQuery.data?.data,
+    draftVariantsQuery.data?.data,
+    variantsQuery.data?.data,
+  ]);
   const navigateProductInventory = React.useCallback(
     (row: ProductRow) => {
       const existing = productInventoryByProductId.get(row.id);
       const encodedReturnPath = encodeURIComponent(returnPath);
       const existingId = typeof existing?.id === "string" ? existing.id : "";
       if (existingId) {
-        navigate(`/dashboard/inventory/${encodeURIComponent(existingId)}?returnPath=${encodedReturnPath}`);
+        navigate(
+          `/dashboard/inventory/${encodeURIComponent(existingId)}?returnPath=${encodedReturnPath}`,
+        );
         return;
       }
       navigate(
@@ -239,16 +358,20 @@ export const ProductsListPage: React.FC = () => {
     const { action, ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete") await Promise.all(ids.map((id) => softDelete.mutateAsync(id)));
+      if (action === "delete")
+        await Promise.all(ids.map((id) => softDelete.mutateAsync(id)));
       if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await Promise.all(ids.map((id) => destroy.mutateAsync(id)));
+      if (action === "destroy")
+        await Promise.all(ids.map((id) => destroy.mutateAsync(id)));
       await query.refetch();
       await deletedQuery.refetch();
       setSelectedIds(new Set());
       toast.success(
-        action === "recover" ? `${ids.length === 1 ? "Product" : `${ids.length} products`} recovered.`
-          : action === "destroy" ? `${ids.length === 1 ? "Product" : `${ids.length} products`} permanently deleted.`
-          : `${ids.length === 1 ? "Product" : `${ids.length} products`} deleted.`,
+        action === "recover"
+          ? `${ids.length === 1 ? "Product" : `${ids.length} products`} recovered.`
+          : action === "destroy"
+            ? `${ids.length === 1 ? "Product" : `${ids.length} products`} permanently deleted.`
+            : `${ids.length === 1 ? "Product" : `${ids.length} products`} deleted.`,
       );
     } finally {
       confirm.dismiss();
@@ -257,7 +380,11 @@ export const ProductsListPage: React.FC = () => {
 
   const changeStatus = async (id: string, status: PublicationStatus) => {
     await updateProduct.mutateAsync({ id, dto: { status } });
-    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
   const columns = [
@@ -267,7 +394,11 @@ export const ProductsListPage: React.FC = () => {
       render: (r: ProductRow) => (
         <div className="flex items-center gap-3">
           {r.image ? (
-            <img src={r.image} alt={r.name} className="h-9 w-9 rounded-lg object-cover border border-[#e5e5ea] shrink-0" />
+            <img
+              src={r.image}
+              alt={r.name}
+              className="h-9 w-9 rounded-lg object-cover border border-[#e5e5ea] shrink-0"
+            />
           ) : (
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f7] text-[11px] font-semibold text-[#86868b] border border-[#e5e5ea]">
               {r.name.charAt(0).toUpperCase()}
@@ -290,15 +421,39 @@ export const ProductsListPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "sku", label: "SKU", render: (r: ProductRow) => <span className="font-mono text-xs text-gray-500">{r.sku}</span> },
-    { key: "category", label: "Category", render: (r: ProductRow) => <span className="text-gray-600">{r.category}</span> },
+    {
+      key: "sku",
+      label: "SKU",
+      render: (r: ProductRow) => (
+        <span className="font-mono text-xs text-gray-500">{r.sku}</span>
+      ),
+    },
+    {
+      key: "category",
+      label: "Category",
+      render: (r: ProductRow) => (
+        <span className="text-gray-600">{r.category}</span>
+      ),
+    },
     {
       key: "price",
       label: "Price",
-      render: (r: ProductRow) => <span className="font-medium text-gray-900">{fmtPrice(r.price)}</span>,
+      render: (r: ProductRow) => (
+        <span className="font-medium text-gray-900">{fmtPrice(r.price)}</span>
+      ),
     },
-    { key: "createdAt", label: "Created", render: (r: ProductRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
-    { key: "status", label: "Status", render: (r: ProductRow) => <PublicationStatusBadge status={r.status} /> },
+    {
+      key: "createdAt",
+      label: "Created",
+      render: (r: ProductRow) => (
+        <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (r: ProductRow) => <PublicationStatusBadge status={r.status} />,
+    },
     ...(!isDeletedView
       ? [
           {
@@ -310,7 +465,8 @@ export const ProductsListPage: React.FC = () => {
               }
 
               const existing = productInventoryByProductId.get(r.id);
-              const hasInventory = typeof existing?.id === "string" && existing.id.length > 0;
+              const hasInventory =
+                typeof existing?.id === "string" && existing.id.length > 0;
 
               return (
                 <button
@@ -319,7 +475,7 @@ export const ProductsListPage: React.FC = () => {
                     event.stopPropagation();
                     navigateProductInventory(r);
                   }}
-                  className="inline-flex h-[28px] items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                  className="inline-flex h-7 items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
                 >
                   {!hasInventory ? <PackagePlus size={12} /> : null}
                   {hasInventory ? "Edit" : "Set"}
@@ -332,13 +488,24 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "actions",
       label: "Actions",
-      render: (r: ProductRow) => (
+      render: (r: ProductRow) =>
         isDeletedView ? (
-          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+          <div
+            className="flex items-center justify-end gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => confirm.prompt("recover", [r.id])}
+              className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+            >
               <RotateCcw size={11} /> Recover
             </button>
-            <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+            <button
+              type="button"
+              onClick={() => confirm.prompt("destroy", [r.id])}
+              className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+            >
               <Trash2 size={11} /> Delete Permanently
             </button>
           </div>
@@ -372,7 +539,9 @@ export const ProductsListPage: React.FC = () => {
                 <DropdownMenuItem
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate(`/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`);
+                    navigate(
+                      `/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`,
+                    );
                   }}
                 >
                   <Star className="mr-2 h-4 w-4" />
@@ -382,7 +551,9 @@ export const ProductsListPage: React.FC = () => {
               <DropdownMenuItem
                 onClick={(event) => {
                   event.stopPropagation();
-                  navigate(`/dashboard/product-tags?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                  navigate(
+                    `/dashboard/product-tags?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                  );
                 }}
               >
                 <Tag className="mr-2 h-4 w-4" />
@@ -391,7 +562,9 @@ export const ProductsListPage: React.FC = () => {
               <DropdownMenuItem
                 onClick={(event) => {
                   event.stopPropagation();
-                  navigate(`/dashboard/product-attributes?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                  navigate(
+                    `/dashboard/product-attributes?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                  );
                 }}
               >
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
@@ -412,7 +585,9 @@ export const ProductsListPage: React.FC = () => {
                 <DropdownMenuItem
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate(`/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`);
+                    navigate(
+                      `/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                    );
                   }}
                 >
                   <Boxes className="mr-2 h-4 w-4" />
@@ -423,7 +598,9 @@ export const ProductsListPage: React.FC = () => {
                 <DropdownMenuItem
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate(`/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`);
+                    navigate(
+                      `/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`,
+                    );
                   }}
                 >
                   <Globe className="mr-2 h-4 w-4" />
@@ -431,9 +608,39 @@ export const ProductsListPage: React.FC = () => {
                 </DropdownMenuItem>
               )}
               {canProductUpdate ? <DropdownMenuSeparator /> : null}
-              {canProductUpdate && r.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "PUBLISHED"); }}><Globe className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
-              {canProductUpdate && r.status !== "DRAFT" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
-              {canProductUpdate && r.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(r.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
+              {canProductUpdate && r.status !== "PUBLISHED" ? (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void changeStatus(r.id, "PUBLISHED");
+                  }}
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  Publish
+                </DropdownMenuItem>
+              ) : null}
+              {canProductUpdate && r.status !== "DRAFT" ? (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void changeStatus(r.id, "DRAFT");
+                  }}
+                >
+                  <FilePenLine className="mr-2 h-4 w-4" />
+                  Move to Draft
+                </DropdownMenuItem>
+              ) : null}
+              {canProductUpdate && r.status !== "ARCHIVED" ? (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void changeStatus(r.id, "ARCHIVED");
+                  }}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </DropdownMenuItem>
+              ) : null}
               {canProductDelete && (
                 <>
                   <DropdownMenuSeparator />
@@ -451,8 +658,7 @@ export const ProductsListPage: React.FC = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        )
-      ),
+        ),
     },
   ];
 
@@ -460,19 +666,34 @@ export const ProductsListPage: React.FC = () => {
     <PageLayout
       variant={isDeletedView ? "deleted" : undefined}
       title={isDeletedView ? "Deleted Products" : "Products"}
-      subtitle={isDeletedView ? "View soft-deleted products." : "All products in the catalog."}
+      subtitle={
+        isDeletedView
+          ? "View soft-deleted products."
+          : "All products in the catalog."
+      }
       onBack={isDeletedView ? () => navigate("/dashboard/products") : undefined}
       onNew={
         showAddProductButton
           ? () =>
               navigate(
-                `/dashboard/products/create?categoryId=${encodeURIComponent(categoryId)}&subcategoryId=${encodeURIComponent(subcategoryId)}&next=inventory`
+                `/dashboard/products/create?categoryId=${encodeURIComponent(categoryId)}&subcategoryId=${encodeURIComponent(subcategoryId)}&next=inventory`,
               )
           : undefined
       }
       newButtonLabel="Add Product"
       actions={
-        !isDeletedView ? <ExportMenu basePath="/product" params={{ page: state.page, limit: state.limit, search: debouncedSearch || undefined, subcategory: subcategoryId || undefined }} filename="products"/> : undefined
+        !isDeletedView ? (
+          <ExportMenu
+            basePath="/product"
+            params={{
+              page: state.page,
+              limit: state.limit,
+              search: debouncedSearch || undefined,
+              subcategory: subcategoryId || undefined,
+            }}
+            filename="products"
+          />
+        ) : undefined
       }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
@@ -480,22 +701,70 @@ export const ProductsListPage: React.FC = () => {
     >
       {!isDeletedView && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Products`} value={stats.total} icon={Package} colorVariant="blue" />
-          <StatCardV2 label="In Stock" value={stats.inStock} icon={Tag} colorVariant="emerald" />
-          <StatCardV2 label="Low Stock" value={stats.lowStock} icon={AlertTriangle} colorVariant="amber" />
-          <StatCardV2 label="Out of Stock" value={stats.outOfStock} icon={Layers} colorVariant="red" />
+          <StatCardV2
+            label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Products`}
+            value={stats.total}
+            icon={Package}
+            colorVariant="blue"
+          />
+          <StatCardV2
+            label="In Stock"
+            value={stats.inStock}
+            icon={Tag}
+            colorVariant="emerald"
+          />
+          <StatCardV2
+            label="Low Stock"
+            value={stats.lowStock}
+            icon={AlertTriangle}
+            colorVariant="amber"
+          />
+          <StatCardV2
+            label="Out of Stock"
+            value={stats.outOfStock}
+            icon={Layers}
+            colorVariant="red"
+          />
         </div>
       )}
       <DataTableV2
-        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(location.search); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : undefined}
+        toolbarLeading={
+          !isDeletedView ? (
+            <PublicationTabs
+              value={publicationView}
+              onChange={(status) => {
+                const next = new URLSearchParams(location.search);
+                next.set("status", status);
+                navigate(`${location.pathname}?${next.toString()}`);
+              }}
+            />
+          ) : undefined
+        }
         tabs={!isDeletedView ? tabs : undefined}
         activeTab={!isDeletedView ? activeTab : undefined}
-        onTabChange={!isDeletedView ? (t) => { setActiveTab(t); setState((p) => ({ ...p, page: 1 })); } : undefined}
+        onTabChange={
+          !isDeletedView
+            ? (t) => {
+                setActiveTab(t);
+                setState((p) => ({ ...p, page: 1 }));
+              }
+            : undefined
+        }
         columns={columns}
         data={filtered}
         searchValue={state.search}
-        onRowClick={!isDeletedView ? (r) => navigate(`/dashboard/products/${r.id}`) : undefined}
-        emptyMessage={(isDeletedView ? deletedQuery.isLoading : lifecycleQuery.isLoading) ? "Loading products..." : isDeletedView ? "No deleted products." : `No ${publicationView} products found.`}
+        onRowClick={
+          !isDeletedView
+            ? (r) => navigate(`/dashboard/products/${r.id}`)
+            : undefined
+        }
+        emptyMessage={
+          (isDeletedView ? deletedQuery.isLoading : lifecycleQuery.isLoading)
+            ? "Loading products..."
+            : isDeletedView
+              ? "No deleted products."
+              : `No ${publicationView} products found.`
+        }
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
@@ -535,27 +804,47 @@ export const ProductsListPage: React.FC = () => {
         )}
       />
 
-      <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
+      <AlertDialog
+        open={confirm.open}
+        onOpenChange={(o) => !o && confirm.dismiss()}
+      >
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover products?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete products?"}
+              {confirm.action === "recover"
+                ? "Recover products?"
+                : confirm.action === "destroy"
+                  ? "Delete permanently?"
+                  : "Delete products?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm.action === "recover"
                 ? `Recover ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`}.`
                 : confirm.action === "destroy"
-                ? "This cannot be undone."
-                : `Move ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`} to trash.`}
+                  ? "This cannot be undone."
+                  : `Move ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`} to trash.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              className="rounded-full"
+              onClick={confirm.dismiss}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
+              className={
+                confirm.action === "recover"
+                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
+              }
               onClick={() => void handleConfirm()}
             >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+              {confirm.action === "recover"
+                ? "Recover"
+                : confirm.action === "destroy"
+                  ? "Delete Permanently"
+                  : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

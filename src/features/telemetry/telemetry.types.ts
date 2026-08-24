@@ -1,5 +1,13 @@
 export type AuditLogDto = Readonly<{
+  id?: string;
+  createdAt?: string;
   userId?: string;
+  user?: Readonly<{
+    id: string;
+    firstname: string;
+    lastname: string | null;
+    email: string;
+  }> | null;
   action: string;
   entityType: string;
   entityId: string;

@@ -33,6 +33,16 @@ const toStatus = (value: string): Row["status"] =>
     ? "Scheduled"
     : "Draft";
 
+const statusFromPublishedFlag = (value: unknown, fallbackStatus: unknown): Row["status"] => {
+  if (typeof value === "boolean") return value ? "Published" : "Draft";
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return "Published";
+    if (normalized === "false") return "Draft";
+  }
+  return toStatus(text(fallbackStatus, "Draft"));
+};
+
 const rowsFrom = (payload: unknown): ReadonlyArray<Row> => {
   const items = Array.isArray(payload) ? payload : ((payload as { data?: unknown[] } | undefined)?.data ?? []);
   return items.map((entry) => {
@@ -43,7 +53,7 @@ const rowsFrom = (payload: unknown): ReadonlyArray<Row> => {
       slug: text(item.slug, ""),
       author: text(item.author ?? item.createdBy, "—"),
       category: text(item.category, "General"),
-      status: toStatus(text(item.status, "Draft")),
+      status: statusFromPublishedFlag(item.isPublished, item.status),
       views: num(item.views),
     };
   });

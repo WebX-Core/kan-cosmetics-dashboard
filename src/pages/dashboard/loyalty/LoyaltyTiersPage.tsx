@@ -5,7 +5,8 @@ import { useDeleteLoyaltyTier, useLoyaltyTiers } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { TierBadge, number } from "./loyaltyUi";
+import { TierBadge } from "./loyaltyUi";
+import { number } from "./loyaltyUtils";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 
 export const LoyaltyTiersPage: React.FC = () => {

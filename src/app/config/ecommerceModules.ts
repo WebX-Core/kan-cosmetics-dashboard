@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   List,
   Mail,
+  Megaphone,
   MessageCircleQuestion,
   Package,
   Rss,
@@ -67,6 +68,7 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
 
   { key: "blog-posts", label: "Blog", path: "/dashboard/blog-posts", section: "Marketing", description: "Blog post CRUD and publish toggle.", icon: Rss },
   { key: "newsletter", label: "Newsletter", path: "/dashboard/newsletter", section: "Marketing", description: "Subscriber list, subscription state, and segmentation.", icon: Send },
+  { key: "advertisements", label: "Advertisements", path: "/dashboard/advertisements", section: "Marketing", description: "Promotional banners with category, product, and variant targeting.", icon: Megaphone },
   { key: "email-campaigns", label: "Email Campaigns", path: "/dashboard/marketing/email-campaigns", section: "Marketing", description: "Email marketing campaign management.", icon: Mail },
   { key: "email-recipients", label: "Email Recipients", path: "/dashboard/marketing/email-recipients", section: "Marketing", description: "Recipients linked to email campaigns.", icon: Users },
   { key: "email-recipient-buckets", label: "Recipient Buckets", path: "/dashboard/marketing/email-recipient-buckets", section: "Marketing", description: "Audience buckets for targeted email campaigns.", icon: Archive },

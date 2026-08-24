@@ -8,6 +8,7 @@ import { AuthProvider } from './app/providers/AuthContext.tsx'
 import { RecaptchaProvider } from './app/providers/RecaptchaProvider.tsx'
 import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './shared/components/feedback/ToastProvider.tsx'
+import { ConfirmDialogProvider } from './shared/components/feedback/ConfirmDialogProvider.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -16,7 +17,9 @@ createRoot(document.getElementById('root')!).render(
         <RecaptchaProvider>
           <AuthProvider>
             <ToastProvider>
-              <App />
+              <ConfirmDialogProvider>
+                <App />
+              </ConfirmDialogProvider>
             </ToastProvider>
           </AuthProvider>
         </RecaptchaProvider>

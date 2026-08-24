@@ -5,6 +5,7 @@ import { ModernFormLayout, FormSection, FormField, FormActions } from "@/shared/
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 import { marketingApi } from "@/features/marketing";
+import { withoutUtcSuffix } from "./emailDateTime";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
@@ -61,7 +62,7 @@ export const EmailQueueFromBucketPage: React.FC = () => {
       const response = await marketingApi.createQueueFromBucket({
         campaignId,
         bucketId,
-        scheduledAt: scheduledAt.trim() || undefined,
+        scheduledAt: withoutUtcSuffix(scheduledAt),
         limit: limit ? Number(limit) : undefined,
         batchSize: batchSize ? Number(batchSize) : undefined,
         dryRun,

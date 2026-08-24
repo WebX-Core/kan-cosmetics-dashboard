@@ -9,7 +9,8 @@ import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { catalogApi } from "@/features/catalog";
 import type { PublicationStatus } from "@/features/catalog/catalog.types";
-import { PublicationStatusBadge, PublicationTabs, readPublicationStatus, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
+import { PublicationStatusBadge, PublicationTabs, type PublicationView } from "@/shared/components/catalog/PublicationLifecycle";
+import { readPublicationStatus } from "@/shared/components/catalog/publicationLifecycle.utils";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import {
   AlertDialog,

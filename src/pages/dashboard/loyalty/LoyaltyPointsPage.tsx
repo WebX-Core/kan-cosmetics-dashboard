@@ -5,7 +5,7 @@ import { useLoyaltyPoints, type LoyaltyPointSource } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
-import { customerName, date, number, text } from "./loyaltyUi";
+import { customerName, date, number, text } from "./loyaltyUtils";
 
 const sources: Array<LoyaltyPointSource | ""> = ["", "SIGNUP", "ORDER_COMPLETED", "ORDER_SETTLED", "REFERRAL", "ADMIN_BONUS", "MANUAL_ADJUSTMENT", "POINT_REDEMPTION", "YEARLY_RESET"];
 export const LoyaltyPointsPage: React.FC = () => {

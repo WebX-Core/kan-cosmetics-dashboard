@@ -44,7 +44,7 @@ const toCrudPaths = ({
   getOne: getOne ? (id) => `${basePath}${dashboardGetOne ? "/dashboard" : ""}/get/${id}` : undefined,
   create: `${basePath}/create`,
   update: update ? (id) => `${basePath}/update/${id}` : undefined,
-  softDelete: (ids) => `${basePath}/destroy/${ids}`,
+  softDelete: (ids) => `${basePath}/delete/${ids}`,
   deletedList: deleted ? `${basePath}/deleted` : `${basePath}/get-all`,
   recover: recover ? `${basePath}/recover` : `${basePath}/create`,
   destroy: (ids) => `${basePath}/destroy/${ids}`,

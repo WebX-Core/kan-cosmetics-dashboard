@@ -21,16 +21,23 @@ export type BlogPostDto = Readonly<{
 
 export type AdvertisementDto = Readonly<{
   title: string;
-  image: string;
+  image: string | File;
   season?: string;
   date?: string;
   sortOrder?: number;
-  targetType: string;
-  targetMode: string;
+  targetType: "CATEGORY" | "SUBCATEGORY" | "PRODUCT" | "VARIANT";
+  targetMode: "IDS" | "ALL";
   targetIds?: ReadonlyArray<string>;
   categoryId?: string;
   subcategoryId?: string;
   productId?: string;
+}>;
+
+export type AdvertisementMatchQuery = Readonly<{
+  categoryId?: string;
+  subcategoryId?: string;
+  productId?: string;
+  variantId?: string;
 }>;
 
 export type EmailCampaignDto = Readonly<{
@@ -59,9 +66,19 @@ export type EmailQueueDto = Readonly<{
 }>;
 
 export type EmailLogDto = Readonly<{
-  to: string;
-  subject: string;
+  id?: string;
+  createdAt?: string;
+  campaign?: Readonly<{
+    id: string;
+    title: string;
+    subject: string;
+    type: string;
+  }> | null;
+  recipientEmail: string;
   status?: string;
+  providerResponse?: Readonly<Record<string, unknown>> | null;
+  errorMessage?: string | null;
+  sentAt?: string | null;
   sortOrder?: number;
 }>;
 

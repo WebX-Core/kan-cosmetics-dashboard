@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Users, UserCheck, Shield, ChevronLeft, ChevronRight, ShieldCheck, Key, Trash2, MoreHorizontal, Pencil } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -22,19 +21,6 @@ import { useAdminUsersList, useDeleteAdminUsers } from "@/features/adminUsers";
 import type { Gender, Role } from "@/features/adminUsers/adminUsers.types";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useUserStore } from "@/store/UserStore";
-import { api, unwrap } from "@/shared/api/api";
-
-type CustomerRow = Readonly<{
-  id: string;
-  firstname: string;
-  middlename?: string;
-  lastname: string;
-  email: string;
-  phone: string;
-  role: "CUSTOMER";
-  isVerified: boolean;
-  createdAt?: string;
-}>;
 
 type CombinedRow = Readonly<{
   id: string;
@@ -45,38 +31,16 @@ type CombinedRow = Readonly<{
   phone: string;
   address: string;
   gender: Gender;
-  role: Role | "CUSTOMER";
+  role: Role;
   isVerified: boolean;
   createdAt?: string;
-  rowType: "admin" | "customer";
 }>;
-
-const toCustomerRows = (payload: unknown): ReadonlyArray<CustomerRow> => {
-  if (!payload || typeof payload !== "object") return [];
-  const obj = payload as Record<string, unknown>;
-  const rows = (obj.customers ?? obj.items ?? obj.data) as unknown;
-  if (!Array.isArray(rows)) return [];
-  return rows
-    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
-    .map((item) => ({
-      id: String(item.id ?? ""),
-      firstname: String(item.firstname ?? ""),
-      middlename: typeof item.middlename === "string" ? item.middlename : undefined,
-      lastname: String(item.lastname ?? ""),
-      email: String(item.email ?? ""),
-      phone: String(item.phone ?? ""),
-      role: "CUSTOMER" as const,
-      isVerified: Boolean(item.isVerified),
-      createdAt: typeof item.createdAt === "string" ? item.createdAt : undefined,
-    }))
-    .filter((item) => item.id.length > 0);
-};
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const viewerRole = useUserStore((state) => (state.user?.role ?? "").toUpperCase());
-  const [activeTab, setActiveTab] = React.useState<"all" | "system" | "customers">("all");
+  const [activeTab, setActiveTab] = React.useState<"all" | "system">("all");
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 15, search: "" });
 
@@ -85,46 +49,18 @@ export const UsersPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
   });
-  const customersQuery = useQuery({
-    queryKey: ["customerUsers", state.page, state.limit, debouncedSearch],
-    queryFn: async () => {
-      const res = await api.get("/customer/get-all", {
-        params: {
-          page: state.page,
-          limit: state.limit,
-          search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
-        },
-      });
-      return toCustomerRows(unwrap<unknown>(res));
-    },
-    staleTime: 30_000,
-  });
   const del = useDeleteAdminUsers();
 
-  const adminRows: ReadonlyArray<CombinedRow> = (listQuery.data?.data ?? []).map((row) => ({ ...row, rowType: "admin" }));
-  const customerRows: ReadonlyArray<CombinedRow> = (customersQuery.data ?? []).map((row) => ({
-    ...row,
-    rowType: "customer",
-    gender: "OTHER",
-    address: "",
-    role: "CUSTOMER" as const,
-  }));
-  const rows: ReadonlyArray<CombinedRow> = [...adminRows, ...customerRows];
+  const rows: ReadonlyArray<CombinedRow> = listQuery.data?.data ?? [];
   const resolveRole = React.useCallback((user: CombinedRow) => (user.role ?? "USER").toUpperCase(), []);
   const totalPages = listQuery.data?.totalPages ?? 1;
   const roleScopedRows = React.useMemo<ReadonlyArray<CombinedRow>>(() => {
     if (viewerRole === "SUDOADMIN") return rows;
-    return rows.filter((u) => u.rowType === "customer" || resolveRole(u) !== "SUDOADMIN");
+    return rows.filter((u) => resolveRole(u) !== "SUDOADMIN");
   }, [rows, viewerRole, resolveRole]);
   const filteredRows = React.useMemo(() => {
-    if (activeTab === "customers") {
-      return roleScopedRows.filter((u) => u.rowType === "customer");
-    }
     if (activeTab === "system") {
-      return roleScopedRows.filter((u) => {
-        const role = resolveRole(u);
-        return role === "ADMIN";
-      });
+      return roleScopedRows.filter((u) => resolveRole(u) === "ADMIN");
     }
     return roleScopedRows;
   }, [activeTab, roleScopedRows, resolveRole]);
@@ -140,14 +76,10 @@ export const UsersPage: React.FC = () => {
   const tabs = React.useMemo(
     () => [
       { key: "all", label: "All Users", count: roleScopedRows.length },
-      { key: "customers", label: "Customers", count: roleScopedRows.filter((u) => u.rowType === "customer").length },
       {
         key: "system",
         label: "System Users",
-        count: roleScopedRows.filter((u) => {
-          const role = resolveRole(u);
-          return role === "ADMIN";
-        }).length,
+        count: roleScopedRows.filter((u) => resolveRole(u) === "ADMIN").length,
       },
     ],
     [roleScopedRows, resolveRole],
@@ -158,18 +90,6 @@ export const UsersPage: React.FC = () => {
     if (!ok) return;
     await del.mutateAsync(id);
     toast.success("User deleted.");
-  };
-
-  const handleBanCustomer = async (row: CombinedRow) => {
-    navigate("/dashboard/customers/bans/create", {
-      state: {
-        customer: {
-          id: row.id,
-          name: `${row.firstname} ${row.middlename ? `${row.middlename} ` : ""}${row.lastname}`.trim(),
-          email: row.email,
-        },
-      },
-    });
   };
 
   const columns = [
@@ -224,30 +144,19 @@ export const UsersPage: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            {u.rowType === "admin" && (
-              <DropdownMenuItem
-                className="text-[#1d1d1f] focus:text-[#1d1d1f]"
-                onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/users/${u.id}/edit`); }}
-              >
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              className="text-[#1d1d1f] focus:text-[#1d1d1f]"
+              onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/users/${u.id}/edit`); }}
+            >
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {u.rowType === "customer" ? (
-              <DropdownMenuItem
-                className="text-[#b42318] focus:text-[#b42318]"
-                onClick={(e) => { e.stopPropagation(); void handleBanCustomer(u); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Ban Customer
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                className="text-[#b42318] focus:text-[#b42318]"
-                onClick={(e) => { e.stopPropagation(); void handleDelete(u.id); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              className="text-[#b42318] focus:text-[#b42318]"
+              onClick={(e) => { e.stopPropagation(); void handleDelete(u.id); }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -293,11 +202,11 @@ export const UsersPage: React.FC = () => {
       <DataTableV2
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab as "all" | "system" | "customers")}
+        onTabChange={(tab) => setActiveTab(tab as "all" | "system")}
         columns={columns}
         data={[...filteredRows]}
         searchValue={state.search}
-        emptyMessage={listQuery.isLoading || customersQuery.isLoading ? "Loading users..." : "No users found."}
+        emptyMessage={listQuery.isLoading ? "Loading users..." : "No users found."}
         showPagination={false}
         rowId={(row) => String((row as unknown as CombinedRow).id ?? "")}
         selectedIds={selectedIds}

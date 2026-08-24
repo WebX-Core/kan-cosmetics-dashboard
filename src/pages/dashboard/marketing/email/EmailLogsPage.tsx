@@ -1,5 +1,5 @@
 import React from "react";
-import { Inbox, CheckCircle, AlertCircle } from "lucide-react";
+import { Inbox, CheckCircle, AlertCircle, Eye } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -8,8 +8,11 @@ import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
+import { EmailLogDetailModal } from "./EmailLogDetailModal";
+import type { EmailLogRow } from "./emailLogs.types";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
+const record = (v: unknown): Record<string, unknown> => (typeof v === "object" && v !== null ? (v as Record<string, unknown>) : {});
 const fmt = (v: string): string => {
   if (!v) return "—";
   const d = new Date(v);
@@ -22,29 +25,29 @@ const toRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   return items.filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null);
 };
 
-type LogRow = Readonly<{
-  id: string;
-  to: string;
-  subject: string;
-  status: string;
-  sentAt: string;
-  createdAt: string;
-}>;
-
-const toLogRows = (payload: unknown): ReadonlyArray<LogRow> =>
-  toRows(payload).map((item) => ({
-    id: text(item.id, crypto.randomUUID()),
-    to: text(item.to ?? item.email, "—"),
-    subject: text(item.subject, "—"),
-    status: text(item.status, "—"),
-    sentAt: text(item.sentAt ?? item.deliveredAt, ""),
-    createdAt: text(item.createdAt, ""),
-  }));
+const toLogRows = (payload: unknown): ReadonlyArray<EmailLogRow> =>
+  toRows(payload).map((item) => {
+    const campaign = record(item.campaign);
+    const providerResponse = record(item.providerResponse);
+    const sentAt = text(item.sentAt) || text(item.createdAt);
+    return {
+      id: text(item.id, crypto.randomUUID()),
+      recipientEmail: text(item.recipientEmail ?? item.to ?? item.email, "—"),
+      campaignTitle: text(campaign.title, "—"),
+      subject: text(campaign.subject, "—"),
+      status: text(item.status, "—"),
+      errorMessage: text(item.errorMessage),
+      messageId: text(providerResponse.messageId),
+      providerMessage: text(providerResponse.response),
+      sentAt: fmt(sentAt),
+    };
+  });
 
 export const EmailLogsPage: React.FC = () => {
   const toast = useToast();
   const [retryingId, setRetryingId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState("all");
+  const [selectedRow, setSelectedRow] = React.useState<EmailLogRow | null>(null);
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
 
   const query = marketingApi.emailLogs.hooks.useList({
@@ -76,22 +79,58 @@ export const EmailLogsPage: React.FC = () => {
     { key: "failed", label: "Failed" },
   ];
 
+  const handleRetry = async (row: EmailLogRow) => {
+    setRetryingId(row.id);
+    try {
+      await marketingApi.retryEmailLog(row.id);
+      toast.success("Email queued for retry.");
+      await query.refetch();
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const columns = [
-    { key: "to", label: "To", render: (r: LogRow) => <span className="font-medium text-gray-900">{r.to}</span> },
-    { key: "subject", label: "Subject", render: (r: LogRow) => <span className="text-gray-600 line-clamp-1">{r.subject}</span> },
+    { key: "recipientEmail", label: "Who", render: (r: EmailLogRow) => <span className="font-medium text-gray-900">{r.recipientEmail}</span> },
     {
-      key: "status",
-      label: "Status",
-      render: (r: LogRow) => (
-        <StatusBadge
-          status={["delivered", "sent"].includes(r.status.toLowerCase()) ? "Active" : "Inactive"}
-          label={r.status}
-        />
+      key: "campaign",
+      label: "What",
+      render: (r: EmailLogRow) => (
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={["delivered", "sent"].includes(r.status.toLowerCase()) ? "Active" : "Inactive"} label={r.status} />
+          <span className="text-gray-700 line-clamp-1">{r.campaignTitle}</span>
+        </div>
       ),
     },
-    { key: "sentAt", label: "Sent At", render: (r: LogRow) => <span className="text-xs text-gray-500">{fmt(r.sentAt)}</span> },
-    { key: "createdAt", label: "Logged At", render: (r: LogRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
-    { key: "actions", label: "Actions", render: (r: LogRow) => r.status.toLowerCase() === "failed" ? <button type="button" disabled={retryingId === r.id} onClick={(event) => { event.stopPropagation(); void (async () => { setRetryingId(r.id); try { await marketingApi.retryEmailLog(r.id); toast.success("Email queued for retry."); await query.refetch(); } catch (error) { toast.error(parseApiError(error).message); } finally { setRetryingId(null); } })(); }} className="rounded-full border border-[#d2d2d7] px-3 py-1.5 text-xs font-semibold hover:bg-[#f5f5f7] disabled:opacity-50">{retryingId === r.id ? "Retrying…" : "Retry"}</button> : null },
+    { key: "sentAt", label: "When", render: (r: EmailLogRow) => <span className="text-xs text-gray-500">{r.sentAt}</span> },
+    {
+      key: "actions",
+      label: "",
+      render: (r: EmailLogRow) => (
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          {r.status.toLowerCase() === "failed" && (
+            <button
+              type="button"
+              disabled={retryingId === r.id}
+              onClick={() => void handleRetry(r)}
+              className="rounded-full border border-[#d2d2d7] px-3 py-1.5 text-xs font-semibold hover:bg-[#f5f5f7] disabled:opacity-50"
+            >
+              {retryingId === r.id ? "Retrying…" : "Retry"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setSelectedRow(r)}
+            className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            aria-label={`View details for email to ${r.recipientEmail}`}
+          >
+            <Eye size={14} />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -114,6 +153,7 @@ export const EmailLogsPage: React.FC = () => {
         onTabChange={(t) => { setActiveTab(t); setState((p) => ({ ...p, page: 1 })); }}
         columns={columns}
         data={filtered}
+        onRowClick={setSelectedRow}
         searchValue={state.search}
         emptyMessage={query.isLoading ? "Loading logs..." : "No email logs found."}
         showPagination
@@ -121,6 +161,7 @@ export const EmailLogsPage: React.FC = () => {
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
       />
+      {selectedRow && <EmailLogDetailModal row={selectedRow} onClose={() => setSelectedRow(null)} />}
     </PageLayout>
   );
 };
