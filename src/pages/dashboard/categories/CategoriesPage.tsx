@@ -118,6 +118,8 @@ export const CategoriesPage: React.FC = () => {
   );
   const softDeleteCategory = catalogApi.categories.hooks.useSoftDelete();
   const updateCategory = catalogApi.categories.hooks.useUpdate();
+  // Full-set fetches to compute per-category subcategory/product counts —
+  // the category list endpoint doesn't return these counts itself.
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList({ page: 1, limit: 1000 }, true);
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
 

@@ -113,6 +113,9 @@ export const SubcategoryDetailPage: React.FC = () => {
     { subcategory: subcategoryId, limit: 100 },
     Boolean(subcategoryId) && publicationView === "archived"
   );
+  // Full-set fetches for per-product stock/variant lookup maps — backend
+  // inventory/variant list endpoints filter by a single productId, not a
+  // batch, so this can't be scoped to just the current page's products.
   const inventoryQuery = catalogApi.inventory.hooks.useList({ page: 1, limit: 1000 }, true);
   const publishedVariantsQuery = catalogApi.productVariants.hooks.useList({ page: 1, limit: 1000 }, true);
 

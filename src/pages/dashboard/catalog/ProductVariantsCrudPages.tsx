@@ -344,6 +344,8 @@ export const ProductVariantsPage: React.FC = () => {
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined, product: productFilter || undefined },
     publicationView === "archived",
   );
+  // Full-set fetch for the per-variant stock lookup map — backend inventory
+  // list only filters by a single productId, not a batch of variant ids.
   const inventoryQuery = catalogApi.inventory.hooks.useList({ page: 1, limit: 1000 }, Boolean(productFilter));
   const softDelete = catalogApi.productVariants.hooks.useSoftDelete();
   const updateStatus = catalogApi.productVariants.hooks.useUpdate();

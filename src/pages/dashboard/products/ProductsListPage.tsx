@@ -230,6 +230,10 @@ export const ProductsListPage: React.FC = () => {
     },
     publicationView === "archived",
   );
+  // Full-set fetches used to build per-product stock/variant lookup maps for
+  // row badges. Backend inventory/variant list endpoints only filter by a
+  // single productId, not an array, so scoping this to just the current
+  // page's products would mean N requests instead of one.
   const inventoryQuery = catalogApi.inventory.hooks.useList(
     { page: 1, limit: 1000 },
     canInventoryManage,

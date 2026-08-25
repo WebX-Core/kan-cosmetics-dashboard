@@ -123,6 +123,8 @@ export const CategoryDetailPage: React.FC = () => {
     { category: id, limit: 100 },
     Boolean(id) && publicationView === "archived"
   );
+  // Full-set fetch to compute per-subcategory product counts — no aggregate
+  // count on the subcategory list endpoint itself.
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
 
   const softDeleteSubcategory = catalogApi.subcategories.hooks.useSoftDelete();

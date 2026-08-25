@@ -124,6 +124,8 @@ export const SubcategoriesPage: React.FC = () => {
   const softDeleteSubcategory = catalogApi.subcategories.hooks.useSoftDelete();
   const updateSubcategory = catalogApi.subcategories.hooks.useUpdate();
 
+  // Full-set fetch to compute per-subcategory product counts — no aggregate
+  // count on the subcategory list endpoint itself.
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
 
   const productCountMap = React.useMemo(() => {
