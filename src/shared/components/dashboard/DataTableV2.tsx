@@ -5,18 +5,34 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Columns3,
   Loader2,
   Check,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/app/providers/AuthContext";
 import { hasDashboardPermission } from "@/app/guards/DashboardPermissionGuard";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 
 type Column<T> = {
   key: string;
   label: React.ReactNode;
   render?: (row: T) => React.ReactNode;
   width?: string;
+  /** Enables click-to-sort on this column's header. Sorts whatever rows are
+   *  currently loaded (this table has no knowledge of server-side data beyond
+   *  what's passed in via `data`). */
+  sortValue?: (row: T) => string | number;
 };
 
 type Tab = {
@@ -49,6 +65,11 @@ type Props<T> = {
   onPageChange?: (page: number) => void;
   showPagination?: boolean;
   alwaysShowPagination?: boolean;
+  /** Page-size selector — only rendered when onPageSizeChange is provided,
+   *  since changing it usually means re-querying the server with a new limit. */
+  pageSize?: number;
+  pageSizeOptions?: ReadonlyArray<number>;
+  onPageSizeChange?: (size: number) => void;
   /** Row selection — provide rowId to extract a unique key from each row */
   rowId?: (row: T) => string;
   selectedIds?: ReadonlySet<string>;
@@ -56,6 +77,8 @@ type Props<T> = {
   /** Bulk action bar rendered when at least one row is selected */
   bulkActions?: (selectedIds: Set<string>, clearSelection: () => void) => React.ReactNode;
 };
+
+const DEFAULT_PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 
 export function DataTableV2<T extends Record<string, unknown>>({
   title,
@@ -81,6 +104,9 @@ export function DataTableV2<T extends Record<string, unknown>>({
   onPageChange,
   showPagination = true,
   alwaysShowPagination = false,
+  pageSize,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
+  onPageSizeChange,
   rowId,
   selectedIds: controlledSelectedIds,
   onSelectionChange,
@@ -190,7 +216,6 @@ export function DataTableV2<T extends Record<string, unknown>>({
   const hasToolbar = hasTabs || Boolean(toolbarLeading) || hasSearch || actions;
   const tabItems = tabs ?? [];
   const isLoadingState = data.length === 0 && /loading/i.test(String(emptyMessage));
-  const effectiveData = data;
   const skeletonRows = 6;
   const [showDebounceSpinner, setShowDebounceSpinner] = React.useState(false);
   const [revealRows, setRevealRows] = React.useState(false);
@@ -214,10 +239,54 @@ export function DataTableV2<T extends Record<string, unknown>>({
       setRevealRows(false);
       return;
     }
-    if (effectiveData.length === 0) return;
+    if (data.length === 0) return;
     const timeoutId = window.setTimeout(() => setRevealRows(true), 30);
     return () => window.clearTimeout(timeoutId);
-  }, [isLoadingState, effectiveData.length]);
+  }, [isLoadingState, data.length]);
+
+  // Sorting + column visibility state, hand-rolled (not delegated to a table
+  // library's row model) so this stays simple and predictable. Row selection,
+  // search highlighting, tabs, pagination, and cell/header rendering are
+  // unchanged from before — this just adds sort-by-header and show/hide
+  // columns on top.
+  const [sortState, setSortState] = React.useState<{ key: string; desc: boolean } | null>(null);
+  const [hiddenColumns, setHiddenColumns] = React.useState<ReadonlySet<string>>(new Set());
+
+  const sortedData = React.useMemo(() => {
+    if (!sortState) return data;
+    const col = columns.find((c) => c.key === sortState.key);
+    if (!col?.sortValue) return data;
+    const getValue = col.sortValue;
+    return [...data].sort((a, b) => {
+      const av = getValue(a);
+      const bv = getValue(b);
+      if (av < bv) return sortState.desc ? 1 : -1;
+      if (av > bv) return sortState.desc ? -1 : 1;
+      return 0;
+    });
+  }, [data, sortState, columns]);
+
+  const toggleSort = (key: string) => {
+    setSortState((prev) => {
+      if (!prev || prev.key !== key) return { key, desc: false };
+      if (!prev.desc) return { key, desc: true };
+      return null;
+    });
+  };
+
+  const toggleColumnVisibility = (key: string, visible: boolean) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (visible) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const visibleColumns = React.useMemo(
+    () => columns.filter((col) => !hiddenColumns.has(col.key)),
+    [columns, hiddenColumns],
+  );
+  const canToggleColumns = columns.length > 1;
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#e5e5e7] bg-white">
@@ -291,6 +360,39 @@ export function DataTableV2<T extends Record<string, unknown>>({
                 ) : null}
               </div>
             )}
+            {canToggleColumns && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-[34px] items-center gap-[6px] rounded-full border border-[#d2d2d7] bg-white px-[13px] text-[12px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+                  >
+                    <Columns3 size={13} strokeWidth={2} />
+                    Columns
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {columns.map((col) => {
+                    const isVisible = !hiddenColumns.has(col.key);
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={col.key}
+                        checked={isVisible}
+                        onSelect={(event) => event.preventDefault()}
+                        onCheckedChange={(checked) => {
+                          if (!checked && visibleColumns.length <= 1) return;
+                          toggleColumnVisibility(col.key, Boolean(checked));
+                        }}
+                      >
+                        {typeof col.label === "string" ? col.label : col.key}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {actions}
           </div>
         </div>
@@ -329,15 +431,35 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   </button>
                 </th>
               )}
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]"
-                  style={col.width ? { width: col.width } : undefined}
-                >
-                  {col.label}
-                </th>
-              ))}
+              {visibleColumns.map((col) => {
+                const sortDirection = sortState?.key === col.key ? (sortState.desc ? "desc" : "asc") : null;
+                return (
+                  <th
+                    key={col.key}
+                    className="px-[21px] py-[10px] text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]"
+                    style={col.width ? { width: col.width } : undefined}
+                  >
+                    {col.sortValue ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(col.key)}
+                        className="inline-flex items-center gap-[4px] hover:text-[#1d1d1f]"
+                      >
+                        {col.label}
+                        {sortDirection === "asc" ? (
+                          <ChevronUp size={11} strokeWidth={2.5} />
+                        ) : sortDirection === "desc" ? (
+                          <ChevronDown size={11} strokeWidth={2.5} />
+                        ) : (
+                          <ChevronsUpDown size={11} strokeWidth={2} className="opacity-40" />
+                        )}
+                      </button>
+                    ) : (
+                      col.label
+                    )}
+                  </th>
+                );
+              })}
               {(effectiveOnEdit || effectiveOnDelete || rowActions) && (
                 <th className="px-[21px] py-[10px] text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#86868b]">
                   Action
@@ -353,7 +475,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   className="border-b border-[#f5f5f7] last:border-0"
                 >
                   {isSelectable && <td className="px-[21px] py-[13px]"><div className="h-4 w-4 animate-pulse rounded bg-[#f3f3f5]" /></td>}
-                  {columns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <td
                       key={`${col.key}-${rowIndex}`}
                       className="px-[21px] py-[13px]"
@@ -368,17 +490,17 @@ export function DataTableV2<T extends Record<string, unknown>>({
                   )}
                 </tr>
               ))
-            ) : effectiveData.length === 0 ? (
+            ) : sortedData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (effectiveOnEdit || effectiveOnDelete || rowActions ? 1 : 0) + (isSelectable ? 1 : 0)}
+                  colSpan={visibleColumns.length + (effectiveOnEdit || effectiveOnDelete || rowActions ? 1 : 0) + (isSelectable ? 1 : 0)}
                   className="px-[21px] py-[55px] text-center text-[14px] text-[#86868b]"
                 >
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              effectiveData.map((row, idx) => {
+              sortedData.map((row, idx) => {
                 const rid = rowId ? rowId(row) : "";
                 const isRowSelected = isSelectable && selected.has(rid);
                 return (
@@ -405,7 +527,7 @@ export function DataTableV2<T extends Record<string, unknown>>({
                       </button>
                     </td>
                   )}
-                  {columns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <td
                       key={col.key}
                       className="px-[21px] py-[13px] text-[14px] leading-[22px] text-[#1d1d1f]"
@@ -457,70 +579,90 @@ export function DataTableV2<T extends Record<string, unknown>>({
         </table>
       </div>
       {/* Pagination — golden ratio heights and spacing */}
-      {showPagination && (alwaysShowPagination || totalPages > 1) && (
-        <div className="flex items-center justify-between border-t border-[#f0f0f2] px-[21px] py-[13px]">
-          <p className="text-[12px] text-[#86868b]">
-            Page {currentPage} of {totalPages}
-          </p>
-          <div className="flex items-center gap-[5px]">
-            <button
-              onClick={() => onPageChange?.(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <ChevronLeft size={13} strokeWidth={2} />
-            </button>
-
-            {pageNumbers[0] > 1 && (
-              <>
-                <button
-                  onClick={() => onPageChange?.(1)}
-                  className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[11px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
+      {showPagination && (alwaysShowPagination || totalPages > 1 || onPageSizeChange) && (
+        <div className="flex flex-wrap items-center justify-between gap-[10px] border-t border-[#f0f0f2] px-[21px] py-[13px]">
+          <div className="flex items-center gap-[13px]">
+            <p className="text-[12px] text-[#86868b]">
+              Page {currentPage} of {totalPages}
+            </p>
+            {onPageSizeChange && (
+              <label className="flex items-center gap-[6px] text-[12px] text-[#86868b]">
+                Rows
+                <select
+                  value={pageSize}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                  className="h-[26px] rounded-full border border-[#d2d2d7] bg-white px-[8px] text-[12px] text-[#1d1d1f] outline-none focus:border-[var(--primary)]"
                 >
-                  1
-                </button>
-                {pageNumbers[0] > 2 && (
-                  <span className="px-[2px] text-[12px] text-[#86868b]">…</span>
-                )}
-              </>
+                  {pageSizeOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
-
-            {pageNumbers.map((page) => (
-              <button
-                key={page}
-                onClick={() => onPageChange?.(page)}
-                className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[11px] font-medium transition-colors ${
-                  currentPage === page
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                    : "border-[#d2d2d7] text-[#6e6e73] hover:bg-[#f5f5f7]"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-
-            {pageNumbers[pageNumbers.length - 1] < totalPages && (
-              <>
-                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
-                  <span className="px-[2px] text-[12px] text-[#86868b]">…</span>
-                )}
-                <button
-                  onClick={() => onPageChange?.(totalPages)}
-                  className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[11px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
-                >
-                  {totalPages}
-                </button>
-              </>
-            )}
-
-            <button
-              onClick={() => onPageChange?.(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <ChevronRight size={13} strokeWidth={2} />
-            </button>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-[5px]">
+              <button
+                onClick={() => onPageChange?.(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <ChevronLeft size={13} strokeWidth={2} />
+              </button>
+
+              {pageNumbers[0] > 1 && (
+                <>
+                  <button
+                    onClick={() => onPageChange?.(1)}
+                    className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[11px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
+                  >
+                    1
+                  </button>
+                  {pageNumbers[0] > 2 && (
+                    <span className="px-[2px] text-[12px] text-[#86868b]">…</span>
+                  )}
+                </>
+              )}
+
+              {pageNumbers.map((page) => (
+                <button
+                  key={page}
+                  onClick={() => onPageChange?.(page)}
+                  className={`flex h-[28px] w-[28px] items-center justify-center rounded-full border text-[11px] font-medium transition-colors ${
+                    currentPage === page
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                      : "border-[#d2d2d7] text-[#6e6e73] hover:bg-[#f5f5f7]"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                <>
+                  {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                    <span className="px-[2px] text-[12px] text-[#86868b]">…</span>
+                  )}
+                  <button
+                    onClick={() => onPageChange?.(totalPages)}
+                    className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[11px] font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => onPageChange?.(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex h-[28px] w-[28px] items-center justify-center rounded-full border border-[#d2d2d7] text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <ChevronRight size={13} strokeWidth={2} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
