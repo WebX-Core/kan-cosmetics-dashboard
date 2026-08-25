@@ -1,5 +1,5 @@
 import { api, unwrap } from "@/shared/api/api";
-import type { CreateTierDto, LoyaltyCustomer, LoyaltyList, LoyaltyPointAdjustmentDto, LoyaltyPointLedger, LoyaltyPointsQuery, LoyaltyQuery, LoyaltyReward, LoyaltyRewardUpdateDto, LoyaltySettings, LoyaltyTier, ResetYearlyCycleDto, UpdateLoyaltySettingsDto, UpdateTierDto } from "./loyalty.types";
+import type { CreateTierDto, LoyaltyCustomer, LoyaltyList, LoyaltyPointAdjustmentDto, LoyaltyPointLedger, LoyaltyPointsQuery, LoyaltyQuery, LoyaltyReward, LoyaltyRewardRule, LoyaltyRewardRuleDto, LoyaltyRewardUpdateDto, LoyaltySettings, LoyaltyTier, ResetYearlyCycleDto, UpdateLoyaltySettingsDto, UpdateTierDto } from "./loyalty.types";
 
 const BASE = "/customer-loyalty/admin";
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -8,7 +8,7 @@ const normalizeList = <T>(payload: unknown): LoyaltyList<T> => {
   if (Array.isArray(payload)) return { data: payload as T[], total: payload.length, totalPages: 1 };
   if (!isRecord(payload)) return { data: [] };
   const body = isRecord(payload.data) ? payload.data : payload;
-  const arrays = [body.items, body.data, body.customers, body.tiers, body.rewards, body.points, payload.items].find(Array.isArray);
+  const arrays = [body.items, body.data, body.customers, body.tiers, body.rewards, body.rules, body.points, payload.items].find(Array.isArray);
   const rows = (arrays ?? []) as T[];
   return {
     data: rows,
@@ -42,6 +42,12 @@ export const loyaltyApi = {
     list: async (query?: LoyaltyQuery) => normalizeList<LoyaltyReward>(unwrap<unknown>(await api.get(`${BASE}/rewards`, { params: query }))),
     updateStatus: async (id: string, dto: LoyaltyRewardUpdateDto) => unwrap<unknown>(await api.patch(`${BASE}/rewards/${id}/status`, dto)),
     fulfill: async (id: string, dto: LoyaltyRewardUpdateDto) => unwrap<unknown>(await api.patch(`${BASE}/rewards/${id}/fulfill`, dto)),
+  },
+  rewardRules: {
+    list: async (query?: LoyaltyQuery) => normalizeList<LoyaltyRewardRule>(unwrap<unknown>(await api.get(`${BASE}/reward-rules`, { params: query }))),
+    create: async (dto: LoyaltyRewardRuleDto) => unwrap<LoyaltyRewardRule>(await api.post(`${BASE}/reward-rules`, dto)),
+    update: async (id: string, dto: Partial<LoyaltyRewardRuleDto>) => unwrap<LoyaltyRewardRule>(await api.patch(`${BASE}/reward-rules/${id}`, dto)),
+    remove: async (id: string) => unwrap<unknown>(await api.delete(`${BASE}/reward-rules/${id}`)),
   },
   resetYearlyCycle: async (dto: ResetYearlyCycleDto) => unwrap<unknown>(await api.post(`${BASE}/reset-yearly-cycle`, dto)),
 };

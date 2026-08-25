@@ -169,7 +169,7 @@ import { WebPushNotificationDetailPage } from "@/pages/dashboard/marketing/web-p
 import { CustomerBanPage } from "@/pages/dashboard/customers/CustomerBanPage";
 import { CustomerBanFormPage } from "@/pages/dashboard/customers/CustomerBanFormPage";
 import { CustomerAddressesPage } from "@/pages/dashboard/customers/CustomerAddressesPage";
-import { LoyaltyCustomerDetailPage, LoyaltyLeaderboardPage, LoyaltyOverviewPage, LoyaltyPointsPage, LoyaltyRewardsPage, LoyaltySettingsPage, LoyaltyTierFormPage, LoyaltyTiersPage } from "@/pages/dashboard/loyalty";
+import { LoyaltyCustomerDetailPage, LoyaltyLeaderboardPage, LoyaltyOverviewPage, LoyaltyPointsPage, LoyaltyRewardRuleFormPage, LoyaltyRewardRulesPage, LoyaltyRewardsPage, LoyaltySettingsPage, LoyaltyTierFormPage, LoyaltyTiersPage } from "@/pages/dashboard/loyalty";
 
 export const AppRouter: React.FC = () => {
   return (
@@ -384,6 +384,9 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/loyalty/tiers/:id/edit" element={<LoyaltyTierFormPage />} />
             <Route path="/dashboard/loyalty/points" element={<LoyaltyPointsPage />} />
             <Route path="/dashboard/loyalty/rewards" element={<LoyaltyRewardsPage />} />
+            <Route path="/dashboard/loyalty/reward-rules" element={<LoyaltyRewardRulesPage />} />
+            <Route path="/dashboard/loyalty/reward-rules/create" element={<LoyaltyRewardRuleFormPage />} />
+            <Route path="/dashboard/loyalty/reward-rules/:id/edit" element={<LoyaltyRewardRuleFormPage />} />
             <Route path="/dashboard/loyalty/settings" element={<LoyaltySettingsPage />} />
           </Route>
           <Route

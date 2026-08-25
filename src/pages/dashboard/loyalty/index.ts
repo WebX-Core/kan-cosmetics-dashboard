@@ -5,4 +5,6 @@ export * from "./LoyaltyTierFormPage";
 export * from "./LoyaltySettingsPage";
 export * from "./LoyaltyPointsPage";
 export * from "./LoyaltyRewardsPage";
+export * from "./LoyaltyRewardRulesPage";
+export * from "./LoyaltyRewardRuleFormPage";
 export * from "./LoyaltyCustomerDetailPage";

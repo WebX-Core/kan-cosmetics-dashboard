@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, ChevronDown, Coins, RotateCcw, Settings2, Trophy, Users } from "lucide-react";
+import { Award, ChevronDown, Coins, RotateCcw, Settings2, Sparkles, Trophy, Users } from "lucide-react";
 import { useLoyaltyCustomers, useLoyaltyTiers, useResetYearlyCycle } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -69,6 +69,10 @@ export const LoyaltyOverviewPage: React.FC = () => {
               <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/rewards")}>
                 <Award className="mr-2 h-4 w-4 text-rose-600" />
                 <div><p>Rewards</p><p className="text-xs text-[#86868b]">Fulfillment and reward status</p></div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/reward-rules")}>
+                <Sparkles className="mr-2 h-4 w-4 text-amber-600" />
+                <div><p>Reward Rules</p><p className="text-xs text-[#86868b]">Dynamic coupons, gifts, and point multipliers</p></div>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/dashboard/loyalty/settings")}>
                 <Settings2 className="mr-2 h-4 w-4 text-blue-600" />

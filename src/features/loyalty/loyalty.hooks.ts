@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { loyaltyApi } from "./loyalty.api";
-import type { CreateTierDto, LoyaltyPointAdjustmentDto, LoyaltyPointsQuery, LoyaltyQuery, LoyaltyRewardUpdateDto, ResetYearlyCycleDto, UpdateLoyaltySettingsDto, UpdateTierDto } from "./loyalty.types";
+import type { CreateTierDto, LoyaltyPointAdjustmentDto, LoyaltyPointsQuery, LoyaltyQuery, LoyaltyRewardRuleDto, LoyaltyRewardUpdateDto, ResetYearlyCycleDto, UpdateLoyaltySettingsDto, UpdateTierDto } from "./loyalty.types";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
 
@@ -11,6 +11,7 @@ export const useLoyaltyCustomer = (customerId?: string) => useQuery({ queryKey: 
 export const useLoyaltySettings = () => useQuery({ queryKey: ["loyalty", "settings"], queryFn: loyaltyApi.settings.get });
 export const useLoyaltyPoints = (query?: LoyaltyPointsQuery) => useQuery({ queryKey: ["loyalty", "points", query], queryFn: () => loyaltyApi.points.list(query), placeholderData: keepPreviousData });
 export const useLoyaltyRewards = (query?: LoyaltyQuery) => useQuery({ queryKey: ["loyalty", "rewards", query], queryFn: () => loyaltyApi.rewards.list(query), placeholderData: keepPreviousData });
+export const useLoyaltyRewardRules = (query?: LoyaltyQuery) => useQuery({ queryKey: ["loyalty", "reward-rules", query], queryFn: () => loyaltyApi.rewardRules.list(query), placeholderData: keepPreviousData });
 
 const useLoyaltyMutation = <T,>(mutationFn: (vars: T) => Promise<unknown>, message: string) => {
   const qc = useQueryClient(); const toast = useToast();
@@ -23,3 +24,6 @@ export const useResetYearlyCycle = () => useLoyaltyMutation((dto: ResetYearlyCyc
 export const useUpdateLoyaltySettings = () => useLoyaltyMutation((dto: UpdateLoyaltySettingsDto) => loyaltyApi.settings.update(dto), "Loyalty settings updated.");
 export const useFulfillLoyaltyReward = () => useLoyaltyMutation(({ id, dto }: { id: string; dto: LoyaltyRewardUpdateDto }) => loyaltyApi.rewards.fulfill(id, dto), "Reward updated.");
 export const useAdjustLoyaltyPoints = () => useLoyaltyMutation(({ customerId, dto }: { customerId: string; dto: LoyaltyPointAdjustmentDto }) => loyaltyApi.customers.adjustPoints(customerId, dto), "Customer points adjusted.");
+export const useCreateLoyaltyRewardRule = () => useLoyaltyMutation((dto: LoyaltyRewardRuleDto) => loyaltyApi.rewardRules.create(dto), "Reward rule created.");
+export const useUpdateLoyaltyRewardRule = () => useLoyaltyMutation(({ id, dto }: { id: string; dto: Partial<LoyaltyRewardRuleDto> }) => loyaltyApi.rewardRules.update(id, dto), "Reward rule updated.");
+export const useDeleteLoyaltyRewardRule = () => useLoyaltyMutation((id: string) => loyaltyApi.rewardRules.remove(id), "Reward rule deleted.");
