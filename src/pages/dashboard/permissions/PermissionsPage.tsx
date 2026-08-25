@@ -122,6 +122,7 @@ export const PermissionsPage: React.FC = () => {
     {
       key: "key",
       label: "Permission",
+      sortValue: (r: PermRow) => r.key,
       render: (r: PermRow) => (
         <div>
           <div className="font-mono text-sm font-medium text-gray-900">{r.key}</div>
@@ -132,6 +133,7 @@ export const PermissionsPage: React.FC = () => {
     {
       key: "module",
       label: "Module",
+      sortValue: (r: PermRow) => r.module,
       render: (r: PermRow) => (
         <span className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
           {r.module}
@@ -141,6 +143,7 @@ export const PermissionsPage: React.FC = () => {
     {
       key: "action",
       label: "Action",
+      sortValue: (r: PermRow) => r.action,
       render: (r: PermRow) => (
         <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
           {r.action}
@@ -199,6 +202,8 @@ export const PermissionsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

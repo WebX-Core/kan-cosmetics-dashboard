@@ -180,6 +180,7 @@ export const WishlistDetailPage: React.FC = () => {
     {
       key: "product",
       label: "Product",
+      sortValue: (row: WishlistItem) => row.productTitle,
       render: (row: WishlistItem) => (
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-[#e5e5e7] bg-[#f5f5f7]">
@@ -209,6 +210,7 @@ export const WishlistDetailPage: React.FC = () => {
     {
       key: "quantity",
       label: "Qty",
+      sortValue: (row: WishlistItem) => row.quantity,
       render: (row: WishlistItem) => (
         <span className="font-medium text-[#1d1d1f]">{row.quantity}</span>
       ),
@@ -216,6 +218,7 @@ export const WishlistDetailPage: React.FC = () => {
     {
       key: "price",
       label: "Price",
+      sortValue: (row: WishlistItem) => row.price,
       render: (row: WishlistItem) => (
         <span className="font-medium text-[#1d1d1f]">{itemCurrency(row.price)}</span>
       ),
@@ -223,6 +226,7 @@ export const WishlistDetailPage: React.FC = () => {
     {
       key: "total",
       label: "Total",
+      sortValue: (row: WishlistItem) => row.price * row.quantity,
       render: (row: WishlistItem) => (
         <span className="font-medium text-[#1d1d1f]">
           {itemCurrency(row.price * row.quantity)}
@@ -232,6 +236,7 @@ export const WishlistDetailPage: React.FC = () => {
     {
       key: "addedAt",
       label: "Added",
+      sortValue: (row: WishlistItem) => row.addedAt,
       render: (row: WishlistItem) => (
         <span className="text-xs text-[#86868b]">{formatDateTime(row.addedAt)}</span>
       ),

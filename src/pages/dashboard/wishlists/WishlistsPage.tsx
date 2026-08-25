@@ -84,6 +84,7 @@ export const WishlistsPage: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(20);
   const query = useWishlistAggregate();
 
   const wishlists = React.useMemo(() => getRows(query.data), [query.data]);
@@ -101,12 +102,11 @@ export const WishlistsPage: React.FC = () => {
     );
   }, [search, wishlists]);
 
-  const limit = 20;
   const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
   const currentPage = Math.min(page, totalPages);
   const pageData = React.useMemo(
     () => filtered.slice((currentPage - 1) * limit, currentPage * limit),
-    [currentPage, filtered],
+    [currentPage, filtered, limit],
   );
 
   React.useEffect(() => {
@@ -138,6 +138,7 @@ export const WishlistsPage: React.FC = () => {
     {
       key: "customer",
       label: "Customer",
+      sortValue: (row: WishlistRow) => row.customerName,
       render: (row: WishlistRow) => (
         <button
           type="button"
@@ -169,6 +170,7 @@ export const WishlistsPage: React.FC = () => {
     {
       key: "items",
       label: "Wishlist Items",
+      sortValue: (row: WishlistRow) => row.wishlistItemCount,
       render: (row: WishlistRow) => (
         <span className="inline-flex items-center rounded-full bg-[#f5f5f7] px-2.5 py-1 text-sm font-medium text-[#1d1d1f]">
           {row.wishlistItemCount}
@@ -178,6 +180,7 @@ export const WishlistsPage: React.FC = () => {
     {
       key: "lastWishlistActivityAt",
       label: "Last Activity",
+      sortValue: (row: WishlistRow) => row.lastWishlistActivityAt,
       render: (row: WishlistRow) => (
         <span className="text-sm text-gray-700">
           {formatDateTime(row.lastWishlistActivityAt)}
@@ -270,6 +273,8 @@ export const WishlistsPage: React.FC = () => {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setPage}
+        pageSize={limit}
+        onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
       />
     </PageLayout>
   );

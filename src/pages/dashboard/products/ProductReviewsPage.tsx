@@ -110,6 +110,7 @@ export const ProductReviewsPage: React.FC = () => {
     {
       key: "reviewer",
       label: "Reviewer",
+      sortValue: (r: ReviewRow) => r.reviewerName,
       render: (r: ReviewRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.reviewerName}</div>
@@ -120,6 +121,7 @@ export const ProductReviewsPage: React.FC = () => {
     {
       key: "rating",
       label: "Rating",
+      sortValue: (r: ReviewRow) => r.rating,
       render: (r: ReviewRow) => <Stars rating={r.rating} />,
     },
     {
@@ -142,6 +144,7 @@ export const ProductReviewsPage: React.FC = () => {
     {
       key: "createdAt",
       label: "Date",
+      sortValue: (r: ReviewRow) => r.createdAt,
       render: (r: ReviewRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span>,
     },
     {

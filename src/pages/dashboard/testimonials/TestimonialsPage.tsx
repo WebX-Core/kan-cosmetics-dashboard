@@ -143,6 +143,7 @@ export const TestimonialsPage: React.FC = () => {
     },
     {
       key: "reviewer", label: "Reviewer",
+      sortValue: (r: Row) => r.reviewerName,
       render: (r: Row) => (
         <div className="flex items-center gap-3">
           {r.image ? (
@@ -168,9 +169,10 @@ export const TestimonialsPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "rating", label: "Rating", render: (r: Row) => <Stars rating={r.rating} /> },
+    { key: "rating", label: "Rating", sortValue: (r: Row) => r.rating, render: (r: Row) => <Stars rating={r.rating} /> },
     {
       key: "status", label: "Published",
+      sortValue: (r: Row) => (r.isPublished ? 1 : 0),
       render: (r: Row) => (
         <button
           type="button"
@@ -247,6 +249,8 @@ export const TestimonialsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

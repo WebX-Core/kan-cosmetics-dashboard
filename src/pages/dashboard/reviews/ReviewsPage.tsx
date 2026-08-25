@@ -128,6 +128,7 @@ export const ReviewsPage: React.FC = () => {
     },
     {
       key: "review", label: "Review",
+      sortValue: (r: Row) => r.productName,
       render: (r: Row) => (
         <div>
           <div className="font-medium text-gray-900">{r.productName}</div>
@@ -135,9 +136,9 @@ export const ReviewsPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "rating", label: "Rating", render: (r: Row) => <Stars rating={r.rating} /> },
-    { key: "type", label: "Type", render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
-    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    { key: "rating", label: "Rating", sortValue: (r: Row) => r.rating, render: (r: Row) => <Stars rating={r.rating} /> },
+    { key: "type", label: "Type", sortValue: (r: Row) => r.type, render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
+    { key: "status", label: "Status", sortValue: (r: Row) => r.status, render: (r: Row) => <StatusBadge status={r.status} /> },
     {
       key: "actions", label: "",
       render: (r: Row) => (
@@ -200,6 +201,8 @@ export const ReviewsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

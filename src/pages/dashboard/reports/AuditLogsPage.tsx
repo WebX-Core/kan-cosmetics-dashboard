@@ -45,6 +45,7 @@ const mapRows = (payload: unknown): ReadonlyArray<AuditLogRow> => {
       method: text(newValues.method, "—"),
       statusCode: typeof newValues.statusCode === "number" ? newValues.statusCode : 0,
       timestamp: formatTimestamp(text(row.createdAt)),
+      createdAt: text(row.createdAt),
       changedBody: record(newValues.body),
     };
   });
@@ -99,11 +100,13 @@ export const AuditLogsPage: React.FC = () => {
     {
       key: "admin",
       label: "Who",
+      sortValue: (r: AuditLogRow) => r.admin,
       render: (r: AuditLogRow) => <span className="font-medium text-gray-900">{r.admin}</span>,
     },
     {
       key: "action",
       label: "What",
+      sortValue: (r: AuditLogRow) => r.action,
       render: (r: AuditLogRow) => (
         <div className="flex items-center gap-1.5">
           {actionIcon(r.action)}
@@ -112,7 +115,7 @@ export const AuditLogsPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "timestamp", label: "When", render: (r: AuditLogRow) => <span className="text-xs text-gray-400">{r.timestamp}</span> },
+    { key: "timestamp", label: "When", sortValue: (r: AuditLogRow) => r.createdAt, render: (r: AuditLogRow) => <span className="text-xs text-gray-400">{r.timestamp}</span> },
     {
       key: "view",
       label: "",
@@ -159,6 +162,8 @@ export const AuditLogsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
       {selectedRow && <AuditLogDetailModal row={selectedRow} onClose={() => setSelectedRow(null)} />}
     </PageLayout>

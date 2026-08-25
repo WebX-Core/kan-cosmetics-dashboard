@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, UserCheck, Shield, ChevronLeft, ChevronRight, ShieldCheck, Key, Trash2, MoreHorizontal, Pencil } from "lucide-react";
+import { Users, UserCheck, Shield, ShieldCheck, Key, Trash2, MoreHorizontal, Pencil } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -96,6 +96,7 @@ export const UsersPage: React.FC = () => {
     {
       key: "user",
       label: "User",
+      sortValue: (u: CombinedRow) => u.email,
       render: (u: CombinedRow) => (
         <div>
           <div className="font-medium text-gray-900">
@@ -109,6 +110,7 @@ export const UsersPage: React.FC = () => {
     {
       key: "role",
       label: "Role",
+      sortValue: (u: CombinedRow) => resolveRole(u),
       render: (u: CombinedRow) => (
         (() => { const role = resolveRole(u); return (
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -123,9 +125,10 @@ export const UsersPage: React.FC = () => {
     {
       key: "verified",
       label: "Verified",
+      sortValue: (u: CombinedRow) => (u.isVerified ? 1 : 0),
       render: (u: CombinedRow) => <StatusBadge status={u.isVerified ? "Verified" : "Unverified"} />,
     },
-    { key: "createdAt", label: "Created", render: (u: CombinedRow) => <span className="text-xs text-gray-400">{formatDateTime(u.createdAt)}</span> },
+    { key: "createdAt", label: "Created", sortValue: (u: CombinedRow) => u.createdAt ?? "", render: (u: CombinedRow) => <span className="text-xs text-gray-400">{formatDateTime(u.createdAt)}</span> },
     {
       key: "actions",
       label: "Actions",
@@ -207,7 +210,12 @@ export const UsersPage: React.FC = () => {
         data={[...filteredRows]}
         searchValue={state.search}
         emptyMessage={listQuery.isLoading ? "Loading users..." : "No users found."}
-        showPagination={false}
+        showPagination
+        currentPage={state.page}
+        totalPages={totalPages}
+        onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
         rowId={(row) => String((row as unknown as CombinedRow).id ?? "")}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -226,26 +234,6 @@ export const UsersPage: React.FC = () => {
           </button>
         )}
       />
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          <button
-            disabled={state.page <= 1}
-            onClick={() => setState((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
-            className="grid h-8 w-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-500 disabled:opacity-40 hover:bg-gray-50"
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <span className="text-sm text-gray-500">{state.page} / {Math.max(1, totalPages)}</span>
-          <button
-            disabled={state.page >= totalPages}
-            onClick={() => setState((p) => ({ ...p, page: Math.min(totalPages, p.page + 1) }))}
-            className="grid h-8 w-8 place-items-center rounded-lg border border-gray-200 bg-white text-gray-500 disabled:opacity-40 hover:bg-gray-50"
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      )}
     </PageLayout>
   );
 };

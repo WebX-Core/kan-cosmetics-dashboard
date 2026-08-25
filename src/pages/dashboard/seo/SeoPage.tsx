@@ -185,6 +185,7 @@ export const SeoListPage: React.FC = () => {
     {
       key: "entityType",
       label: "Entity Type",
+      sortValue: (row: (typeof rows)[number]) => row.entityType,
       render: (row: (typeof rows)[number]) => (
         <span className="inline-flex items-center rounded-full bg-[#f0f7ff] px-2 py-0.5 text-[11px] font-medium text-[var(--primary)]">
           {row.entityType}
@@ -194,6 +195,7 @@ export const SeoListPage: React.FC = () => {
     {
       key: "title",
       label: "Title",
+      sortValue: (row: (typeof rows)[number]) => row.title,
       render: (row: (typeof rows)[number]) => (
         <div>
           <div className="font-medium text-gray-900 truncate max-w-[260px]">{row.title}</div>
@@ -213,6 +215,7 @@ export const SeoListPage: React.FC = () => {
     {
       key: "indexable",
       label: "Indexable",
+      sortValue: (row: (typeof rows)[number]) => (row.isIndexable ? 1 : 0),
       render: (row: (typeof rows)[number]) => (
         <StatusBadge status={row.isIndexable ? "Active" : "Inactive"} />
       ),
@@ -220,6 +223,7 @@ export const SeoListPage: React.FC = () => {
     {
       key: "optimized",
       label: "Optimized",
+      sortValue: (row: (typeof rows)[number]) => (row.isOptimized ? 1 : 0),
       render: (row: (typeof rows)[number]) => (
         <StatusBadge status={row.isOptimized ? "Active" : "Inactive"} />
       ),
@@ -281,6 +285,8 @@ export const SeoListPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((p) => ({ ...p, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
         onRowClick={(row) => navigate(`/dashboard/seo-metadata/${(row as typeof rows[number]).id}/edit`)}
         rowId={(row) => (row as typeof rows[number]).id}
         selectedIds={selectedIds}

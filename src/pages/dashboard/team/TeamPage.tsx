@@ -103,6 +103,7 @@ export const TeamPage: React.FC = () => {
     {
       key: "member",
       label: "Member",
+      sortValue: (r: TeamRow) => r.fullname,
       render: (r: TeamRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.fullname}</div>
@@ -128,6 +129,7 @@ export const TeamPage: React.FC = () => {
     {
       key: "updatedAt",
       label: "Updated",
+      sortValue: (r: TeamRow) => r.updatedAt,
       render: (r: TeamRow) => <span className="text-xs text-gray-400">{formatDateTime(r.updatedAt)}</span>,
     },
   ];
@@ -201,6 +203,8 @@ export const TeamPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
     </PageLayout>
   );

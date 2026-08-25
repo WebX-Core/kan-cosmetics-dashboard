@@ -83,6 +83,7 @@ export const ProductFaqsPage: React.FC = () => {
     {
       key: "title",
       label: "Question",
+      sortValue: (row: ProductFaqRow) => row.title,
       render: (row: ProductFaqRow) => (
         <div>
           <div className="font-medium text-gray-900">{row.title}</div>
@@ -93,6 +94,7 @@ export const ProductFaqsPage: React.FC = () => {
     {
       key: "status",
       label: "Status",
+      sortValue: (row: ProductFaqRow) => (row.isActive ? 1 : 0),
       render: (row: ProductFaqRow) => (
         <div className="inline-flex items-center gap-2">
           <button

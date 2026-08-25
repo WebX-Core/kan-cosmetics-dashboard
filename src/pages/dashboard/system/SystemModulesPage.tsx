@@ -193,6 +193,7 @@ export const CouponUsagePage: React.FC = () => {
     {
       key: "couponCode",
       label: "Coupon Code",
+      sortValue: (r: (typeof usageRows)[number]) => r.couponCode,
       render: (r: (typeof usageRows)[number]) => (
         <span className="font-mono text-sm font-medium text-gray-900">
           {r.couponCode}
@@ -216,6 +217,7 @@ export const CouponUsagePage: React.FC = () => {
     {
       key: "usedAt",
       label: "Used At",
+      sortValue: (r: (typeof usageRows)[number]) => r.usedAt,
       render: (r: (typeof usageRows)[number]) => (
         <span className="text-xs text-gray-400">{fmt(r.usedAt)}</span>
       ),
@@ -300,6 +302,8 @@ export const CouponUsagePage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
     </PageLayout>
   );
@@ -405,6 +409,7 @@ export const RolesPage: React.FC = () => {
     {
       key: "name",
       label: "Role",
+      sortValue: (row: (typeof rows)[number]) => row.name,
       render: (row: (typeof rows)[number]) => (
         <div>
           <div className="font-medium text-gray-900">{row.name}</div>
@@ -428,6 +433,7 @@ export const RolesPage: React.FC = () => {
     {
       key: "sortOrder",
       label: "Sort Order",
+      sortValue: (row: (typeof rows)[number]) => row.sortOrder || 0,
       render: (row: (typeof rows)[number]) => (
         <span className="text-gray-700">{row.sortOrder || "—"}</span>
       ),
@@ -435,6 +441,7 @@ export const RolesPage: React.FC = () => {
     {
       key: "status",
       label: "Status",
+      sortValue: (row: (typeof rows)[number]) => row.status,
       render: (row: (typeof rows)[number]) => (
         <span
           className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
@@ -450,6 +457,7 @@ export const RolesPage: React.FC = () => {
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (row: (typeof rows)[number]) => row.createdAt,
       render: (row: (typeof rows)[number]) => (
         <span className="text-xs text-gray-500">
           {row.createdAt
@@ -589,6 +597,8 @@ export const RolesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={(q.data?.totalPages as number | undefined) ?? 1}
         onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((previous) => ({ ...previous, page: 1, limit: size }))}
         rowId={(row) => String((row as { id: string }).id ?? "")}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -683,6 +693,7 @@ export const UserRolesPage: React.FC = () => {
     {
       key: "role",
       label: "Role",
+      sortValue: (r: (typeof rows)[number]) => r.roleName,
       render: (r: (typeof rows)[number]) => (
         <div>
           <div className="font-medium text-gray-900">{r.roleName}</div>
@@ -700,6 +711,7 @@ export const UserRolesPage: React.FC = () => {
     {
       key: "assignedAt",
       label: "Assigned",
+      sortValue: (r: (typeof rows)[number]) => r.assignedAt,
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-400">{fmt(r.assignedAt)}</span>
       ),
@@ -912,6 +924,7 @@ export const RolePermissionsPage: React.FC = () => {
     {
       key: "permission",
       label: "Permission",
+      sortValue: (r: (typeof rows)[number]) => r.permKey,
       render: (r: (typeof rows)[number]) => (
         <span className="font-mono text-sm font-medium text-gray-900">
           {r.permKey}
@@ -921,6 +934,7 @@ export const RolePermissionsPage: React.FC = () => {
     {
       key: "permModule",
       label: "Module",
+      sortValue: (r: (typeof rows)[number]) => r.permModule,
       render: (r: (typeof rows)[number]) => (
         <span className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
           {r.permModule}
@@ -930,6 +944,7 @@ export const RolePermissionsPage: React.FC = () => {
     {
       key: "permAction",
       label: "Action",
+      sortValue: (r: (typeof rows)[number]) => r.permAction,
       render: (r: (typeof rows)[number]) => (
         <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
           {r.permAction}
@@ -939,6 +954,7 @@ export const RolePermissionsPage: React.FC = () => {
     {
       key: "assignedAt",
       label: "Assigned",
+      sortValue: (r: (typeof rows)[number]) => r.assignedAt,
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-400">{fmt(r.assignedAt)}</span>
       ),
@@ -1151,6 +1167,7 @@ export const UserPermissionsPage: React.FC = () => {
     {
       key: "permission",
       label: "Permission",
+      sortValue: (r: (typeof rows)[number]) => r.permKey,
       render: (r: (typeof rows)[number]) => (
         <span className="font-mono text-sm font-medium text-gray-900">
           {r.permKey}
@@ -1160,6 +1177,7 @@ export const UserPermissionsPage: React.FC = () => {
     {
       key: "permModule",
       label: "Module",
+      sortValue: (r: (typeof rows)[number]) => r.permModule,
       render: (r: (typeof rows)[number]) => (
         <span className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500">
           {r.permModule}
@@ -1169,6 +1187,7 @@ export const UserPermissionsPage: React.FC = () => {
     {
       key: "permAction",
       label: "Action",
+      sortValue: (r: (typeof rows)[number]) => r.permAction,
       render: (r: (typeof rows)[number]) => (
         <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
           {r.permAction}
@@ -1178,6 +1197,7 @@ export const UserPermissionsPage: React.FC = () => {
     {
       key: "assignedAt",
       label: "Assigned",
+      sortValue: (r: (typeof rows)[number]) => r.assignedAt,
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-400">{fmt(r.assignedAt)}</span>
       ),
@@ -1461,6 +1481,7 @@ export const UserMetadataPage: React.FC = () => {
     {
       key: "location",
       label: "Location",
+      sortValue: (r: (typeof rows)[number]) => [r.city, r.country].filter((v) => v !== "—").join(", "),
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-600">
           {[r.city, r.country].filter((v) => v !== "—").join(", ") || "—"}
@@ -1479,6 +1500,7 @@ export const UserMetadataPage: React.FC = () => {
     {
       key: "browser",
       label: "Browser",
+      sortValue: (r: (typeof rows)[number]) => r.browser,
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-600">{r.browser}</span>
       ),
@@ -1486,6 +1508,7 @@ export const UserMetadataPage: React.FC = () => {
     {
       key: "createdAt",
       label: "Recorded",
+      sortValue: (r: (typeof rows)[number]) => r.createdAt,
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-400">{fmt(r.createdAt)}</span>
       ),
@@ -1596,6 +1619,8 @@ export const UserMetadataPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
       />
 
       <AlertDialog
@@ -1811,6 +1836,7 @@ export const PurchaseHistoryPage: React.FC = () => {
     {
       key: "product",
       label: "Product",
+      sortValue: (r: (typeof rows)[number]) => r.productName,
       render: (r: (typeof rows)[number]) => (
         <div>
           <div className="text-sm font-medium text-gray-900">
@@ -1823,6 +1849,7 @@ export const PurchaseHistoryPage: React.FC = () => {
     {
       key: "quantity",
       label: "Qty",
+      sortValue: (r: (typeof rows)[number]) => r.quantity,
       render: (r: (typeof rows)[number]) => (
         <span className="text-sm text-gray-700">{r.quantity || "—"}</span>
       ),
@@ -1837,6 +1864,7 @@ export const PurchaseHistoryPage: React.FC = () => {
     {
       key: "purchasedAt",
       label: "Purchased",
+      sortValue: (r: (typeof rows)[number]) => r.purchasedAt,
       render: (r: (typeof rows)[number]) => (
         <span className="text-xs text-gray-400">{fmt(r.purchasedAt)}</span>
       ),

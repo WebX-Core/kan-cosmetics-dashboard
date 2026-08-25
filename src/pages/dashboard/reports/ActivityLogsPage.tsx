@@ -161,14 +161,16 @@ export const ActivityLogsPage: React.FC = () => {
   }, []);
 
   const [activityPage, setActivityPage] = React.useState(1);
+  const [activityLimit, setActivityLimit] = React.useState(20);
   const [visitorPage, setVisitorPage] = React.useState(1);
+  const [visitorPageSize, setVisitorPageSize] = React.useState(20);
   const [discardPage, setDiscardPage] = React.useState(1);
-  const VISITOR_PAGE_SIZE = 20;
+  const [discardLimit, setDiscardLimit] = React.useState(20);
 
-  const activityQuery = useUserActivityList({ page: activityPage, limit: 20 });
+  const activityQuery = useUserActivityList({ page: activityPage, limit: activityLimit });
   const visitorQuery = useUserMetadataList({ page: 1, limit: 200 });
   const funnelQuery = useUserActivityFunnel();
-  const discardQuery = useUserActivityDiscardAnalytics({ page: discardPage, limit: 20 });
+  const discardQuery = useUserActivityDiscardAnalytics({ page: discardPage, limit: discardLimit });
 
   const activityTotalPages = (activityQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const discardTotalPages = (discardQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
@@ -181,10 +183,10 @@ export const ActivityLogsPage: React.FC = () => {
     () => toAnalyticsRows(visitorQuery.data, "visitor"),
     [visitorQuery.data],
   );
-  const visitorTotalPages = Math.max(1, Math.ceil(visitorRows.length / VISITOR_PAGE_SIZE));
+  const visitorTotalPages = Math.max(1, Math.ceil(visitorRows.length / visitorPageSize));
   const visitorPageRows = React.useMemo(
-    () => visitorRows.slice((visitorPage - 1) * VISITOR_PAGE_SIZE, visitorPage * VISITOR_PAGE_SIZE),
-    [visitorRows, visitorPage],
+    () => visitorRows.slice((visitorPage - 1) * visitorPageSize, visitorPage * visitorPageSize),
+    [visitorRows, visitorPage, visitorPageSize],
   );
   const funnelRows = React.useMemo(
     () => toAnalyticsRows(funnelQuery.data, "funnel"),
@@ -232,11 +234,11 @@ export const ActivityLogsPage: React.FC = () => {
 
   const activityColumns = React.useMemo(
     () => [
-      { key: "who", label: "Who", render: (r: ActivityRow) => <span className="font-medium text-gray-900">{r.who}</span> },
-      { key: "activity", label: "Activity", render: (r: ActivityRow) => <span className="text-gray-700">{r.activityLabel}</span> },
-      { key: "entity", label: "On", render: (r: ActivityRow) => <span className="text-gray-600">{r.entityLabel}</span> },
+      { key: "who", label: "Who", sortValue: (r: ActivityRow) => r.who, render: (r: ActivityRow) => <span className="font-medium text-gray-900">{r.who}</span> },
+      { key: "activity", label: "Activity", sortValue: (r: ActivityRow) => r.activityLabel, render: (r: ActivityRow) => <span className="text-gray-700">{r.activityLabel}</span> },
+      { key: "entity", label: "On", sortValue: (r: ActivityRow) => r.entityLabel, render: (r: ActivityRow) => <span className="text-gray-600">{r.entityLabel}</span> },
       { key: "path", label: "Page", render: (r: ActivityRow) => <span className="text-xs text-gray-500">{r.path}</span> },
-      { key: "occurredAt", label: "When", render: (r: ActivityRow) => <span className="text-xs text-gray-400">{r.occurredAtLabel}</span> },
+      { key: "occurredAt", label: "When", sortValue: (r: ActivityRow) => r.occurredAtLabel, render: (r: ActivityRow) => <span className="text-xs text-gray-400">{r.occurredAtLabel}</span> },
     ],
     [],
   );
@@ -351,6 +353,8 @@ export const ActivityLogsPage: React.FC = () => {
           currentPage={activityPage}
           totalPages={activityTotalPages}
           onPageChange={setActivityPage}
+          pageSize={activityLimit}
+          onPageSizeChange={(size) => { setActivityLimit(size); setActivityPage(1); }}
           rowId={(row) => row.id}
         />
       )}
@@ -431,6 +435,8 @@ export const ActivityLogsPage: React.FC = () => {
             currentPage={visitorPage}
             totalPages={visitorTotalPages}
             onPageChange={setVisitorPage}
+            pageSize={visitorPageSize}
+            onPageSizeChange={(size) => { setVisitorPageSize(size); setVisitorPage(1); }}
             rowId={(row) => row.__rowId}
           />
         </div>
@@ -469,6 +475,8 @@ export const ActivityLogsPage: React.FC = () => {
           currentPage={discardPage}
           totalPages={discardTotalPages}
           onPageChange={setDiscardPage}
+          pageSize={discardLimit}
+          onPageSizeChange={(size) => { setDiscardLimit(size); setDiscardPage(1); }}
           rowId={(row) => row.__rowId}
         />
       )}

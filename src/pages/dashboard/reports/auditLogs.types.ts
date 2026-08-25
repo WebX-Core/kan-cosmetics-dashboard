@@ -7,5 +7,6 @@ export type AuditLogRow = Readonly<{
   method: string;
   statusCode: number;
   timestamp: string;
+  createdAt: string;
   changedBody: Readonly<Record<string, unknown>>;
 }>;

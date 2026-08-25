@@ -368,6 +368,7 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "name",
       label: "Product",
+      sortValue: (r: ProductRow) => r.name,
       render: (r: ProductRow) => (
         <div className="flex items-center gap-3">
           {r.image ? (
@@ -401,6 +402,7 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "sku",
       label: "SKU",
+      sortValue: (r: ProductRow) => r.sku,
       render: (r: ProductRow) => (
         <span className="font-mono text-xs text-gray-500">{r.sku}</span>
       ),
@@ -408,6 +410,7 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "category",
       label: "Category",
+      sortValue: (r: ProductRow) => r.category,
       render: (r: ProductRow) => (
         <span className="text-gray-600">{r.category}</span>
       ),
@@ -415,6 +418,7 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "price",
       label: "Price",
+      sortValue: (r: ProductRow) => r.price,
       render: (r: ProductRow) => (
         <span className="font-medium text-gray-900">{fmtPrice(r.price)}</span>
       ),
@@ -422,6 +426,7 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (r: ProductRow) => r.createdAt,
       render: (r: ProductRow) => (
         <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span>
       ),
@@ -429,6 +434,7 @@ export const ProductsListPage: React.FC = () => {
     {
       key: "status",
       label: "Status",
+      sortValue: (r: ProductRow) => r.status,
       render: (r: ProductRow) => <PublicationStatusBadge status={r.status} />,
     },
     {
@@ -699,6 +705,8 @@ export const ProductsListPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
         rowId={(r) => r.id}
         selectedIds={selectedIds}
         onSelectionChange={(ids) => setSelectedIds(ids)}

@@ -37,6 +37,7 @@ export const PermissionsUsersPage: React.FC = () => {
     {
       key: "user",
       label: "User",
+      sortValue: (u: User) => `${u.firstname} ${u.lastname}`.trim() || u.email,
       render: (u: User) => (
         <div>
           <div className="font-medium text-gray-900">
@@ -46,8 +47,8 @@ export const PermissionsUsersPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "phone", label: "Phone", render: (u: User) => <span className="text-gray-600">{u.phone ?? "—"}</span> },
-    { key: "role", label: "Role", render: (u: User) => <span className="font-medium text-gray-700">{fmtRole(u.role)}</span> },
+    { key: "phone", label: "Phone", sortValue: (u: User) => u.phone ?? "", render: (u: User) => <span className="text-gray-600">{u.phone ?? "—"}</span> },
+    { key: "role", label: "Role", sortValue: (u: User) => fmtRole(u.role), render: (u: User) => <span className="font-medium text-gray-700">{fmtRole(u.role)}</span> },
     { key: "verified", label: "Verified", render: (u: User) => <StatusBadge status={u.isVerified ? "Verified" : "Unverified"} /> },
     {
       key: "actions",
@@ -111,6 +112,8 @@ export const PermissionsUsersPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((p) => ({ ...p, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
         onRowClick={(row) => navigate(`/dashboard/permissions/users/${(row as unknown as User).id}`)}
         rowId={(row) => String((row as unknown as User).id ?? "")}
         selectedIds={selectedIds}
