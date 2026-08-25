@@ -306,10 +306,10 @@ export const CustomerDetailsPage: React.FC = () => {
       <DataTableV2
         title="Orders"
         columns={[
-          { key: "orderNumber", label: "Order #", render: (r: OrderRow) => <span className="font-medium text-gray-900">{r.orderNumber}</span> },
-          { key: "total", label: "Total", render: (r: OrderRow) => <span>Rs {r.total}</span> },
-          { key: "status", label: "Status", render: (r: OrderRow) => <StatusBadge status={r.status} /> },
-          { key: "date", label: "Date", render: (r: OrderRow) => <span className="text-xs text-gray-500">{fmt(r.date)}</span> },
+          { key: "orderNumber", label: "Order #", sortValue: (r: OrderRow) => r.orderNumber, render: (r: OrderRow) => <span className="font-medium text-gray-900">{r.orderNumber}</span> },
+          { key: "total", label: "Total", sortValue: (r: OrderRow) => Number(r.total) || 0, render: (r: OrderRow) => <span>Rs {r.total}</span> },
+          { key: "status", label: "Status", sortValue: (r: OrderRow) => r.status, render: (r: OrderRow) => <StatusBadge status={r.status} /> },
+          { key: "date", label: "Date", sortValue: (r: OrderRow) => r.date, render: (r: OrderRow) => <span className="text-xs text-gray-500">{fmt(r.date)}</span> },
         ]}
         data={customerOrders}
         emptyMessage={ordersQuery.isLoading ? "Loading orders…" : "No orders found for this customer."}
@@ -319,13 +319,13 @@ export const CustomerDetailsPage: React.FC = () => {
       <DataTableV2
         title="Purchase History"
         columns={[
-          { key: "orderNumber", label: "Order #", render: (r: PurchaseRow) => <span className="font-medium text-gray-900">{r.orderNumber}</span> },
-          { key: "product", label: "Product", render: (r: PurchaseRow) => <span className="text-gray-700">{r.product}</span> },
-          { key: "qty", label: "Qty", render: (r: PurchaseRow) => <span className="text-gray-600">{r.qty}</span> },
-          { key: "unitPrice", label: "Unit Price", render: (r: PurchaseRow) => <span className="text-gray-600">Rs {r.unitPrice}</span> },
-          { key: "lineTotal", label: "Total", render: (r: PurchaseRow) => <span className="font-medium text-gray-900">Rs {r.lineTotal}</span> },
-          { key: "status", label: "Status", render: (r: PurchaseRow) => <StatusBadge status={r.status} /> },
-          { key: "purchasedAt", label: "Date", render: (r: PurchaseRow) => <span className="text-xs text-gray-500">{fmt(r.purchasedAt)}</span> },
+          { key: "orderNumber", label: "Order #", sortValue: (r: PurchaseRow) => r.orderNumber, render: (r: PurchaseRow) => <span className="font-medium text-gray-900">{r.orderNumber}</span> },
+          { key: "product", label: "Product", sortValue: (r: PurchaseRow) => r.product, render: (r: PurchaseRow) => <span className="text-gray-700">{r.product}</span> },
+          { key: "qty", label: "Qty", sortValue: (r: PurchaseRow) => r.qty, render: (r: PurchaseRow) => <span className="text-gray-600">{r.qty}</span> },
+          { key: "unitPrice", label: "Unit Price", sortValue: (r: PurchaseRow) => Number(r.unitPrice) || 0, render: (r: PurchaseRow) => <span className="text-gray-600">Rs {r.unitPrice}</span> },
+          { key: "lineTotal", label: "Total", sortValue: (r: PurchaseRow) => Number(r.lineTotal) || 0, render: (r: PurchaseRow) => <span className="font-medium text-gray-900">Rs {r.lineTotal}</span> },
+          { key: "status", label: "Status", sortValue: (r: PurchaseRow) => r.status, render: (r: PurchaseRow) => <StatusBadge status={r.status} /> },
+          { key: "purchasedAt", label: "Date", sortValue: (r: PurchaseRow) => r.purchasedAt, render: (r: PurchaseRow) => <span className="text-xs text-gray-500">{fmt(r.purchasedAt)}</span> },
         ]}
         data={purchaseRows}
         emptyMessage={purchaseQuery.isLoading ? "Loading purchase history…" : "No purchase history found."}
@@ -335,11 +335,11 @@ export const CustomerDetailsPage: React.FC = () => {
       <DataTableV2
         title="Coupons"
         columns={[
-          { key: "code", label: "Code", render: (r: typeof couponRows[number]) => <span className="font-mono font-semibold">{r.code}</span> },
-          { key: "title", label: "Coupon" },
-          { key: "status", label: "Eligibility", render: (r: typeof couponRows[number]) => <StatusBadge status={r.status} /> },
-          { key: "used", label: "Times used" },
-          { key: "expiresAt", label: "Expires", render: (r: typeof couponRows[number]) => fmt(r.expiresAt) },
+          { key: "code", label: "Code", sortValue: (r: typeof couponRows[number]) => r.code, render: (r: typeof couponRows[number]) => <span className="font-mono font-semibold">{r.code}</span> },
+          { key: "title", label: "Coupon", sortValue: (r: typeof couponRows[number]) => r.title },
+          { key: "status", label: "Eligibility", sortValue: (r: typeof couponRows[number]) => r.status, render: (r: typeof couponRows[number]) => <StatusBadge status={r.status} /> },
+          { key: "used", label: "Times used", sortValue: (r: typeof couponRows[number]) => r.used },
+          { key: "expiresAt", label: "Expires", sortValue: (r: typeof couponRows[number]) => r.expiresAt, render: (r: typeof couponRows[number]) => fmt(r.expiresAt) },
         ]}
         data={couponRows}
         emptyMessage={couponsQuery.isLoading ? "Loading coupons…" : "No coupons found for this customer."}
@@ -349,11 +349,11 @@ export const CustomerDetailsPage: React.FC = () => {
       <DataTableV2
         title="Saved Addresses"
         columns={[
-          { key: "type", label: "Type" },
-          { key: "name", label: "Recipient" },
-          { key: "phone", label: "Phone" },
-          { key: "address", label: "Address" },
-          { key: "isDefault", label: "Default", render: (r: typeof addressRows[number]) => r.isDefault ? "Yes" : "No" },
+          { key: "type", label: "Type", sortValue: (r: typeof addressRows[number]) => r.type },
+          { key: "name", label: "Recipient", sortValue: (r: typeof addressRows[number]) => r.name },
+          { key: "phone", label: "Phone", sortValue: (r: typeof addressRows[number]) => r.phone },
+          { key: "address", label: "Address", sortValue: (r: typeof addressRows[number]) => r.address },
+          { key: "isDefault", label: "Default", sortValue: (r: typeof addressRows[number]) => (r.isDefault ? 1 : 0), render: (r: typeof addressRows[number]) => r.isDefault ? "Yes" : "No" },
         ]}
         data={addressRows}
         emptyMessage={addressesQuery.isLoading ? "Loading addresses…" : "No saved addresses."}

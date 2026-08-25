@@ -102,7 +102,7 @@ export const ProductTagsPage: React.FC = () => {
   };
 
   const columns = [
-    { key: "tag", label: "Tag", render: (r: TagRow) => <span className="font-medium text-gray-900">{r.tag}</span> },
+    { key: "tag", label: "Tag", sortValue: (r: TagRow) => r.tag, render: (r: TagRow) => <span className="font-medium text-gray-900">{r.tag}</span> },
   ];
 
   return (
@@ -128,6 +128,8 @@ export const ProductTagsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
     </PageLayout>
   );
@@ -277,6 +279,7 @@ export const ProductAttributesPage: React.FC = () => {
     {
       key: "attr",
       label: "Attribute",
+      sortValue: (r: AttrRow) => r.name,
       render: (r: AttrRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.name}</div>
@@ -309,6 +312,8 @@ export const ProductAttributesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
     </PageLayout>
   );

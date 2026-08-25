@@ -110,14 +110,14 @@ export const FaqsPage: React.FC = () => {
       ),
       width: "44px",
     },
-    { key: "question", label: "Question", render: (r: Row) => (
+    { key: "question", label: "Question", sortValue: (r: Row) => r.question, render: (r: Row) => (
       <div>
         <div className="font-medium text-gray-900">{r.question}</div>
         <div className="text-xs text-gray-400 line-clamp-1">{r.answer}</div>
       </div>
     )},
-    { key: "type", label: "Type", render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
-    { key: "category", label: "Category", render: (r: Row) => <span className="text-gray-600">{r.category}</span> },
+    { key: "type", label: "Type", sortValue: (r: Row) => r.type, render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
+    { key: "category", label: "Category", sortValue: (r: Row) => r.category, render: (r: Row) => <span className="text-gray-600">{r.category}</span> },
     { key: "status", label: "Status", render: (r: Row) => (
       <div className="inline-flex items-center gap-2">
         <button
@@ -221,6 +221,8 @@ export const FaqsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
     </PageLayout>
   );

@@ -255,6 +255,7 @@ export const SubcategoryDetailPage: React.FC = () => {
     {
       key: "name",
       label: "Product",
+      sortValue: (row: ProductRow) => row.name,
       render: (row: ProductRow) => (
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-white">
@@ -274,16 +275,19 @@ export const SubcategoryDetailPage: React.FC = () => {
     {
       key: "price",
       label: "Price",
+      sortValue: (row: ProductRow) => Number(row.price) || 0,
       render: (row: ProductRow) => <span className="font-medium text-gray-900">Rs {row.price}</span>,
     },
     {
       key: "status",
       label: "Status",
+      sortValue: (row: ProductRow) => row.status,
       render: (row: ProductRow) => <StatusBadge status={row.status} />,
     },
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (row: ProductRow) => row.createdAt,
       render: (row: ProductRow) => <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>,
     },
     {

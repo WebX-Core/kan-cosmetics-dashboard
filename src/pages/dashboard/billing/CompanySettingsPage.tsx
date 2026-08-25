@@ -34,13 +34,14 @@ export const CompanySettingsPage: React.FC = () => {
     {
       key: "company",
       label: "Company",
+      sortValue: (row: CompanySetting) => row.companyName,
       render: (row: CompanySetting) => <div className="flex min-w-[210px] items-center gap-3">{row.logoUrl ? <img src={row.logoUrl} alt="" className="h-10 w-10 rounded-lg border border-[#e5e5e7] object-contain"/> : <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50"><Building2 size={18} className="text-indigo-600"/></span>}<div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#1d1d1f]">{row.companyName}</p><p className="mt-0.5 truncate text-[11px] text-[#86868b]">{row.legalName || row.senderName || "—"}</p></div></div>,
     },
     { key: "address", label: "Address", render: (row: CompanySetting) => <div className="min-w-[150px]"><p className="text-[12px] text-[#1d1d1f]">{row.address}</p><p className="mt-0.5 text-[11px] text-[#86868b]">{[row.city, row.district, row.country].filter(Boolean).join(", ") || "—"}</p></div> },
     { key: "tax", label: "Tax Details", render: (row: CompanySetting) => <div className="min-w-[130px] text-[11px]"><p><span className="text-[#86868b]">PAN</span> <span className="font-medium text-[#1d1d1f]">{row.panNumber || "—"}</span></p><p className="mt-1"><span className="text-[#86868b]">VAT</span> <span className="font-medium text-[#1d1d1f]">{row.vatNumber || "—"}</span></p></div> },
-    { key: "invoicePrefix", label: "Prefix", render: (row: CompanySetting) => <span className="text-[12px] font-semibold text-[#1d1d1f]">{row.invoicePrefix}</span> },
-    { key: "fiscalYear", label: "Fiscal Year", render: (row: CompanySetting) => <span className="text-[12px] text-[#1d1d1f]">{row.fiscalYear || "—"}</span> },
-    { key: "invoiceStartNumber", label: "Start No.", render: (row: CompanySetting) => <span className="text-[12px] text-[#1d1d1f]">{row.invoiceStartNumber}</span> },
+    { key: "invoicePrefix", label: "Prefix", sortValue: (row: CompanySetting) => row.invoicePrefix, render: (row: CompanySetting) => <span className="text-[12px] font-semibold text-[#1d1d1f]">{row.invoicePrefix}</span> },
+    { key: "fiscalYear", label: "Fiscal Year", sortValue: (row: CompanySetting) => row.fiscalYear || "", render: (row: CompanySetting) => <span className="text-[12px] text-[#1d1d1f]">{row.fiscalYear || "—"}</span> },
+    { key: "invoiceStartNumber", label: "Start No.", sortValue: (row: CompanySetting) => row.invoiceStartNumber, render: (row: CompanySetting) => <span className="text-[12px] text-[#1d1d1f]">{row.invoiceStartNumber}</span> },
     { key: "status", label: "Status", render: (row: CompanySetting) => row.isActive ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700"><CheckCircle2 size={11}/> Active</span> : <span className="inline-flex rounded-full bg-[#f5f5f7] px-2.5 py-1 text-[10px] font-semibold text-[#6e6e73]">Inactive</span> },
     { key: "actions", label: "Actions", render: (row: CompanySetting) => <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" onClick={(event) => event.stopPropagation()} className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/><span className="sr-only">Open actions</span></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}><DropdownMenuLabel>Actions</DropdownMenuLabel>{canUpdate && <DropdownMenuItem onClick={() => navigate(`/dashboard/company-settings/${row.id}/edit`)}><Edit3 className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>}{canUpdate && canDelete && <DropdownMenuSeparator/>}{canDelete && <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={() => void remove.mutateAsync(row.id)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu> },
   ];
@@ -62,7 +63,7 @@ export const CompanySettingsPage: React.FC = () => {
         </div>
       }
     >
-      {showDeleted ? <DataTableV2 columns={deletedColumns} data={deletedRows} emptyMessage={deletedQuery.isLoading ? "Loading deleted company profiles..." : "No deleted company profiles."} showPagination={false}/> : <DataTableV2 columns={columns} data={query.data?.settings ?? []} emptyMessage={query.isLoading ? "Loading company profiles..." : "No company profiles found."} showPagination currentPage={state.page} totalPages={query.data?.totalPages ?? 1} onPageChange={(page) => setState((previous) => ({ ...previous, page }))}/>} 
+      {showDeleted ? <DataTableV2 columns={deletedColumns} data={deletedRows} emptyMessage={deletedQuery.isLoading ? "Loading deleted company profiles..." : "No deleted company profiles."} showPagination={false}/> : <DataTableV2 columns={columns} data={query.data?.settings ?? []} emptyMessage={query.isLoading ? "Loading company profiles..." : "No company profiles found."} showPagination currentPage={state.page} totalPages={query.data?.totalPages ?? 1} onPageChange={(page) => setState((previous) => ({ ...previous, page }))} pageSize={state.limit} onPageSizeChange={(limit) => setState((previous) => ({ ...previous, page: 1, limit }))}/>}
     </PageLayout>
   );
 };

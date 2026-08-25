@@ -187,6 +187,7 @@ export const CustomerBanPage: React.FC = () => {
     {
       key: "customer",
       label: "Customer",
+      sortValue: (row: BanRow) => row.customerName,
       render: (row: BanRow) => (
         <div>
           <div className="font-medium text-gray-900">{row.customerName}</div>
@@ -203,9 +204,10 @@ export const CustomerBanPage: React.FC = () => {
     {
       key: "bannedUntil",
       label: "Banned Until",
+      sortValue: (row: BanRow) => row.bannedUntil || "",
       render: (row: BanRow) => <span className="text-xs text-gray-500">{row.bannedUntil ? formatDateTime(row.bannedUntil) : "Permanent"}</span>,
     },
-    { key: "createdAt", label: "Banned At", render: (row: BanRow) => <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span> },
+    { key: "createdAt", label: "Banned At", sortValue: (row: BanRow) => row.createdAt || "", render: (row: BanRow) => <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span> },
   ];
 
   return (
@@ -240,6 +242,8 @@ export const CustomerBanPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((prev) => ({ ...prev, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
         rowActions={(row) => (
           <CustomerBanActions
             onManage={() => navigate(`/dashboard/customers/bans/${row.id}/edit`)}

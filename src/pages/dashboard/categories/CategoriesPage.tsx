@@ -224,7 +224,7 @@ export const CategoriesPage: React.FC = () => {
       ),
       width: "44px",
     },
-    { key: "name", label: "Category", render: (row: CategoryRow) => (
+    { key: "name", label: "Category", sortValue: (row: CategoryRow) => row.name, render: (row: CategoryRow) => (
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-white">
           {row.coverImage ? (
@@ -242,15 +242,15 @@ export const CategoriesPage: React.FC = () => {
     { key: "description", label: "Description", render: (row: CategoryRow) => (
       <span className="text-gray-600 line-clamp-1">{row.description}</span>
     )},
-    { key: "subcategories", label: "Subcategories", render: (row: CategoryRow) => (
+    { key: "subcategories", label: "Subcategories", sortValue: (row: CategoryRow) => row.subcategories, render: (row: CategoryRow) => (
       <span className="font-medium text-gray-900">{row.subcategories}</span>
     )},
-    { key: "products", label: "Products", render: (row: CategoryRow) => (
+    { key: "products", label: "Products", sortValue: (row: CategoryRow) => row.products, render: (row: CategoryRow) => (
       <span className="font-medium text-gray-900">{row.products}</span>
     )},
-    { key: "status", label: "Status", render: (row: CategoryRow) => <PublicationStatusBadge status={row.status} /> },
-    { key: "publishedAt", label: "Published", render: (row: CategoryRow) => <span className="text-gray-500 text-xs">{formatDateTime(row.publishedAt)}</span> },
-    { key: "createdAt", label: "Created", render: (row: CategoryRow) => (
+    { key: "status", label: "Status", sortValue: (row: CategoryRow) => row.status, render: (row: CategoryRow) => <PublicationStatusBadge status={row.status} /> },
+    { key: "publishedAt", label: "Published", sortValue: (row: CategoryRow) => row.publishedAt || "", render: (row: CategoryRow) => <span className="text-gray-500 text-xs">{formatDateTime(row.publishedAt)}</span> },
+    { key: "createdAt", label: "Created", sortValue: (row: CategoryRow) => row.createdAt || "", render: (row: CategoryRow) => (
       <span className="text-gray-500 text-xs">{formatDateTime(row.createdAt)}</span>
     )},
     {
@@ -327,6 +327,8 @@ export const CategoriesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

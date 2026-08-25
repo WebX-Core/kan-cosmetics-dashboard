@@ -114,6 +114,7 @@ export const CustomersPage: React.FC = () => {
     {
       key: "customer",
       label: "Customer",
+      sortValue: (row: CustomerRow) => row.name,
       render: (row: CustomerRow) => (
         <div className="flex items-center gap-3">
           {row.profilePicture ? (
@@ -145,6 +146,7 @@ export const CustomersPage: React.FC = () => {
     {
       key: "profileCompletion",
       label: "Profile",
+      sortValue: (row: CustomerRow) => row.profileCompletion,
       render: (row: CustomerRow) => (
         <div className="min-w-[170px] space-y-1.5">
           <div className="flex items-center justify-between gap-3">
@@ -181,6 +183,7 @@ export const CustomersPage: React.FC = () => {
     {
       key: "createdAt",
       label: "Joined",
+      sortValue: (row: CustomerRow) => row.createdAt || "",
       render: (row: CustomerRow) => <span className="text-xs text-gray-500">{fmt(row.createdAt)}</span>,
     },
   ];
@@ -217,6 +220,8 @@ export const CustomersPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
         rowActions={(row) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

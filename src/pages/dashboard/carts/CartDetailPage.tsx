@@ -229,11 +229,13 @@ export const CartDetailPage: React.FC = () => {
     {
       key: "quantity",
       label: "Qty",
+      sortValue: (row: CartItem) => row.quantity,
       render: (row: CartItem) => <span className="font-medium text-[#1d1d1f]">{row.quantity}</span>,
     },
     {
       key: "price",
       label: "Unit Price",
+      sortValue: (row: CartItem) => row.price,
       render: (row: CartItem) => <span className="text-[#1d1d1f]">{itemCurrency(row.price)}</span>,
     },
     {
@@ -249,6 +251,7 @@ export const CartDetailPage: React.FC = () => {
     {
       key: "subtotal",
       label: "Subtotal",
+      sortValue: (row: CartItem) => row.subtotal,
       render: (row: CartItem) => <span className="font-semibold text-[#1d1d1f]">{itemCurrency(row.subtotal)}</span>,
     },
   ];

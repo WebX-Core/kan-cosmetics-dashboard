@@ -108,7 +108,7 @@ export const CouponsPage: React.FC = () => {
   ];
 
   const columns = [
-    { key: "code", label: "Code", render: (row: CouponRow) => (
+    { key: "code", label: "Code", sortValue: (row: CouponRow) => row.code, render: (row: CouponRow) => (
       <span className="font-mono font-semibold text-gray-900 text-xs bg-gray-100 px-2 py-1 rounded">{row.code}</span>
     )},
     { key: "description", label: "Description", render: (row: CouponRow) => (
@@ -117,10 +117,10 @@ export const CouponsPage: React.FC = () => {
     { key: "discount", label: "Discount", render: (row: CouponRow) => (
       <span className="text-gray-700">{row.discountType}: {row.discountValue}</span>
     )},
-    { key: "usage", label: "Usage", render: (row: CouponRow) => (
+    { key: "usage", label: "Usage", sortValue: (row: CouponRow) => row.usageCount, render: (row: CouponRow) => (
       <span className="font-medium text-gray-900">{row.usageCount}/{row.usageLimit || "Unlimited"}</span>
     )},
-    { key: "status", label: "Status", render: (row: CouponRow) => <StatusBadge status={row.status} /> },
+    { key: "status", label: "Status", sortValue: (row: CouponRow) => row.status, render: (row: CouponRow) => <StatusBadge status={row.status} /> },
     { key: "validity", label: "Validity", render: (row: CouponRow) => (
       <span className="text-xs text-gray-500">{row.validFrom} – {row.validUntil}</span>
     )},
@@ -158,6 +158,8 @@ export const CouponsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
     </PageLayout>
   );

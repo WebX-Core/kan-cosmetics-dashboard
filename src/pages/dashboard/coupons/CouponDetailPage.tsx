@@ -354,8 +354,8 @@ export const CouponDetailPage: React.FC = () => {
         <FormSection title="Assigned Customers">
           <DataTableV2
             columns={[
-              { key: "name", label: "Customer" },
-              { key: "email", label: "Email" },
+              { key: "name", label: "Customer", sortValue: (row: (typeof assignedCustomers)[number]) => row.name },
+              { key: "email", label: "Email", sortValue: (row: (typeof assignedCustomers)[number]) => row.email },
             ]}
             data={assignedCustomers}
             onRowClick={(row) => navigate(`/dashboard/customers/${row.id}`)}
@@ -410,7 +410,7 @@ export const CouponDetailPage: React.FC = () => {
       </FormSection>
 
       <FormSection title="Usage History">
-        <DataTableV2 columns={[{ key: "customer", label: "Customer" }, { key: "email", label: "Email" }, { key: "order", label: "Order" }, { key: "usedAt", label: "Used At", render: (row: typeof usageRows[number]) => row.usedAt ? new Date(row.usedAt).toLocaleString() : "—" }]} data={usageRows} onRowClick={(row) => navigate(`/dashboard/coupon-usage/${row.id}`)} emptyMessage={usageQuery.isLoading ? "Loading usage history…" : "This coupon has not been used yet."} showPagination={false}/>
+        <DataTableV2 columns={[{ key: "customer", label: "Customer", sortValue: (row: typeof usageRows[number]) => row.customer }, { key: "email", label: "Email", sortValue: (row: typeof usageRows[number]) => row.email }, { key: "order", label: "Order", sortValue: (row: typeof usageRows[number]) => row.order }, { key: "usedAt", label: "Used At", sortValue: (row: typeof usageRows[number]) => row.usedAt, render: (row: typeof usageRows[number]) => row.usedAt ? new Date(row.usedAt).toLocaleString() : "—" }]} data={usageRows} onRowClick={(row) => navigate(`/dashboard/coupon-usage/${row.id}`)} emptyMessage={usageQuery.isLoading ? "Loading usage history…" : "This coupon has not been used yet."} showPagination={false}/>
       </FormSection>
     </ModernFormLayout>
   );

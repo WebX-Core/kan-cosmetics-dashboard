@@ -135,6 +135,7 @@ export const SiteInquiriesPage: React.FC = () => {
     },
     {
       key: "customer", label: "Customer",
+      sortValue: (r: Row) => r.customerName,
       render: (r: Row) => (
         <div>
           <div className="font-medium text-gray-900">{r.customerName}</div>
@@ -144,6 +145,7 @@ export const SiteInquiriesPage: React.FC = () => {
     },
     {
       key: "subject", label: "Subject / Message",
+      sortValue: (r: Row) => r.subject,
       render: (r: Row) => (
         <div>
           <div className="text-sm text-gray-800">{r.subject}</div>
@@ -151,7 +153,7 @@ export const SiteInquiriesPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    { key: "status", label: "Status", sortValue: (r: Row) => r.status, render: (r: Row) => <StatusBadge status={r.status} /> },
     {
       key: "actions", label: "Actions",
       render: (r: Row) => (
@@ -200,6 +202,8 @@ export const SiteInquiriesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

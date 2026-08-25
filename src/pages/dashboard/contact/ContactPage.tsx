@@ -147,6 +147,7 @@ export const ContactPage: React.FC = () => {
     },
     {
       key: "sender", label: "Sender",
+      sortValue: (c: ContactRow) => c.name,
       render: (c: ContactRow) => (
         <div>
           <div className="font-medium text-gray-900">{c.name}</div>
@@ -162,7 +163,7 @@ export const ContactPage: React.FC = () => {
         return <StatusBadge status={viewed ? "Viewed" : "Unread"} />;
       },
     },
-    { key: "createdAt", label: "Date", render: (c: ContactRow) => <span className="text-xs text-gray-400">{formatDateTime(c.createdAt)}</span> },
+    { key: "createdAt", label: "Date", sortValue: (c: ContactRow) => c.createdAt || "", render: (c: ContactRow) => <span className="text-xs text-gray-400">{formatDateTime(c.createdAt)}</span> },
     {
       key: "actions", label: "",
       render: (c: ContactRow) => (
@@ -209,6 +210,8 @@ export const ContactPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
 
       <ReplyDialog

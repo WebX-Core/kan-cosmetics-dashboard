@@ -229,6 +229,7 @@ export const SubcategoriesPage: React.FC = () => {
     {
       key: "name",
       label: "Subcategory",
+      sortValue: (row: SubcategoryRow) => row.name,
       render: (row: SubcategoryRow) => (
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-white">
@@ -248,6 +249,7 @@ export const SubcategoriesPage: React.FC = () => {
     {
       key: "categoryName",
       label: "Category",
+      sortValue: (row: SubcategoryRow) => row.categoryName,
       render: (row: SubcategoryRow) => <span className="text-gray-700">{row.categoryName}</span>,
     },
     {
@@ -260,11 +262,13 @@ export const SubcategoriesPage: React.FC = () => {
     {
       key: "products",
       label: "Products",
+      sortValue: (row: SubcategoryRow) => row.products,
       render: (row: SubcategoryRow) => <span className="font-medium text-gray-900">{row.products}</span>,
     },
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (row: SubcategoryRow) => row.createdAt || "",
       render: (row: SubcategoryRow) => (
         <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>
       ),
@@ -272,6 +276,7 @@ export const SubcategoriesPage: React.FC = () => {
     {
       key: "status",
       label: "Status",
+      sortValue: (row: SubcategoryRow) => row.status,
       render: (row: SubcategoryRow) => <PublicationStatusBadge status={row.status} />,
     },
     {
@@ -335,6 +340,8 @@ export const SubcategoriesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((prev) => ({ ...prev, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

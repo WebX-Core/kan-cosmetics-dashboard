@@ -114,13 +114,12 @@ const mapCartRows = (
     };
   });
 
-const LIMIT = 20;
-
 export const CartsPage: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const activeQuery = useCartAggregate();
   const abandonedQuery = useAbandonedCartAggregate();
@@ -153,11 +152,11 @@ export const CartsPage: React.FC = () => {
     );
   }, [filteredByTab, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / LIMIT));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageData = React.useMemo(
-    () => filtered.slice((currentPage - 1) * LIMIT, currentPage * LIMIT),
-    [currentPage, filtered],
+    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [currentPage, filtered, pageSize],
   );
   const visibleIds = React.useMemo(() => pageData.map((row) => row.customerId), [pageData]);
   const isAllVisibleSelected = React.useMemo(
@@ -240,6 +239,7 @@ export const CartsPage: React.FC = () => {
     {
       key: "customer",
       label: "Customer",
+      sortValue: (row: CartRow) => row.customerName,
       render: (row: CartRow) => (
         <button type="button" onClick={() => openCart(row)} className="text-left">
           <div className="font-medium text-gray-900">{row.customerName}</div>
@@ -257,6 +257,7 @@ export const CartsPage: React.FC = () => {
     {
       key: "items",
       label: "Items",
+      sortValue: (row: CartRow) => row.itemCount,
       render: (row: CartRow) => (
         <span className="inline-flex items-center rounded-full bg-[#f5f5f7] px-2.5 py-1 text-sm font-medium text-[#1d1d1f]">
           {row.itemCount}
@@ -266,6 +267,7 @@ export const CartsPage: React.FC = () => {
     {
       key: "total",
       label: "Total",
+      sortValue: (row: CartRow) => row.totalAmount,
       render: (row: CartRow) => (
         <span className="font-medium text-gray-900">Rs {row.totalAmount.toFixed(2)}</span>
       ),
@@ -273,6 +275,7 @@ export const CartsPage: React.FC = () => {
     {
       key: "activity",
       label: "Last Activity",
+      sortValue: (row: CartRow) => row.lastCartActivityAt,
       render: (row: CartRow) => (
         <span className="text-sm text-gray-700">
           {formatDateTime(row.lastCartActivityAt)}
@@ -358,6 +361,8 @@ export const CartsPage: React.FC = () => {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
       />
     </PageLayout>
   );

@@ -437,6 +437,7 @@ export const ProductVariantsPage: React.FC = () => {
     {
       key: "variant",
       label: "Variant",
+      sortValue: (row: VariantRow) => row.title,
       render: (row: VariantRow) => (
         <div>
           <div className="font-medium text-gray-900">{row.title}</div>
@@ -444,7 +445,7 @@ export const ProductVariantsPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "status", label: "Status", render: (row: VariantRow) => <PublicationStatusBadge status={row.status} /> },
+    { key: "status", label: "Status", sortValue: (row: VariantRow) => row.status, render: (row: VariantRow) => <PublicationStatusBadge status={row.status} /> },
     ...(productFilter
       ? [
           {
@@ -623,6 +624,8 @@ export const ProductVariantsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((prev) => ({ ...prev, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

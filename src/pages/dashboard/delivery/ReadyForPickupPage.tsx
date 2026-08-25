@@ -108,6 +108,7 @@ const columns = [
   {
     key: "order",
     label: "Order",
+    sortValue: (row: Row) => text(row.orderNumber),
     render: (row: Row) => (
       <div className="min-w-37.5">
         <p className="text-[13px] font-semibold text-[#1d1d1f]">
@@ -122,6 +123,7 @@ const columns = [
   {
     key: "customer",
     label: "Customer",
+    sortValue: (row: Row) => customerName(row),
     render: (row: Row) => (
       <div className="min-w-45">
         <p className="text-[13px] font-semibold text-[#1d1d1f]">
@@ -154,6 +156,7 @@ const columns = [
   {
     key: "amount",
     label: "Amount",
+    sortValue: (row: Row) => numeric(row.totalAmount),
     render: (row: Row) => (
       <div className="text-[13px] font-semibold text-[#1d1d1f]">
         {money(row.totalAmount)}
@@ -328,6 +331,8 @@ export const ReadyForPickupPage: React.FC = () => {
         currentPage={state.page}
         totalPages={payload.totalPages}
         onPageChange={(page) => setState((previous) => ({ ...previous, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((previous) => ({ ...previous, page: 1, limit }))}
         showPagination
         onRowClick={(row) => navigate(`/dashboard/orders/${text(row.id, "")}`)}
         rowActions={(row) => (

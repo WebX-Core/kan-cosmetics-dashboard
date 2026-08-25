@@ -202,6 +202,10 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
           shipmentListLabels[column] ??
           config.fields.find((field) => field.key === column)?.label ??
           (column === "id" ? "ID" : column),
+        sortValue: (row: Row) => {
+          const value = row[column];
+          return typeof value === "number" ? value : String(value ?? "");
+        },
         render: (row: Row) => (
           <span className="text-sm text-zinc-700">
             {renderTableValue(column, row[column])}
@@ -259,6 +263,8 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(nextPage) => setState((prev) => ({ ...prev, page: nextPage }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
     </PageLayout>
   );

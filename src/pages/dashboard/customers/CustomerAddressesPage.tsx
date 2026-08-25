@@ -87,6 +87,7 @@ export const CustomerAddressesPage: React.FC = () => {
     {
       key: "fullName",
       label: "Name",
+      sortValue: (r: AddressRow) => r.fullName,
       render: (r: AddressRow) => (
         <div className="flex items-center gap-2">
           <span className="font-medium text-gray-900">{r.fullName}</span>
@@ -104,10 +105,10 @@ export const CustomerAddressesPage: React.FC = () => {
       ),
     },
     { key: "address", label: "Address", render: (r: AddressRow) => <span className="text-gray-600 line-clamp-1">{r.address}</span> },
-    { key: "city", label: "City", render: (r: AddressRow) => <span className="text-gray-600">{r.city}</span> },
-    { key: "country", label: "Country", render: (r: AddressRow) => <span className="text-gray-600">{r.country}</span> },
+    { key: "city", label: "City", sortValue: (r: AddressRow) => r.city, render: (r: AddressRow) => <span className="text-gray-600">{r.city}</span> },
+    { key: "country", label: "Country", sortValue: (r: AddressRow) => r.country, render: (r: AddressRow) => <span className="text-gray-600">{r.country}</span> },
     { key: "customerId", label: "Customer ID", render: (r: AddressRow) => <span className="font-mono text-xs text-gray-400">{r.customerId}</span> },
-    { key: "createdAt", label: "Added", render: (r: AddressRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    { key: "createdAt", label: "Added", sortValue: (r: AddressRow) => r.createdAt || "", render: (r: AddressRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
   ];
 
   return (
@@ -136,6 +137,8 @@ export const CustomerAddressesPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))}
       />
     </PageLayout>
   );
