@@ -1,13 +1,12 @@
 import React from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { HelpCircle, CheckCircle, XCircle, Package, Globe, X, RotateCcw, Trash2, MoreHorizontal, Pencil } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { HelpCircle, CheckCircle, XCircle, Package, Globe, X, Trash2, MoreHorizontal, Pencil } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { confirmAction } from "@/shared/utils/confirm";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
-import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { engagementApi } from "@/features/engagement";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 
@@ -43,30 +42,20 @@ const toRow = (entry: unknown): Row => {
 
 export const FaqsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
-  const isDeletedView = location.pathname.endsWith("/deleted");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const productIdFilter = searchParams.get("productId") ?? "";
   const productNameFilter = searchParams.get("productName") ?? "";
 
-  const listQuery = engagementApi.faqs.hooks.useList({
+  const query = engagementApi.faqs.hooks.useList({
     page: state.page,
     limit: state.limit,
     search: debouncedSearch || undefined,
-  }, !isDeletedView);
-  const deletedQuery = engagementApi.faqs.hooks.useDeleted({
-    page: state.page,
-    limit: state.limit,
-    search: debouncedSearch || undefined,
-  }, isDeletedView);
-  const recoverMutation = engagementApi.faqs.hooks.useRecover();
+  });
   const destroyMutation = engagementApi.faqs.hooks.useDestroy();
   const updateMutation = engagementApi.faqs.hooks.useUpdate();
-
-  const query = isDeletedView ? deletedQuery : listQuery;
 
   const rows = React.useMemo(() => (query.data?.data ?? []).map(toRow), [query.data?.data]);
   const scopedRows = React.useMemo(() => {
@@ -110,9 +99,7 @@ export const FaqsPage: React.FC = () => {
     setState((p) => ({ ...p, page: 1 }));
   };
 
-  const tabs = isDeletedView
-    ? [{ key: "all", label: "All Deleted" }, { key: "product", label: "Product" }, { key: "site", label: "Site" }]
-    : [{ key: "all", label: "All" }, { key: "product", label: "Product" }, { key: "site", label: "Site" }, { key: "inactive", label: "Inactive" }];
+  const tabs = [{ key: "all", label: "All" }, { key: "product", label: "Product" }, { key: "site", label: "Site" }, { key: "inactive", label: "Inactive" }];
 
   const columns = [
     {
@@ -132,37 +119,33 @@ export const FaqsPage: React.FC = () => {
     { key: "type", label: "Type", render: (r: Row) => <span className="text-gray-600">{r.type}</span> },
     { key: "category", label: "Category", render: (r: Row) => <span className="text-gray-600">{r.category}</span> },
     { key: "status", label: "Status", render: (r: Row) => (
-      isDeletedView ? (
-        <StatusBadge status={r.status} />
-      ) : (
-        <div className="inline-flex items-center gap-2">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={r.isActive}
-              onClick={async (event) => {
-              event.stopPropagation();
-              await updateMutation.mutateAsync({
-                id: r.id,
-                dto: { title: r.question, isActive: !r.isActive },
-              });
-              await query.refetch();
-            }}
-            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-              r.isActive ? "bg-emerald-500" : "bg-zinc-300"
+      <div className="inline-flex items-center gap-2">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={r.isActive}
+            onClick={async (event) => {
+            event.stopPropagation();
+            await updateMutation.mutateAsync({
+              id: r.id,
+              dto: { title: r.question, isActive: !r.isActive },
+            });
+            await query.refetch();
+          }}
+          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+            r.isActive ? "bg-emerald-500" : "bg-zinc-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+              r.isActive ? "translate-x-6" : "translate-x-1"
             }`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                r.isActive ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-          <span className={`text-xs font-medium ${r.isActive ? "text-emerald-700" : "text-zinc-600"}`}>
-            {r.isActive ? "Active" : "Inactive"}
-          </span>
-        </div>
-      )
+          />
+        </button>
+        <span className={`text-xs font-medium ${r.isActive ? "text-emerald-700" : "text-zinc-600"}`}>
+          {r.isActive ? "Active" : "Inactive"}
+        </span>
+      </div>
     ) },
     {
       key: "actions",
@@ -176,43 +159,25 @@ export const FaqsPage: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            {!isDeletedView && (
-              <>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/faqs/${r.id}/edit`); }}>
-                  <Pencil className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=FAQ&entityId=${encodeURIComponent(r.id)}`); }}>
-                  <Globe className="mr-2 h-4 w-4" /> SEO
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-[#b42318] focus:text-[#b42318]"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const ok = await confirmAction("Delete this FAQ?");
-                    if (!ok) return;
-                    await destroyMutation.mutateAsync(r.id);
-                    await query.refetch();
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </>
-            )}
-            {isDeletedView && (
-              <>
-                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await recoverMutation.mutateAsync({ ids: [r.id] }); }}>
-                  <RotateCcw className="mr-2 h-4 w-4" /> Recover
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-[#b42318] focus:text-[#b42318]"
-                  onClick={async (e) => { e.stopPropagation(); await destroyMutation.mutateAsync(r.id); }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/faqs/${r.id}/edit`); }}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=FAQ&entityId=${encodeURIComponent(r.id)}`); }}>
+              <Globe className="mr-2 h-4 w-4" /> SEO
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[#b42318] focus:text-[#b42318]"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const ok = await confirmAction("Delete this FAQ?");
+                if (!ok) return;
+                await destroyMutation.mutateAsync(r.id);
+                await query.refetch();
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -221,11 +186,10 @@ export const FaqsPage: React.FC = () => {
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
       title="FAQs"
-      subtitle={productIdFilter ? `Manage FAQs for ${productNameFilter || "selected product"}.` : isDeletedView ? "View deleted FAQ records." : "Manage FAQ records."}
-      onNew={isDeletedView ? undefined : () => navigate(`/dashboard/faqs/create`)}
-      newButtonLabel={isDeletedView ? undefined : "New FAQ"}
+      subtitle={productIdFilter ? `Manage FAQs for ${productNameFilter || "selected product"}.` : "Manage FAQ records."}
+      onNew={() => navigate(`/dashboard/faqs/create`)}
+      newButtonLabel="New FAQ"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search FAQs..."
@@ -245,35 +209,10 @@ export const FaqsPage: React.FC = () => {
         data={tabFiltered}
         actions={selectedIds.length > 0 ? (
           <div className="flex items-center gap-2">
-            {isDeletedView ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => void recoverMutation.mutateAsync({ ids: selectedIds })}
-                  className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
-                >
-                  <RotateCcw size={12} />
-                  Recover ({selectedIds.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await Promise.all(selectedIds.map((id) => destroyMutation.mutateAsync(id)));
-                  }}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                >
-                  <Trash2 size={12} />
-                  Delete Permanently ({selectedIds.length})
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-xs font-medium text-[#6e6e73]">{selectedIds.length} selected</span>
-                <button type="button" onClick={() => setSelectedIds([])} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]" aria-label="Clear selected faqs">
-                  <X size={12} />
-                </button>
-              </>
-            )}
+            <span className="text-xs font-medium text-[#6e6e73]">{selectedIds.length} selected</span>
+            <button type="button" onClick={() => setSelectedIds([])} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#6e6e73] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]" aria-label="Clear selected faqs">
+              <X size={12} />
+            </button>
           </div>
         ) : undefined}
         searchValue={state.search}

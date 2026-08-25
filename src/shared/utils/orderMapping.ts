@@ -148,24 +148,12 @@ const collectNestedRows = (payload: unknown): ReadonlyArray<ListRecord> => {
   return [];
 };
 
-const normalizeStatus = (value: unknown): string => {
-  const raw = text(value, "PENDING");
-  if (!raw) return "PENDING";
-
-  const lower = raw.toLowerCase();
-  if (lower.includes("complete")) return "DELIVERED";
-  if (lower.includes("deliver")) return "DELIVERED";
-  if (lower.includes("ship")) return "SHIPPED";
-  if (lower.includes("packed") || lower === "pack") return "PACKED";
-  if (lower.includes("ready")) return "READY_FOR_SHIPMENT";
-  if (lower.includes("confirm")) return "PROCESSING";
-  if (lower.includes("process")) return "PROCESSING";
-  if (lower.includes("return")) return "RETURNED";
-  if (lower.includes("cancel")) return "CANCELLED";
-  if (lower.includes("pend")) return "PENDING";
-
-  return raw.toUpperCase().replace(/\s+/g, "_");
-};
+// Backend order.orderStatus is already one of PENDING/PROCESSING/PACKED/
+// READY_FOR_SHIPMENT/SHIPPED/DELIVERED/COMPLETED/CANCELLED — trust it verbatim
+// instead of re-guessing via substring matching (e.g. "ship" also matches
+// inside READY_FOR_SHIPMENT, which used to misclassify it as SHIPPED).
+const normalizeStatus = (value: unknown): string =>
+  text(value, "PENDING").toUpperCase().replace(/\s+/g, "_") || "PENDING";
 
 export const getOrderRows = (payload: unknown): ReadonlyArray<OrderRecord> =>
   collectOrderRows(payload);

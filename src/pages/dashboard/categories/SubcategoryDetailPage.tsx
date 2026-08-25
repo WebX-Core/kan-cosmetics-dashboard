@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, Package, PackagePlus, Plus, RotateCcw, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal } from "lucide-react";
+import { Edit2, Package, PackagePlus, Plus, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal } from "lucide-react";
 import { catalogApi } from "@/features/catalog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -91,7 +91,6 @@ export const SubcategoryDetailPage: React.FC = () => {
   const location = useLocation();
   const toast = useToast();
 
-  const isDeletedView = location.pathname.endsWith("/deleted-products");
   const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
   const returnPath = location.pathname;
 
@@ -99,54 +98,37 @@ export const SubcategoryDetailPage: React.FC = () => {
 
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [pendingAction, setPendingAction] = React.useState<null | "delete" | "recover" | "destroy">(null);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
 
   const subcategoryQuery = catalogApi.subcategories.hooks.useGet(subcategoryId);
   const productsQuery = catalogApi.products.hooks.useList(
     { subcategory: subcategoryId, limit: 100 },
-    !isDeletedView && Boolean(subcategoryId) && publicationView === "published"
+    Boolean(subcategoryId) && publicationView === "published"
   );
   const draftProductsQuery = catalogApi.products.hooks.useDraft(
     { subcategory: subcategoryId, limit: 100 },
-    !isDeletedView && Boolean(subcategoryId) && publicationView === "draft"
+    Boolean(subcategoryId) && publicationView === "draft"
   );
   const archivedProductsQuery = catalogApi.products.hooks.useArchived(
     { subcategory: subcategoryId, limit: 100 },
-    !isDeletedView && Boolean(subcategoryId) && publicationView === "archived"
+    Boolean(subcategoryId) && publicationView === "archived"
   );
-  const inventoryQuery = catalogApi.inventory.hooks.useList(
-    { page: 1, limit: 1000 },
-    !isDeletedView
-  );
-  const publishedVariantsQuery = catalogApi.productVariants.hooks.useList(
-    { page: 1, limit: 1000 },
-    !isDeletedView
-  );
-  const deletedProductsQuery = catalogApi.products.hooks.useDeleted(
-    { page: 1, limit: 1000 },
-    isDeletedView
-  );
+  const inventoryQuery = catalogApi.inventory.hooks.useList({ page: 1, limit: 1000 }, true);
+  const publishedVariantsQuery = catalogApi.productVariants.hooks.useList({ page: 1, limit: 1000 }, true);
 
   const softDeleteProduct = catalogApi.products.hooks.useSoftDelete();
-  const recoverProduct = catalogApi.products.hooks.useRecover();
-  const destroyProduct = catalogApi.products.hooks.useDestroy();
 
   const subcategory = subcategoryQuery.data as Record<string, unknown> | undefined;
   const subcategoryName = toText(subcategory?.title ?? subcategory?.name, "Subcategory");
 
   const sourceRows = React.useMemo(() => {
-    if (!isDeletedView) {
-      const lifecycleData = publicationView === "draft"
-        ? draftProductsQuery.data?.data
-        : publicationView === "archived"
-          ? archivedProductsQuery.data?.data
-          : productsQuery.data?.data;
-      return (lifecycleData ?? []).filter((entry) => getSubcategoryIdFromProduct(entry) === subcategoryId);
-    }
-    const deletedRows = deletedProductsQuery.data?.data ?? [];
-    return deletedRows.filter((entry) => getSubcategoryIdFromProduct(entry) === subcategoryId);
-  }, [archivedProductsQuery.data?.data, deletedProductsQuery.data?.data, draftProductsQuery.data?.data, isDeletedView, productsQuery.data?.data, publicationView, subcategoryId]);
+    const lifecycleData = publicationView === "draft"
+      ? draftProductsQuery.data?.data
+      : publicationView === "archived"
+        ? archivedProductsQuery.data?.data
+        : productsQuery.data?.data;
+    return (lifecycleData ?? []).filter((entry) => getSubcategoryIdFromProduct(entry) === subcategoryId);
+  }, [archivedProductsQuery.data?.data, draftProductsQuery.data?.data, productsQuery.data?.data, publicationView, subcategoryId]);
 
   const rows = React.useMemo(() => sourceRows.map(toProductRow), [sourceRows]);
 
@@ -221,49 +203,29 @@ export const SubcategoryDetailPage: React.FC = () => {
     });
   };
 
-  const openConfirm = (action: "delete" | "recover" | "destroy", ids: ReadonlyArray<string>) => {
+  const openConfirm = (ids: ReadonlyArray<string>) => {
     if (!ids.length) return;
-    setPendingAction(action);
     setPendingIds(ids);
     setConfirmOpen(true);
   };
 
   const handleConfirmAction = async () => {
-    if (!pendingAction || !pendingIds.length) return;
+    if (!pendingIds.length) return;
 
     try {
-      if (pendingAction === "delete") {
-        await Promise.all(pendingIds.map((entry) => softDeleteProduct.mutateAsync(entry)));
-      }
-      if (pendingAction === "recover") {
-        await recoverProduct.mutateAsync({ ids: pendingIds });
-      }
-      if (pendingAction === "destroy") {
-        await Promise.all(pendingIds.map((entry) => destroyProduct.mutateAsync(entry)));
-      }
-
+      await Promise.all(pendingIds.map((entry) => softDeleteProduct.mutateAsync(entry)));
       await productsQuery.refetch();
-      await deletedProductsQuery.refetch();
       setSelectedIds((prev) => prev.filter((entry) => !pendingIds.includes(entry)));
 
       toast.success(
-        pendingAction === "delete"
-          ? pendingIds.length === 1
-            ? "Product deleted."
-            : `${pendingIds.length} products deleted.`
-          : pendingAction === "recover"
-          ? pendingIds.length === 1
-            ? "Product recovered."
-            : `${pendingIds.length} products recovered.`
-          : pendingIds.length === 1
-          ? "Product permanently deleted."
-          : `${pendingIds.length} products permanently deleted.`
+        pendingIds.length === 1
+          ? "Product deleted."
+          : `${pendingIds.length} products deleted.`
       );
     } catch {
       toast.error("Action failed.");
     } finally {
       setConfirmOpen(false);
-      setPendingAction(null);
       setPendingIds([]);
     }
   };
@@ -324,190 +286,152 @@ export const SubcategoryDetailPage: React.FC = () => {
       label: "Created",
       render: (row: ProductRow) => <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>,
     },
-    ...(!isDeletedView
-      ? [
-          {
-            key: "inventory",
-            label: "Inventory",
-            render: (row: ProductRow) => {
-              if (productIdsWithVariants.has(row.id)) {
-                return <span className="text-[#86868b]">—</span>;
-              }
+    {
+      key: "inventory",
+      label: "Inventory",
+      render: (row: ProductRow) => {
+        if (productIdsWithVariants.has(row.id)) {
+          return <span className="text-[#86868b]">—</span>;
+        }
 
-              const existing = productInventoryByProductId.get(row.id);
-              const hasInventory = typeof existing?.id === "string" && existing.id.length > 0;
+        const existing = productInventoryByProductId.get(row.id);
+        const hasInventory = typeof existing?.id === "string" && existing.id.length > 0;
 
-              return (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    navigateProductInventory(row);
-                  }}
-                  className="inline-flex h-[28px] items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
-                >
-                  {!hasInventory ? <PackagePlus size={12} /> : null}
-                  {hasInventory ? "Edit" : "Set"}
-                </button>
-              );
-            },
-          },
-        ]
-      : []),
-    ...(isDeletedView
-      ? [
-          {
-            key: "rowActions",
-            label: "Actions",
-            render: (row: ProductRow) => (
-              <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("recover", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={11} />
-                  Recover
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("destroy", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                >
-                  <Trash2 size={11} />
-                  Delete Permanently
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : [
-          {
-            key: "actions",
-            label: "Actions",
-            render: (row: ProductRow) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 rounded-full"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <MoreHorizontal size={15} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      const identifier = row.identifier || row.id;
-                      if (!identifier) return;
-                      navigate(`/dashboard/products/${encodeURIComponent(identifier)}/edit?returnPath=${encodeURIComponent(returnPath)}`);
-                    }}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/dashboard/products/${row.id}/reviews?name=${encodeURIComponent(row.name)}`);
-                    }}
-                  >
-                    <Star className="mr-2 h-4 w-4" />
-                    Reviews
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/dashboard/product-tags?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`);
-                    }}
-                  >
-                    <Tag className="mr-2 h-4 w-4" />
-                    Edit Tags
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/dashboard/product-attributes?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`);
-                    }}
-                  >
-                    <SlidersHorizontal className="mr-2 h-4 w-4" />
-                    Edit Attributes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/dashboard/products/${row.id}/faqs`);
-                    }}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Manage FAQs
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(
-                        `/dashboard/product-variants?product=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}&returnPath=${encodeURIComponent(returnPath)}`
-                      );
-                    }}
-                  >
-                    <Boxes className="mr-2 h-4 w-4" />
-                    Manage Variants
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-[#b42318] focus:text-[#b42318]"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openConfirm("delete", [row.id]);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ),
-          },
-        ]),
+        return (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              navigateProductInventory(row);
+            }}
+            className="inline-flex h-[28px] items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+          >
+            {!hasInventory ? <PackagePlus size={12} /> : null}
+            {hasInventory ? "Edit" : "Set"}
+          </button>
+        );
+      },
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (row: ProductRow) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                const identifier = row.identifier || row.id;
+                if (!identifier) return;
+                navigate(`/dashboard/products/${encodeURIComponent(identifier)}/edit?returnPath=${encodeURIComponent(returnPath)}`);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(`/dashboard/products/${row.id}/reviews?name=${encodeURIComponent(row.name)}`);
+              }}
+            >
+              <Star className="mr-2 h-4 w-4" />
+              Reviews
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(`/dashboard/product-tags?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`);
+              }}
+            >
+              <Tag className="mr-2 h-4 w-4" />
+              Edit Tags
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(`/dashboard/product-attributes?productId=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}`);
+              }}
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Edit Attributes
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(`/dashboard/products/${row.id}/faqs`);
+              }}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Manage FAQs
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(
+                  `/dashboard/product-variants?product=${encodeURIComponent(row.id)}&productName=${encodeURIComponent(row.name)}&returnPath=${encodeURIComponent(returnPath)}`
+                );
+              }}
+            >
+              <Boxes className="mr-2 h-4 w-4" />
+              Manage Variants
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[#b42318] focus:text-[#b42318]"
+              onClick={(event) => {
+                event.stopPropagation();
+                openConfirm([row.id]);
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
       title={subcategoryName}
-      subtitle={isDeletedView ? "View deleted products in this subcategory." : "Manage products in this subcategory."}
-      onBack={() => navigate(isDeletedView ? `/dashboard/categories/${categoryId}/subcategories/${subcategoryId}` : `/dashboard/categories/${categoryId}`)}
+      subtitle="Manage products in this subcategory."
+      onBack={() => navigate(`/dashboard/categories/${categoryId}`)}
       actions={
         <div className="flex items-center gap-2">
-          {!isDeletedView ? (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  `/dashboard/products/create?categoryId=${encodeURIComponent(categoryId ?? "")}&subcategoryId=${encodeURIComponent(subcategoryId ?? "")}&next=inventory`
-                )
-              }
-              className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
-            >
-              <Plus size={13} strokeWidth={2} />
-              Add Product
-            </button>
-          ) : null}
-          {!isDeletedView ? (
-            <button
-              type="button"
-              onClick={() => navigate(`/dashboard/categories/${categoryId}/subcategories/${subcategoryId}/edit`)}
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              <Edit2 size={13} strokeWidth={2} />
-              Edit Subcategory
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                `/dashboard/products/create?categoryId=${encodeURIComponent(categoryId ?? "")}&subcategoryId=${encodeURIComponent(subcategoryId ?? "")}&next=inventory`
+              )
+            }
+            className="flex h-[34px] items-center gap-[8px] rounded-full bg-[var(--primary)] px-[21px] text-[13px] font-medium text-white transition-colors hover:bg-[var(--primary-hover)]"
+          >
+            <Plus size={13} strokeWidth={2} />
+            Add Product
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/dashboard/categories/${categoryId}/subcategories/${subcategoryId}/edit`)}
+            className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+          >
+            <Edit2 size={13} strokeWidth={2} />
+            Edit Subcategory
+          </button>
         </div>
       }
       searchValue={state.search}
@@ -522,67 +446,36 @@ export const SubcategoryDetailPage: React.FC = () => {
       </div>
 
       <DataTableV2
-        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`${location.pathname}?status=${status}`)} /> : undefined}
+        toolbarLeading={<PublicationTabs value={publicationView} onChange={(status) => navigate(`${location.pathname}?status=${status}`)} />}
         columns={columns}
         data={filteredRows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("recover", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
-                  >
-                    <RotateCcw size={12} />
-                    Recover ({selectedIds.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("destroy", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                  >
-                    <Trash2 size={12} />
-                    Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openConfirm("delete", selectedIds)}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                >
-                  <Trash2 size={12} />
-                  Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => openConfirm(selectedIds)}
+              className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+            >
+              <Trash2 size={12} />
+              Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        onRowClick={
-          !isDeletedView
-            ? (row) => {
-                const identifier = row.identifier || row.id;
-                if (!identifier) return;
-                navigate(
-                  `/dashboard/products/${encodeURIComponent(identifier)}?returnPath=${encodeURIComponent(returnPath)}`
-                );
-              }
-            : undefined
-        }
+        onRowClick={(row) => {
+          const identifier = row.identifier || row.id;
+          if (!identifier) return;
+          navigate(
+            `/dashboard/products/${encodeURIComponent(identifier)}?returnPath=${encodeURIComponent(returnPath)}`
+          );
+        }}
         emptyMessage={
-          (isDeletedView
-            ? deletedProductsQuery.isLoading
-            : publicationView === "draft"
-              ? draftProductsQuery.isLoading
-              : publicationView === "archived"
-                ? archivedProductsQuery.isLoading
-                : productsQuery.isLoading)
+          (publicationView === "draft"
+            ? draftProductsQuery.isLoading
+            : publicationView === "archived"
+              ? archivedProductsQuery.isLoading
+              : productsQuery.isLoading)
             ? "Loading products..."
-            : isDeletedView
-            ? "No deleted products found."
             : "No products found."
         }
         showPagination={false}
@@ -591,48 +484,17 @@ export const SubcategoryDetailPage: React.FC = () => {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? "Recover products?"
-                  : "Recover product?"
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? "Delete products permanently?"
-                  : "Delete product permanently?"
-                : pendingIds.length > 1
-                ? "Delete products?"
-                : "Delete product?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{pendingIds.length > 1 ? "Delete products?" : "Delete product?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? `This will recover ${pendingIds.length} products.`
-                  : "This will recover this product."
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? `This will permanently delete ${pendingIds.length} products. This cannot be undone.`
-                  : "This will permanently delete this product. This cannot be undone."
-                : pendingIds.length > 1
+              {pendingIds.length > 1
                 ? `This permanently deletes ${pendingIds.length} products and cannot be undone.`
                 : "This permanently deletes this product and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                pendingAction === "recover"
-                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
-              }
-              onClick={() => void handleConfirmAction()}
-            >
-              {pendingAction === "recover"
-                ? "Recover"
-                : pendingAction === "destroy"
-                ? "Delete Permanently"
-                : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirmAction()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

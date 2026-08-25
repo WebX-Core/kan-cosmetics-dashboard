@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { ShieldCheck, RotateCcw, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -18,8 +18,6 @@ import {
 import { identityApi } from "@/features/identity";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
-import { useToast } from "@/shared/components/feedback/ToastProvider";
-import { useUserStore } from "@/store/UserStore";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 
@@ -56,31 +54,21 @@ const fmt = (v: string) => {
 
 export const PermissionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const toast = useToast();
-  const isSudoAdmin = useUserStore((state) => state.user?.role === "SUDOADMIN");
-  const isDeletedView = location.pathname.endsWith("/deleted");
 
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const confirm = useConfirmAction();
 
-  const query = identityApi.permissions.hooks.useList(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView,
-  );
-  const deletedQuery = identityApi.permissions.hooks.useDeleted(
-    { page: state.page, limit: state.limit },
-    isDeletedView,
-  );
+  const query = identityApi.permissions.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  });
   const softDelete = identityApi.permissions.hooks.useSoftDelete();
-  const recover = identityApi.permissions.hooks.useRecover();
-  const destroy = identityApi.permissions.hooks.useDestroy();
 
-  const sourceData = isDeletedView ? deletedQuery.data : query.data;
-  const rows = React.useMemo(() => toRows(sourceData), [sourceData]);
-  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
+  const rows = React.useMemo(() => toRows(query.data), [query.data]);
+  const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (query.data as { total?: number } | undefined)?.total ?? rows.length;
 
   const allVisibleIds = React.useMemo(() => rows.map((r) => r.id), [rows]);
   const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
@@ -93,22 +81,12 @@ export const PermissionsPage: React.FC = () => {
     );
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await softDelete.mutateAsync(ids.join(","));
       await query.refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(
-        action === "recover"
-          ? `${ids.length === 1 ? "Permission" : `${ids.length} permissions`} recovered.`
-          : action === "destroy"
-            ? "Permanently deleted."
-            : `${ids.length === 1 ? "Permission" : `${ids.length} permissions`} deleted.`,
-      );
     } finally {
       confirm.dismiss();
     }
@@ -179,105 +157,44 @@ export const PermissionsPage: React.FC = () => {
       label: "Created",
       render: (r: PermRow) => <span className="text-xs text-gray-400">{fmt(r.createdAt)}</span>,
     },
-    ...(isDeletedView
-      ? [
-          {
-            key: "rowActions",
-            label: "Actions",
-            render: (r: PermRow) => (
-              <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => confirm.prompt("recover", [r.id])}
-                  className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={11} /> Recover
-                </button>
-                {isSudoAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => confirm.prompt("destroy", [r.id])}
-                    className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                  >
-                    <Trash2 size={11} /> Delete Permanently
-                  </button>
-                )}
-              </div>
-            ),
-          },
-        ]
-      : []),
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Permissions" : "Permissions"}
-      subtitle={isDeletedView ? "View soft-deleted permissions." : "Manage granular permission keys for RBAC."}
-      onBack={isDeletedView ? () => navigate("/dashboard/rbac/permissions") : undefined}
-      onNew={!isDeletedView ? () => navigate("/dashboard/rbac/permissions/create") : undefined}
+      title="Permissions"
+      subtitle="Manage granular permission keys for RBAC."
+      onNew={() => navigate("/dashboard/rbac/permissions/create")}
       newButtonLabel="New Permission"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search permissions..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCardV2 label="Total" value={stats.total} icon={ShieldCheck} colorVariant="blue" />
-          <StatCardV2 label="Active" value={stats.active} icon={CheckCircle} colorVariant="emerald" />
-          <StatCardV2 label="Inactive" value={stats.inactive} icon={XCircle} colorVariant="amber" />
-          <StatCardV2 label="Modules" value={stats.modules} icon={ShieldCheck} colorVariant="indigo" />
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCardV2 label="Total" value={stats.total} icon={ShieldCheck} colorVariant="blue" />
+        <StatCardV2 label="Active" value={stats.active} icon={CheckCircle} colorVariant="emerald" />
+        <StatCardV2 label="Inactive" value={stats.inactive} icon={XCircle} colorVariant="amber" />
+        <StatCardV2 label="Modules" value={stats.modules} icon={ShieldCheck} colorVariant="indigo" />
+      </div>
 
       <DataTableV2
         columns={columns}
         data={rows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => confirm.prompt("recover", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <RotateCcw size={12} /> Recover ({selectedIds.length})
-                  </button>
-                  {isSudoAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => confirm.prompt("destroy", selectedIds)}
-                      className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-                    >
-                      <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
-                    </button>
-                  )}
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => confirm.prompt("delete", selectedIds)}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={12} /> Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => confirm.prompt("delete", selectedIds)}
+              className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+            >
+              <Trash2 size={12} /> Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        onRowClick={!isDeletedView ? (r) => navigate(`/dashboard/rbac/permissions/${r.id}/edit`) : undefined}
-        onEdit={!isDeletedView ? (r) => navigate(`/dashboard/rbac/permissions/${r.id}/edit`) : undefined}
-        onDelete={!isDeletedView ? (r) => confirm.prompt("delete", [r.id]) : undefined}
-        emptyMessage={
-          (isDeletedView ? deletedQuery.isLoading : query.isLoading)
-            ? "Loading permissions..."
-            : isDeletedView
-              ? "No deleted permissions."
-              : "No permissions found."
-        }
+        onRowClick={(r) => navigate(`/dashboard/rbac/permissions/${r.id}/edit`)}
+        onEdit={(r) => navigate(`/dashboard/rbac/permissions/${r.id}/edit`)}
+        onDelete={(r) => confirm.prompt("delete", [r.id])}
+        emptyMessage={query.isLoading ? "Loading permissions..." : "No permissions found."}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
@@ -287,34 +204,15 @@ export const PermissionsPage: React.FC = () => {
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover"
-                ? "Recover permission?"
-                : confirm.action === "destroy"
-                  ? "Delete permanently?"
-                  : "Delete permission?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm.action === "recover"
-                ? "This will restore the permission."
-                : confirm.action === "destroy"
-                  ? "This cannot be undone."
-                  : "This permanently deletes the permission and cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete permission?</AlertDialogTitle>
+            <AlertDialogDescription>This permanently deletes the permission and cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                confirm.action === "recover"
-                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
-              }
-              onClick={() => void handleConfirm()}
-            >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

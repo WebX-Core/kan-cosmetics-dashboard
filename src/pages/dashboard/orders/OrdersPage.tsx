@@ -5,6 +5,7 @@ import {
   Package,
   Truck,
   CheckCircle,
+  ChevronDown,
   X,
   Plus,
   Printer,
@@ -14,10 +15,10 @@ import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
-import { useOrders } from "@/features/commerce";
+import { useOrders, useUpdateOrderStatus } from "@/features/commerce";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { getOrderRows, normalizeOrderRow } from "@/shared/utils/orderMapping";
-import { formatOrderStatusLabel, orderStatusOptions } from "./orderStore";
+import { orderStatusOptions } from "./orderStore";
 import { formatPaymentStatusLabel, normalizePaymentStatus } from "@/shared/utils/paymentStatus";
 import { billingApi, openBillPrintWindow, printBills, type BillType, type BulkBillPayload } from "@/features/billing";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
@@ -38,6 +39,19 @@ type OrderRow = Readonly<{
   status: string;
 }>;
 
+const statusPillClass: Record<string, string> = {
+  PENDING: "bg-amber-100 text-amber-800",
+  PROCESSING: "bg-sky-100 text-sky-800",
+  PACKED: "bg-violet-100 text-violet-700",
+  READY_FOR_SHIPMENT: "bg-indigo-100 text-indigo-700",
+  SHIPPED: "bg-cyan-100 text-cyan-800",
+  DELIVERED: "bg-emerald-100 text-emerald-700",
+  COMPLETED: "bg-emerald-100 text-emerald-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  RETURNED: "bg-rose-100 text-rose-700",
+};
+const defaultStatusPillClass = "bg-gray-100 text-gray-700";
+
 export const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -47,6 +61,8 @@ export const OrdersPage: React.FC = () => {
   const [previewType, setPreviewType] = React.useState<BillType | null>(null);
   const [preview, setPreview] = React.useState<BulkBillPayload | null>(null);
   const [printedOrderIds, setPrintedOrderIds] = React.useState<ReadonlyArray<string>>([]);
+  const updateStatus = useUpdateOrderStatus();
+  const [statusUpdatingId, setStatusUpdatingId] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>(
     [],
@@ -116,6 +132,15 @@ export const OrdersPage: React.FC = () => {
     }),
     [orders, totalOrders],
   );
+
+  const handleStatusChange = async (orderId: string, orderStatus: string) => {
+    setStatusUpdatingId(orderId);
+    try {
+      await updateStatus.mutateAsync({ id: orderId, payload: { orderStatus } });
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -221,10 +246,24 @@ export const OrdersPage: React.FC = () => {
       key: "status",
       label: "Status",
       render: (row: OrderRow) => (
-        <StatusBadge
-          status={row.status}
-          label={formatOrderStatusLabel(row.status)}
-        />
+        <div className="relative inline-flex" onClick={(e) => e.stopPropagation()}>
+          <select
+            value={row.status}
+            disabled={statusUpdatingId === row.id}
+            onChange={(e) => void handleStatusChange(row.id, e.target.value)}
+            aria-label={`Change status for order ${row.orderNumber}`}
+            className={`cursor-pointer appearance-none rounded-full py-[3px] pl-[8px] pr-[18px] text-[11px] font-medium outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
+              statusPillClass[row.status] ?? defaultStatusPillClass
+            }`}
+          >
+            {orderStatusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {statusUpdatingId === row.id ? "Updating…" : option.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={10} strokeWidth={2.5} className="pointer-events-none absolute right-[5px] top-1/2 -translate-y-1/2" />
+        </div>
       ),
     },
   ];

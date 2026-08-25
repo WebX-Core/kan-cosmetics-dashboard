@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, RotateCcw, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Archive, Trash2 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -17,7 +17,6 @@ import {
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
-import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
@@ -59,29 +58,20 @@ const toBucketRows = (payload: unknown): ReadonlyArray<BucketRow> =>
 
 export const EmailRecipientBucketsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const toast = useToast();
-  const isDeletedView = location.pathname === "/dashboard/marketing/email-recipient-buckets/deleted";
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const confirm = useConfirmAction();
 
-  const query = marketingApi.emailRecipientBuckets.hooks.useList(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView,
-  );
-  const deletedQuery = marketingApi.emailRecipientBuckets.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView,
-  );
+  const query = marketingApi.emailRecipientBuckets.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  });
   const softDelete = marketingApi.emailRecipientBuckets.hooks.useSoftDelete();
-  const recover = marketingApi.emailRecipientBuckets.hooks.useRecover();
-  const destroy = marketingApi.emailRecipientBuckets.hooks.useDestroy();
 
-  const sourceData = isDeletedView ? deletedQuery.data : query.data;
-  const rows = React.useMemo(() => toBucketRows(sourceData), [sourceData]);
-  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
+  const rows = React.useMemo(() => toBucketRows(query.data), [query.data]);
+  const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (query.data as { total?: number } | undefined)?.total ?? rows.length;
 
   const allVisibleIds = React.useMemo(() => rows.map((r) => r.id), [rows]);
   const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
@@ -94,16 +84,12 @@ export const EmailRecipientBucketsPage: React.FC = () => {
     );
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await softDelete.mutateAsync(ids.join(","));
       await query.refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
     } finally {
       confirm.dismiss();
     }
@@ -153,72 +139,37 @@ export const EmailRecipientBucketsPage: React.FC = () => {
       label: "Created",
       render: (r: BucketRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span>,
     },
-    ...(isDeletedView
-      ? [
-          {
-            key: "rowActions",
-            label: "Actions",
-            render: (r: BucketRow) => (
-              <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                  <RotateCcw size={11} /> Recover
-                </button>
-                <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                  <Trash2 size={11} /> Delete Permanently
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : []),
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Buckets" : "Recipient Buckets"}
-      subtitle={isDeletedView ? "View soft-deleted recipient buckets." : "Audience buckets for targeted email campaigns."}
-      onBack={isDeletedView ? () => navigate("/dashboard/marketing/email-recipient-buckets") : undefined}
-      onNew={!isDeletedView ? () => navigate("/dashboard/marketing/email-recipient-buckets/create") : undefined}
+      title="Recipient Buckets"
+      subtitle="Audience buckets for targeted email campaigns."
+      onNew={() => navigate("/dashboard/marketing/email-recipient-buckets/create")}
       newButtonLabel="New Bucket"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search buckets..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <StatCardV2 label="Total Buckets" value={total} icon={Archive} colorVariant="blue" />
-          <StatCardV2 label="On This Page" value={rows.length} icon={Archive} colorVariant="indigo" />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCardV2 label="Total Buckets" value={total} icon={Archive} colorVariant="blue" />
+        <StatCardV2 label="On This Page" value={rows.length} icon={Archive} colorVariant="indigo" />
+      </div>
 
       <DataTableV2
         columns={columns}
         data={rows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
-                    <RotateCcw size={12} /> Recover ({selectedIds.length})
-                  </button>
-                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                  <Trash2 size={12} /> Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+              <Trash2 size={12} /> Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        onEdit={!isDeletedView ? (r) => navigate(`/dashboard/marketing/email-recipient-buckets/${r.id}/edit`) : undefined}
-        onDelete={!isDeletedView ? (r) => confirm.prompt("delete", [r.id]) : undefined}
-        emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading buckets..." : "No recipient buckets found."}
+        onEdit={(r) => navigate(`/dashboard/marketing/email-recipient-buckets/${r.id}/edit`)}
+        onDelete={(r) => confirm.prompt("delete", [r.id])}
+        emptyMessage={query.isLoading ? "Loading buckets..." : "No recipient buckets found."}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
@@ -228,20 +179,13 @@ export const EmailRecipientBucketsPage: React.FC = () => {
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover bucket?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete bucket?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the bucket." : "This permanently deletes the bucket and cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete bucket?</AlertDialogTitle>
+            <AlertDialogDescription>This will delete the selected bucket(s).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
-              onClick={() => void handleConfirm()}
-            >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

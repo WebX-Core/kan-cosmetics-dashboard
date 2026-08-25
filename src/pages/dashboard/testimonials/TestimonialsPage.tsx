@@ -1,7 +1,7 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Star, CheckCircle, Clock, BarChart2, Trash2, RotateCcw, MoreHorizontal, Globe, Pencil } from "lucide-react";
+import { Star, CheckCircle, Clock, BarChart2, Trash2, MoreHorizontal, Globe, Pencil } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -71,14 +71,9 @@ const Stars: React.FC<{ rating: number }> = ({ rating }) => (
   </div>
 );
 
-const LIVE_PATH = "/dashboard/testimonials";
-const DELETED_PATH = "/dashboard/testimonials/deleted";
-
 export const TestimonialsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const toast = useToast();
-  const isDeletedView = location.pathname === DELETED_PATH;
 
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
@@ -89,7 +84,6 @@ export const TestimonialsPage: React.FC = () => {
   const liveQuery = useQuery({
     queryKey: ["testimonials", "site", state.page, state.limit, debouncedSearch],
     queryFn: () => engagementApi.reviews.site({ page: state.page, limit: state.limit, search: debouncedSearch || undefined }),
-    enabled: !isDeletedView,
   });
 
   const publishToggle = useMutation({
@@ -101,18 +95,11 @@ export const TestimonialsPage: React.FC = () => {
     },
     onError: (e) => toast.error(parseApiError(e).message),
   });
-  const deletedQuery = engagementApi.reviews.crud.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView,
-  );
   const softDelete = engagementApi.reviews.crud.hooks.useSoftDelete();
-  const recover = engagementApi.reviews.crud.hooks.useRecover();
-  const destroy = engagementApi.reviews.crud.hooks.useDestroy();
 
-  const sourceData = isDeletedView ? deletedQuery.data : liveQuery.data;
-  const rows = React.useMemo(() => mapRows(sourceData), [sourceData]);
-  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
+  const rows = React.useMemo(() => mapRows(liveQuery.data), [liveQuery.data]);
+  const totalPages = (liveQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (liveQuery.data as { total?: number } | undefined)?.total ?? rows.length;
 
   const visibleIds = React.useMemo(() => rows.map((r) => r.id), [rows]);
   const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
@@ -129,16 +116,13 @@ export const TestimonialsPage: React.FC = () => {
   }), [rows, total]);
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await softDelete.mutateAsync(ids.join(","));
       await liveQuery.refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
+      toast.success("Deleted.");
     } catch (error) {
       toast.error(parseApiError(error).message);
     } finally {
@@ -146,7 +130,7 @@ export const TestimonialsPage: React.FC = () => {
     }
   };
 
-  const isLoading = isDeletedView ? deletedQuery.isLoading : liveQuery.isLoading;
+  const isLoading = liveQuery.isLoading;
 
   const columns = [
     {
@@ -204,38 +188,27 @@ export const TestimonialsPage: React.FC = () => {
       key: "actions", label: "",
       render: (r: Row) => (
         <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-          {isDeletedView ? (
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                <RotateCcw size={11} /> Recover
-              </button>
-              <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                <Trash2 size={11} /> Delete Permanently
-              </button>
-            </div>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                  <MoreHorizontal size={15} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/dashboard/testimonials/${r.id}/edit`)}>
-                  <Pencil className="mr-2 h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/dashboard/seo-metadata/create?entityType=REVIEW&entityId=${encodeURIComponent(r.id)}`)}>
-                  <Globe className="mr-2 h-4 w-4" /> SEO
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirm.prompt("delete", [r.id])}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <MoreHorizontal size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/testimonials/${r.id}/edit`)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/seo-metadata/create?entityType=REVIEW&entityId=${encodeURIComponent(r.id)}`)}>
+                <Globe className="mr-2 h-4 w-4" /> SEO
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirm.prompt("delete", [r.id])}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -243,46 +216,29 @@ export const TestimonialsPage: React.FC = () => {
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Testimonials" : "Testimonials"}
-      subtitle={isDeletedView ? "Deleted testimonial records." : "Site-wide customer testimonials."}
-      onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
-      onNew={!isDeletedView ? () => navigate("/dashboard/testimonials/create") : undefined}
+      title="Testimonials"
+      subtitle="Site-wide customer testimonials."
+      onNew={() => navigate("/dashboard/testimonials/create")}
       newButtonLabel="New Testimonial"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search testimonials..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label="Total" value={stats.total} icon={Star} colorVariant="blue" />
-          <StatCardV2 label="Published" value={stats.published} icon={CheckCircle} colorVariant="emerald" />
-          <StatCardV2 label="Unpublished" value={stats.unpublished} icon={Clock} colorVariant="amber" />
-          <StatCardV2 label="Avg Rating" value={stats.avg} icon={BarChart2} colorVariant="blue" />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCardV2 label="Total" value={stats.total} icon={Star} colorVariant="blue" />
+        <StatCardV2 label="Published" value={stats.published} icon={CheckCircle} colorVariant="emerald" />
+        <StatCardV2 label="Unpublished" value={stats.unpublished} icon={Clock} colorVariant="amber" />
+        <StatCardV2 label="Avg Rating" value={stats.avg} icon={BarChart2} colorVariant="blue" />
+      </div>
 
       <DataTableV2
         columns={columns}
         data={rows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
-                    <RotateCcw size={12} /> Recover ({selectedIds.length})
-                  </button>
-                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                  <Trash2 size={12} /> Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+              <Trash2 size={12} /> Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
@@ -296,20 +252,13 @@ export const TestimonialsPage: React.FC = () => {
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover testimonial?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete testimonial?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the selected testimonial." : "This permanently deletes the testimonial and cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete testimonial?</AlertDialogTitle>
+            <AlertDialogDescription>This will delete the selected testimonial(s).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
-              onClick={() => void handleConfirm()}
-            >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

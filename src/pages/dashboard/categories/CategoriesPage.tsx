@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, FilePenLine, FolderTree, Tag, Layers, RotateCcw, Trash2, MoreHorizontal, Pencil, Globe } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Archive, FilePenLine, FolderTree, Tag, Layers, Trash2, MoreHorizontal, Pencil, Globe } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
@@ -98,33 +98,25 @@ export const CategoriesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const isDeletedView = location.pathname === "/dashboard/categories/deleted";
   const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [pendingAction, setPendingAction] = React.useState<null | "delete" | "recover" | "destroy">(null);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
 
   const categoriesQuery = useCategoryList(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView && publicationView === "published"
+    publicationView === "published"
   );
   const draftCategoriesQuery = catalogApi.categories.hooks.useDraft(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView && publicationView === "draft"
+    publicationView === "draft"
   );
   const archivedCategoriesQuery = catalogApi.categories.hooks.useArchived(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView && publicationView === "archived"
-  );
-  const deletedCategoriesQuery = catalogApi.categories.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView
+    publicationView === "archived"
   );
   const softDeleteCategory = catalogApi.categories.hooks.useSoftDelete();
-  const recoverCategory = catalogApi.categories.hooks.useRecover();
-  const destroyCategory = catalogApi.categories.hooks.useDestroy();
   const updateCategory = catalogApi.categories.hooks.useUpdate();
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList({ page: 1, limit: 1000 }, true);
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
@@ -152,13 +144,13 @@ export const CategoriesPage: React.FC = () => {
   }, [productsQuery.data?.data]);
 
   const lifecycleQuery = publicationView === "draft" ? draftCategoriesQuery : publicationView === "archived" ? archivedCategoriesQuery : categoriesQuery;
-  const sourceRows = isDeletedView ? deletedCategoriesQuery.data?.data : lifecycleQuery.data?.data;
+  const sourceRows = lifecycleQuery.data?.data;
   const rows = React.useMemo(
     () => (sourceRows ?? []).map((row) => toCategoryRow(row, subcategoryCountMap, productCountMap)),
     [sourceRows, subcategoryCountMap, productCountMap]
   );
-  const totalPages = (isDeletedView ? deletedCategoriesQuery.data?.totalPages : lifecycleQuery.data?.totalPages) ?? 1;
-  const totalCategories = (isDeletedView ? deletedCategoriesQuery.data?.total : lifecycleQuery.data?.total) ?? rows.length;
+  const totalPages = lifecycleQuery.data?.totalPages ?? 1;
+  const totalCategories = lifecycleQuery.data?.total ?? rows.length;
 
   const stats = React.useMemo(() => ({
     total: totalCategories,
@@ -188,46 +180,20 @@ export const CategoriesPage: React.FC = () => {
     });
   };
 
-  const openConfirm = (
-    action: "delete" | "recover" | "destroy",
-    ids: ReadonlyArray<string>
-  ) => {
+  const openConfirm = (ids: ReadonlyArray<string>) => {
     if (!ids.length) return;
-    setPendingAction(action);
     setPendingIds(ids);
     setConfirmOpen(true);
   };
 
   const handleConfirmAction = async () => {
-    if (!pendingAction || !pendingIds.length) return;
-    if (pendingAction === "delete") {
-      await softDeleteCategory.mutateAsync(pendingIds.join(","));
-    }
-    if (pendingAction === "recover") {
-      await recoverCategory.mutateAsync({ ids: pendingIds });
-    }
-    if (pendingAction === "destroy") {
-      await destroyCategory.mutateAsync(pendingIds.join(","));
-    }
+    if (!pendingIds.length) return;
+    await softDeleteCategory.mutateAsync(pendingIds.join(","));
     await categoriesQuery.refetch();
-    await deletedCategoriesQuery.refetch();
     setSelectedIds((prev) => prev.filter((id) => !pendingIds.includes(id)));
     const count = pendingIds.length;
-    toast.success(
-      pendingAction === "delete"
-        ? count === 1
-          ? "Category deleted."
-          : `${count} categories deleted.`
-        : pendingAction === "recover"
-        ? count === 1
-          ? "Category recovered."
-          : `${count} categories recovered.`
-        : count === 1
-        ? "Category permanently deleted."
-        : `${count} categories permanently deleted.`
-    );
+    toast.success(count === 1 ? "Category deleted." : `${count} categories deleted.`);
     setConfirmOpen(false);
-    setPendingAction(null);
     setPendingIds([]);
   };
 
@@ -291,130 +257,72 @@ export const CategoriesPage: React.FC = () => {
       key: "rowActions",
       label: "Actions",
       render: (row: CategoryRow) => (
-        isDeletedView ? (
-          <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => openConfirm("recover", [row.id])}
-              className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full">
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/categories/${row.id}/edit`); }}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=CATEGORY&entityId=${encodeURIComponent(row.id)}&slug=${encodeURIComponent(row.slug)}`); }}>
+              <Globe className="mr-2 h-4 w-4" /> SEO
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
+            {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
+            {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[#b42318] focus:text-[#b42318]"
+              onClick={(e) => { e.stopPropagation(); openConfirm([row.id]); }}
             >
-              <RotateCcw size={11} />
-              Recover
-            </button>
-            <button
-              type="button"
-              onClick={() => openConfirm("destroy", [row.id])}
-              className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-            >
-              <Trash2 size={11} />
-              Delete Permanently
-            </button>
-          </div>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full">
-                <MoreHorizontal size={15} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/categories/${row.id}/edit`); }}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=CATEGORY&entityId=${encodeURIComponent(row.id)}&slug=${encodeURIComponent(row.slug)}`); }}>
-                <Globe className="mr-2 h-4 w-4" /> SEO
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
-              {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
-              {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(e) => { e.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-[#b42318] focus:text-[#b42318]"
-                onClick={(e) => { e.stopPropagation(); openConfirm("delete", [row.id]); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Categories" : "Categories"}
-      subtitle={
-        isDeletedView
-          ? "View soft-deleted categories."
-          : "Manage product categories and catalog structure."
-      }
-      onBack={isDeletedView ? () => navigate("/dashboard/categories") : undefined}
-      onNew={!isDeletedView ? () => navigate("/dashboard/categories/create") : undefined}
+      title="Categories"
+      subtitle="Manage product categories and catalog structure."
+      onNew={() => navigate("/dashboard/categories/create")}
       newButtonLabel="New Category"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search categories..."
     >
-      {!isDeletedView ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Categories`} value={stats.total} icon={FolderTree} colorVariant="blue" />
-          <StatCardV2 label="Published on this page" value={stats.active} icon={Tag} colorVariant="emerald" />
-          <StatCardV2 label="Subcategories" value={stats.totalSubcategories} icon={Layers} colorVariant="blue" />
-          <StatCardV2 label="Total Products" value={stats.totalProducts} icon={Tag} colorVariant="cyan" />
-        </div>
-      ) : null}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Categories`} value={stats.total} icon={FolderTree} colorVariant="blue" />
+        <StatCardV2 label="Published on this page" value={stats.active} icon={Tag} colorVariant="emerald" />
+        <StatCardV2 label="Subcategories" value={stats.totalSubcategories} icon={Layers} colorVariant="blue" />
+        <StatCardV2 label="Total Products" value={stats.totalProducts} icon={Tag} colorVariant="cyan" />
+      </div>
       <DataTableV2
-        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/categories?status=${status}`)} /> : undefined}
+        toolbarLeading={<PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/categories?status=${status}`)} />}
         columns={columns}
         data={rows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("recover", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
-                  >
-                    <RotateCcw size={12} />
-                    Recover ({selectedIds.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("destroy", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                  >
-                    <Trash2 size={12} />
-                    Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openConfirm("delete", selectedIds)}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                >
-                  <Trash2 size={12} />
-                  Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => openConfirm(selectedIds)}
+              className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+            >
+              <Trash2 size={12} />
+              Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/categories/${row.id}`) : undefined}
-        emptyMessage={
-          (isDeletedView ? deletedCategoriesQuery.isLoading : lifecycleQuery.isLoading)
-            ? "Loading categories..."
-            : isDeletedView
-            ? "No deleted categories found."
-            : "No categories found."
-        }
+        onRowClick={(row) => navigate(`/dashboard/categories/${row.id}`)}
+        emptyMessage={lifecycleQuery.isLoading ? "Loading categories..." : "No categories found."}
         showPagination={true}
         currentPage={state.page}
         totalPages={totalPages}
@@ -424,44 +332,17 @@ export const CategoriesPage: React.FC = () => {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? "Recover categories?"
-                  : "Recover category?"
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? "Delete categories permanently?"
-                  : "Delete category permanently?"
-                : pendingIds.length > 1
-                ? "Delete categories?"
-                : "Delete category?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{pendingIds.length > 1 ? "Delete categories?" : "Delete category?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? `This will recover ${pendingIds.length} categories.`
-                  : "This will recover this category."
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? `This will permanently delete ${pendingIds.length} categories. This cannot be undone.`
-                  : "This will permanently delete this category. This cannot be undone."
-                : pendingIds.length > 1
+              {pendingIds.length > 1
                 ? `This permanently deletes ${pendingIds.length} categories and cannot be undone.`
                 : "This permanently deletes this category and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                pendingAction === "recover"
-                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
-              }
-              onClick={() => void handleConfirmAction()}
-            >
-              {pendingAction === "recover" ? "Recover" : pendingAction === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirmAction()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

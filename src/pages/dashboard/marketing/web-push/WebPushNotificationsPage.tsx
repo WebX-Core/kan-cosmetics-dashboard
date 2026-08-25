@@ -1,6 +1,6 @@
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, BellRing, Clock, RotateCcw, Trash2, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bell, BellRing, Clock, Trash2, Send } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -18,7 +18,6 @@ import {
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useConfirmAction } from "@/shared/hooks/useConfirmAction";
-import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { formatDateTime, notificationTargetLabel, readString } from "./webPushNotification.utils";
 
 const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
@@ -68,30 +67,21 @@ const normalizeStatus = (status: string): string => {
 
 export const WebPushNotificationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const toast = useToast();
-  const isDeletedView = location.pathname === "/dashboard/marketing/web-push/notifications/deleted";
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const confirm = useConfirmAction();
 
-  const query = marketingApi.webPushNotifications.hooks.useList(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView,
-  );
-  const deletedQuery = marketingApi.webPushNotifications.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView,
-  );
+  const query = marketingApi.webPushNotifications.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  });
   const softDelete = marketingApi.webPushNotifications.hooks.useSoftDelete();
-  const recover = marketingApi.webPushNotifications.hooks.useRecover();
-  const destroy = marketingApi.webPushNotifications.hooks.useDestroy();
 
-  const sourceData = isDeletedView ? deletedQuery.data : query.data;
-  const rows = React.useMemo(() => toNotificationRows(sourceData), [sourceData]);
-  const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
+  const rows = React.useMemo(() => toNotificationRows(query.data), [query.data]);
+  const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total = (query.data as { total?: number } | undefined)?.total ?? rows.length;
 
   const filtered = React.useMemo(
     () => (activeTab === "all" ? rows : rows.filter((r) => normalizeStatus(r.status) === activeTab)),
@@ -110,17 +100,13 @@ export const WebPushNotificationsPage: React.FC = () => {
     );
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
 
     try {
-      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await softDelete.mutateAsync(ids.join(","));
       await query.refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
     } finally {
       confirm.dismiss();
     }
@@ -164,46 +150,50 @@ export const WebPushNotificationsPage: React.FC = () => {
       key: "title",
       label: "Notification",
       render: (r: NotificationRow) => (
-        <div>
-          <div className="font-medium text-[#1d1d1f]">{r.title}</div>
-          <div className="line-clamp-1 text-xs text-[#6e6e73]">{r.body}</div>
+        <div className="max-w-[240px]">
+          <div className="truncate font-medium text-[#1d1d1f]">{r.title}</div>
+          <div className="truncate text-xs text-[#6e6e73]">{r.body}</div>
         </div>
       ),
     },
     {
       key: "target",
       label: "Target",
-      render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{r.target}</span>,
+      width: "140px",
+      render: (r: NotificationRow) => <span className="block max-w-[140px] truncate text-xs text-[#6e6e73]" title={r.target}>{r.target}</span>,
     },
-    { key: "status", label: "Status", render: (r: NotificationRow) => <StatusBadge status={r.status} /> },
-    { key: "sentAt", label: "Sent At", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{formatDateTime(r.sentAt || r.deliveredAt)}</span> },
-    { key: "scheduledAt", label: "Scheduled", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{formatDateTime(r.scheduledAt)}</span> },
-    { key: "createdAt", label: "Created", render: (r: NotificationRow) => <span className="text-xs text-[#6e6e73]">{formatDateTime(r.createdAt)}</span> },
+    { key: "status", label: "Status", width: "100px", render: (r: NotificationRow) => <StatusBadge status={r.status} /> },
+    {
+      key: "when",
+      label: "When",
+      width: "140px",
+      render: (r: NotificationRow) => (
+        <span className="text-xs text-[#6e6e73]">
+          {formatDateTime(r.sentAt || r.deliveredAt || r.scheduledAt || r.createdAt)}
+        </span>
+      ),
+    },
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Notifications" : "Web Push Notifications"}
-      subtitle={isDeletedView ? "View soft-deleted push notifications." : "Compose and manage browser push notifications for customers."}
-      onBack={isDeletedView ? () => navigate("/dashboard/marketing/web-push/notifications") : undefined}
-      onNew={!isDeletedView ? () => navigate("/dashboard/marketing/web-push/notifications/create") : undefined}
+      title="Web Push Notifications"
+      subtitle="Compose and manage browser push notifications for customers."
+      onNew={() => navigate("/dashboard/marketing/web-push/notifications/create")}
       newButtonLabel="New Notification"
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search notifications..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label="Total" value={stats.total} icon={Bell} colorVariant="blue" />
-          <StatCardV2 label="Queued" value={stats.queued} icon={Send} colorVariant="amber" />
-          <StatCardV2 label="Delivered" value={stats.delivered} icon={BellRing} colorVariant="emerald" />
-          <StatCardV2 label="Partial / Failed" value={stats.partial + stats.failed} icon={Clock} colorVariant="gray" />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCardV2 label="Total" value={stats.total} icon={Bell} colorVariant="blue" />
+        <StatCardV2 label="Queued" value={stats.queued} icon={Send} colorVariant="amber" />
+        <StatCardV2 label="Delivered" value={stats.delivered} icon={BellRing} colorVariant="emerald" />
+        <StatCardV2 label="Partial / Failed" value={stats.partial + stats.failed} icon={Clock} colorVariant="gray" />
+      </div>
 
       <DataTableV2
-        tabs={!isDeletedView ? tabs : undefined}
+        tabs={tabs}
         activeTab={activeTab}
         onTabChange={(t) => {
           setActiveTab(t);
@@ -213,44 +203,21 @@ export const WebPushNotificationsPage: React.FC = () => {
         data={filtered}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => confirm.prompt("recover", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <RotateCcw size={12} />
-                    Recover ({selectedIds.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => confirm.prompt("destroy", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-                  >
-                    <Trash2 size={12} />
-                    Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => confirm.prompt("delete", selectedIds)}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={12} />
-                  Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => confirm.prompt("delete", selectedIds)}
+              className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+            >
+              <Trash2 size={12} />
+              Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/marketing/web-push/notifications/${row.id}`) : undefined}
-        onEdit={!isDeletedView ? (r) => navigate(`/dashboard/marketing/web-push/notifications/${r.id}/edit`) : undefined}
-        onDelete={!isDeletedView ? (r) => confirm.prompt("delete", [r.id]) : undefined}
-        emptyMessage={(isDeletedView ? deletedQuery.isLoading : query.isLoading) ? "Loading notifications..." : "No notifications found."}
+        onRowClick={(row) => navigate(`/dashboard/marketing/web-push/notifications/${row.id}`)}
+        onEdit={(r) => navigate(`/dashboard/marketing/web-push/notifications/${r.id}/edit`)}
+        onDelete={(r) => confirm.prompt("delete", [r.id])}
+        emptyMessage={query.isLoading ? "Loading notifications..." : "No notifications found."}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
@@ -260,22 +227,15 @@ export const WebPushNotificationsPage: React.FC = () => {
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover notification?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete notification?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the notification." : "This permanently deletes the notification and cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete notification?</AlertDialogTitle>
+            <AlertDialogDescription>This will delete the selected notification(s).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
-              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
-              onClick={() => void handleConfirm()}
-            >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

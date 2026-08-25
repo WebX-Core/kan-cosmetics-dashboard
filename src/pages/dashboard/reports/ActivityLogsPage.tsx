@@ -16,6 +16,8 @@ import {
   toText,
   uniqueTextCount,
 } from "@/features/telemetry/telemetry.utils";
+import { ActivityLogDetailModal } from "./ActivityLogDetailModal";
+import type { ActivityRow } from "./activityLogs.types";
 
 type AnalyticsTabKey = "activity" | "visitors" | "funnel" | "discard";
 
@@ -35,6 +37,47 @@ const toAnalyticsRows = (payload: unknown, prefix: string): ReadonlyArray<Analyt
     ...row,
     __rowId: toText(row.id ?? row._id, `${prefix}-${index}`),
   }));
+
+const record = (value: unknown): Record<string, unknown> =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+
+const formatActivityType = (value: string): string =>
+  value.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Activity";
+
+const formatActivityTimestamp = (value: unknown): string => {
+  const date = new Date(toText(value));
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+};
+
+const toActivityRow = (row: AnalyticsRow): ActivityRow => {
+  const user = record(row.user);
+  const customer = record(row.customer);
+  const person = record(user).firstname || record(user).lastname ? user : customer;
+  const firstname = toText(person.firstname);
+  const lastname = toText(person.lastname);
+  const fullName = [firstname, lastname].filter(Boolean).join(" ");
+  const email = toText(person.email);
+  const who = fullName || email || toText(row.sessionId) || "Anonymous";
+
+  const entityType = toText(row.entityType);
+  const entityId = toText(row.entityId);
+  const entityLabel = entityType
+    ? `${formatActivityType(entityType)}${entityId ? ` #${entityId.slice(0, 8)}` : ""}`
+    : "—";
+
+  return {
+    id: toText(row.id, row.__rowId),
+    who,
+    activityLabel: formatActivityType(toText(row.activityType, "activity")),
+    entityLabel,
+    path: toText(row.path, "—"),
+    method: toText(row.method, "—"),
+    referrer: toText(row.referrer, "—"),
+    sessionId: toText(row.sessionId, "—"),
+    occurredAtLabel: formatActivityTimestamp(row.occurredAt ?? row.createdAt),
+    metadata: row.metadata,
+  };
+};
 
 const buildColumns = (
   rows: ReadonlyArray<AnalyticsRow>,
@@ -104,6 +147,7 @@ const summarizeByField = (
 
 export const ActivityLogsPage: React.FC = () => {
   const [search, setSearch] = React.useState("");
+  const [selectedActivity, setSelectedActivity] = React.useState<ActivityRow | null>(null);
   const [activeTab, setActiveTab] = React.useState<AnalyticsTabKey>("activity");
   const handleTabChange = React.useCallback((tab: string) => {
     if (
@@ -116,10 +160,18 @@ export const ActivityLogsPage: React.FC = () => {
     }
   }, []);
 
-  const activityQuery = useUserActivityList();
+  const [activityPage, setActivityPage] = React.useState(1);
+  const [visitorPage, setVisitorPage] = React.useState(1);
+  const [discardPage, setDiscardPage] = React.useState(1);
+  const VISITOR_PAGE_SIZE = 20;
+
+  const activityQuery = useUserActivityList({ page: activityPage, limit: 20 });
   const visitorQuery = useUserMetadataList({ page: 1, limit: 200 });
   const funnelQuery = useUserActivityFunnel();
-  const discardQuery = useUserActivityDiscardAnalytics();
+  const discardQuery = useUserActivityDiscardAnalytics({ page: discardPage, limit: 20 });
+
+  const activityTotalPages = (activityQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const discardTotalPages = (discardQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
 
   const activityRows = React.useMemo(
     () => toAnalyticsRows(activityQuery.data, "activity"),
@@ -128,6 +180,11 @@ export const ActivityLogsPage: React.FC = () => {
   const visitorRows = React.useMemo(
     () => toAnalyticsRows(visitorQuery.data, "visitor"),
     [visitorQuery.data],
+  );
+  const visitorTotalPages = Math.max(1, Math.ceil(visitorRows.length / VISITOR_PAGE_SIZE));
+  const visitorPageRows = React.useMemo(
+    () => visitorRows.slice((visitorPage - 1) * VISITOR_PAGE_SIZE, visitorPage * VISITOR_PAGE_SIZE),
+    [visitorRows, visitorPage],
   );
   const funnelRows = React.useMemo(
     () => toAnalyticsRows(funnelQuery.data, "funnel"),
@@ -146,7 +203,7 @@ export const ActivityLogsPage: React.FC = () => {
     () => uniqueTextCount(visitorRows, ["country", "region", "city"]),
     [visitorRows],
   );
-  const filteredActivity = React.useMemo(
+  const filteredActivityRaw = React.useMemo(
     () =>
       filterRows(activityRows, search, [
         "userId",
@@ -163,6 +220,10 @@ export const ActivityLogsPage: React.FC = () => {
       ]),
     [activityRows, search],
   );
+  const filteredActivity = React.useMemo(
+    () => filteredActivityRaw.map(toActivityRow),
+    [filteredActivityRaw],
+  );
 
   const activityLocations = React.useMemo(
     () => summarizeByField(visitorRows, ["country", "region", "city"]),
@@ -170,20 +231,14 @@ export const ActivityLogsPage: React.FC = () => {
   );
 
   const activityColumns = React.useMemo(
-    () =>
-      buildColumns(filteredActivity, [
-        "activityType",
-        "entityType",
-        "entityId",
-        "userId",
-        "customerId",
-        "sessionId",
-        "path",
-        "method",
-        "referrer",
-        "occurredAt",
-      ]),
-    [filteredActivity],
+    () => [
+      { key: "who", label: "Who", render: (r: ActivityRow) => <span className="font-medium text-gray-900">{r.who}</span> },
+      { key: "activity", label: "Activity", render: (r: ActivityRow) => <span className="text-gray-700">{r.activityLabel}</span> },
+      { key: "entity", label: "On", render: (r: ActivityRow) => <span className="text-gray-600">{r.entityLabel}</span> },
+      { key: "path", label: "Page", render: (r: ActivityRow) => <span className="text-xs text-gray-500">{r.path}</span> },
+      { key: "occurredAt", label: "When", render: (r: ActivityRow) => <span className="text-xs text-gray-400">{r.occurredAtLabel}</span> },
+    ],
+    [],
   );
   const visitorColumns = React.useMemo(
     () =>
@@ -283,6 +338,7 @@ export const ActivityLogsPage: React.FC = () => {
           onTabChange={handleTabChange}
           columns={activityColumns}
           data={filteredActivity}
+          onRowClick={setSelectedActivity}
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search activity..."
@@ -291,8 +347,11 @@ export const ActivityLogsPage: React.FC = () => {
               ? "Loading activity..."
               : "No activity logs found."
           }
-          showPagination={false}
-          rowId={(row) => row.__rowId}
+          showPagination
+          currentPage={activityPage}
+          totalPages={activityTotalPages}
+          onPageChange={setActivityPage}
+          rowId={(row) => row.id}
         />
       )}
 
@@ -362,13 +421,16 @@ export const ActivityLogsPage: React.FC = () => {
             activeTab={activeTab}
             onTabChange={handleTabChange}
             columns={visitorColumns}
-            data={visitorRows}
+            data={visitorPageRows}
             emptyMessage={
               visitorQuery.isLoading
                 ? "Loading visitor metadata..."
                 : "No visitor metadata available."
             }
-            showPagination={false}
+            showPagination
+            currentPage={visitorPage}
+            totalPages={visitorTotalPages}
+            onPageChange={setVisitorPage}
             rowId={(row) => row.__rowId}
           />
         </div>
@@ -403,9 +465,15 @@ export const ActivityLogsPage: React.FC = () => {
               ? "Loading discard analytics..."
               : "No discard analytics available."
           }
-          showPagination={false}
+          showPagination
+          currentPage={discardPage}
+          totalPages={discardTotalPages}
+          onPageChange={setDiscardPage}
           rowId={(row) => row.__rowId}
         />
+      )}
+      {selectedActivity && (
+        <ActivityLogDetailModal row={selectedActivity} onClose={() => setSelectedActivity(null)} />
       )}
     </PageLayout>
   );

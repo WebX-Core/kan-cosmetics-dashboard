@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, FilePenLine, FolderTree, Globe2, Layers, MoreHorizontal, Pencil, RotateCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Archive, FilePenLine, FolderTree, Globe2, Layers, MoreHorizontal, Pencil, ShoppingBag, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
@@ -96,12 +96,10 @@ export const SubcategoriesPage: React.FC = () => {
   const location = useLocation();
   const toast = useToast();
 
-  const isDeletedView = location.pathname === "/dashboard/subcategories/deleted";
   const publicationView = (new URLSearchParams(location.search).get("status") ?? "published") as PublicationView;
 
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [pendingAction, setPendingAction] = React.useState<null | "delete" | "recover" | "destroy">(null);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
 
   const { state, setState, debouncedSearch } = useListQueryState({
@@ -112,24 +110,18 @@ export const SubcategoriesPage: React.FC = () => {
 
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView && publicationView === "published"
+    publicationView === "published"
   );
   const draftSubcategoriesQuery = catalogApi.subcategories.hooks.useDraft(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView && publicationView === "draft"
+    publicationView === "draft"
   );
   const archivedSubcategoriesQuery = catalogApi.subcategories.hooks.useArchived(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView && publicationView === "archived"
-  );
-  const deletedSubcategoriesQuery = catalogApi.subcategories.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView
+    publicationView === "archived"
   );
 
   const softDeleteSubcategory = catalogApi.subcategories.hooks.useSoftDelete();
-  const recoverSubcategory = catalogApi.subcategories.hooks.useRecover();
-  const destroySubcategory = catalogApi.subcategories.hooks.useDestroy();
   const updateSubcategory = catalogApi.subcategories.hooks.useUpdate();
 
   const productsQuery = catalogApi.products.hooks.useList({ page: 1, limit: 1000 }, true);
@@ -146,20 +138,15 @@ export const SubcategoriesPage: React.FC = () => {
   }, [productsQuery.data?.data]);
 
   const lifecycleQuery = publicationView === "draft" ? draftSubcategoriesQuery : publicationView === "archived" ? archivedSubcategoriesQuery : subcategoriesQuery;
-  const sourceRows = isDeletedView ? deletedSubcategoriesQuery.data?.data : lifecycleQuery.data?.data;
+  const sourceRows = lifecycleQuery.data?.data;
 
   const rows = React.useMemo(
     () => (sourceRows ?? []).map((row) => toSubcategoryRow(row, productCountMap)),
     [sourceRows, productCountMap]
   );
 
-  const totalPages =
-    (isDeletedView
-      ? deletedSubcategoriesQuery.data?.totalPages
-      : lifecycleQuery.data?.totalPages) ?? 1;
-  const totalSubcategories =
-    (isDeletedView ? deletedSubcategoriesQuery.data?.total : lifecycleQuery.data?.total) ??
-    rows.length;
+  const totalPages = lifecycleQuery.data?.totalPages ?? 1;
+  const totalSubcategories = lifecycleQuery.data?.total ?? rows.length;
 
   const stats = React.useMemo(
     () => ({
@@ -192,50 +179,23 @@ export const SubcategoriesPage: React.FC = () => {
     });
   };
 
-  const openConfirm = (
-    action: "delete" | "recover" | "destroy",
-    ids: ReadonlyArray<string>
-  ) => {
+  const openConfirm = (ids: ReadonlyArray<string>) => {
     if (!ids.length) return;
-    setPendingAction(action);
     setPendingIds(ids);
     setConfirmOpen(true);
   };
 
   const handleConfirmAction = async () => {
-    if (!pendingAction || !pendingIds.length) return;
+    if (!pendingIds.length) return;
 
-    if (pendingAction === "delete") {
-      await softDeleteSubcategory.mutateAsync(pendingIds.join(","));
-    }
-    if (pendingAction === "recover") {
-      await recoverSubcategory.mutateAsync({ ids: pendingIds });
-    }
-    if (pendingAction === "destroy") {
-      await destroySubcategory.mutateAsync(pendingIds.join(","));
-    }
-
+    await softDeleteSubcategory.mutateAsync(pendingIds.join(","));
     await subcategoriesQuery.refetch();
-    await deletedSubcategoriesQuery.refetch();
 
     setSelectedIds((prev) => prev.filter((id) => !pendingIds.includes(id)));
     const count = pendingIds.length;
-    toast.success(
-      pendingAction === "delete"
-        ? count === 1
-          ? "Subcategory deleted."
-          : `${count} subcategories deleted.`
-        : pendingAction === "recover"
-        ? count === 1
-          ? "Subcategory recovered."
-          : `${count} subcategories recovered.`
-        : count === 1
-        ? "Subcategory permanently deleted."
-        : `${count} subcategories permanently deleted.`
-    );
+    toast.success(count === 1 ? "Subcategory deleted." : `${count} subcategories deleted.`);
 
     setConfirmOpen(false);
-    setPendingAction(null);
     setPendingIds([]);
   };
 
@@ -309,11 +269,12 @@ export const SubcategoriesPage: React.FC = () => {
         <span className="text-xs text-gray-500">{formatDateTime(row.createdAt)}</span>
       ),
     },
-    ...(!isDeletedView ? [{
+    {
       key: "status",
       label: "Status",
       render: (row: SubcategoryRow) => <PublicationStatusBadge status={row.status} />,
-    }, {
+    },
+    {
       key: "rowActions",
       label: "Actions",
       render: (row: SubcategoryRow) => (
@@ -329,120 +290,47 @@ export const SubcategoriesPage: React.FC = () => {
             {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
             {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm("delete", [row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+            <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm([row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    }] : []),
-    ...(isDeletedView
-      ? [
-          {
-            key: "rowActions",
-            label: "Actions",
-            render: (row: SubcategoryRow) => (
-              <div
-                className="flex items-center justify-end gap-2"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => openConfirm("recover", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={11} />
-                  Recover
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("destroy", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                >
-                  <Trash2 size={11} />
-                  Delete Permanently
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : []),
+    },
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Subcategories" : "Subcategories"}
-      subtitle={
-        isDeletedView
-          ? "View soft-deleted subcategories."
-          : "Manage product subcategories and hierarchy."
-      }
-      onBack={isDeletedView ? () => navigate("/dashboard/subcategories") : undefined}
+      title="Subcategories"
+      subtitle="Manage product subcategories and hierarchy."
       searchValue={state.search}
       onSearchChange={(value) => setState((prev) => ({ ...prev, page: 1, search: value }))}
       searchPlaceholder="Search subcategories..."
     >
-      {!isDeletedView ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Subcategories`} value={stats.total} icon={ShoppingBag} colorVariant="blue" />
-          <StatCardV2 label="Published on this page" value={stats.active} icon={Tag} colorVariant="emerald" />
-          <StatCardV2 label="Products" value={stats.totalProducts} icon={Layers} colorVariant="blue" />
-          <StatCardV2 label="Categories" value={stats.totalCategories} icon={FolderTree} colorVariant="cyan" />
-        </div>
-      ) : null}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCardV2 label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Subcategories`} value={stats.total} icon={ShoppingBag} colorVariant="blue" />
+        <StatCardV2 label="Published on this page" value={stats.active} icon={Tag} colorVariant="emerald" />
+        <StatCardV2 label="Products" value={stats.totalProducts} icon={Layers} colorVariant="blue" />
+        <StatCardV2 label="Categories" value={stats.totalCategories} icon={FolderTree} colorVariant="cyan" />
+      </div>
 
       <DataTableV2
-        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/subcategories?status=${status}`)} /> : undefined}
+        toolbarLeading={<PublicationTabs value={publicationView} onChange={(status) => navigate(`/dashboard/subcategories?status=${status}`)} />}
         columns={columns}
         data={rows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("recover", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
-                  >
-                    <RotateCcw size={12} />
-                    Recover ({selectedIds.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("destroy", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                  >
-                    <Trash2 size={12} />
-                    Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openConfirm("delete", selectedIds)}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                >
-                  <Trash2 size={12} />
-                  Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => openConfirm(selectedIds)}
+              className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+            >
+              <Trash2 size={12} />
+              Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        onRowClick={
-          !isDeletedView
-            ? (row) =>
-                navigate(`/dashboard/categories/${row.categoryId}/subcategories/${row.id}`)
-            : undefined
-        }
-        emptyMessage={
-          (isDeletedView ? deletedSubcategoriesQuery.isLoading : lifecycleQuery.isLoading)
-            ? "Loading subcategories..."
-            : isDeletedView
-            ? "No deleted subcategories found."
-            : "No subcategories found."
-        }
+        onRowClick={(row) => navigate(`/dashboard/categories/${row.categoryId}/subcategories/${row.id}`)}
+        emptyMessage={lifecycleQuery.isLoading ? "Loading subcategories..." : "No subcategories found."}
         showPagination={true}
         currentPage={state.page}
         totalPages={totalPages}
@@ -452,48 +340,17 @@ export const SubcategoriesPage: React.FC = () => {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? "Recover subcategories?"
-                  : "Recover subcategory?"
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? "Delete subcategories permanently?"
-                  : "Delete subcategory permanently?"
-                : pendingIds.length > 1
-                ? "Delete subcategories?"
-                : "Delete subcategory?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{pendingIds.length > 1 ? "Delete subcategories?" : "Delete subcategory?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? `This will recover ${pendingIds.length} subcategories.`
-                  : "This will recover this subcategory."
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? `This will permanently delete ${pendingIds.length} subcategories. This cannot be undone.`
-                  : "This will permanently delete this subcategory. This cannot be undone."
-                : pendingIds.length > 1
+              {pendingIds.length > 1
                 ? `This permanently deletes ${pendingIds.length} subcategories and cannot be undone.`
                 : "This permanently deletes this subcategory and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                pendingAction === "recover"
-                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
-              }
-              onClick={() => void handleConfirmAction()}
-            >
-              {pendingAction === "recover"
-                ? "Recover"
-                : pendingAction === "destroy"
-                ? "Delete Permanently"
-                : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirmAction()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
