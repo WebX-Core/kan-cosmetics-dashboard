@@ -15,7 +15,37 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import type { ExportFile, ExportFormat } from "@/shared/utils/exportFile";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+// Production's static host serves .mjs with the wrong Content-Type
+// (application/octet-stream instead of a JS type), which browsers reject for
+// module workers. Re-fetching the worker source into a same-origin blob: URL
+// works around that — the browser trusts the Blob's own declared type, not
+// the original response header.
+//
+// Dev-only, don't do this in Vite's dev server: Vite injects its own HMR
+// module references into everything it serves through its transform
+// pipeline (even proxied node_modules files), and a blob: URL has no base
+// path for those injected specifiers to resolve against, so it 404s.
+let pdfWorkerReady: Promise<void> | null = null;
+const ensurePdfWorkerReady = (): Promise<void> => {
+  if (!pdfWorkerReady) {
+    pdfWorkerReady = import.meta.env.DEV
+      ? Promise.resolve().then(() => {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+        })
+      : fetch(pdfWorkerUrl)
+          .then((response) => response.text())
+          .then((source) => {
+            const blob = new Blob([source], { type: "text/javascript" });
+            pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+          })
+          .catch(() => {
+            // Fall back to the direct URL — worse odds of loading, but no
+            // worse than before this fix if the fetch itself fails.
+            pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+          });
+  }
+  return pdfWorkerReady;
+};
 
 const MAX_PREVIEW_ROWS = 50;
 
@@ -60,7 +90,11 @@ const ExcelPreview: React.FC<ExcelPreviewProps> = ({ file }) => {
   React.useEffect(() => {
     readExcelPreview(file.blob)
       .then(setData)
-      .catch(() => setError("Could not preview this file."));
+      .catch((error: unknown) => {
+        // eslint-disable-next-line no-console -- keep the real failure reason visible for debugging
+        console.error("Excel preview failed:", error);
+        setError("Could not preview this file.");
+      });
   }, [file]);
 
   if (error) return <p className="p-6 text-[13px] text-[#86868b]">{error}</p>;
@@ -110,6 +144,8 @@ interface PdfPreviewProps {
 }
 
 const renderPdfPages = async (blob: Blob, container: HTMLDivElement, isCancelled: () => boolean) => {
+  await ensurePdfWorkerReady();
+  if (isCancelled()) return;
   const buffer = await blob.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   const scale = Math.min(2, (container.clientWidth || 800) / 612);
@@ -135,20 +171,25 @@ const renderPdfPages = async (blob: Blob, container: HTMLDivElement, isCancelled
 
 const PdfPreview: React.FC<PdfPreviewProps> = ({ file }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [canvasFailed, setCanvasFailed] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const objectUrl = React.useMemo(() => URL.createObjectURL(file.blob), [file]);
+
+  React.useEffect(() => () => URL.revokeObjectURL(objectUrl), [objectUrl]);
 
   React.useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     container.innerHTML = "";
     setLoading(true);
-    setError(null);
+    setCanvasFailed(false);
 
     let cancelled = false;
     renderPdfPages(file.blob, container, () => cancelled)
-      .catch(() => {
-        if (!cancelled) setError("Could not preview this file.");
+      .catch((error: unknown) => {
+        // eslint-disable-next-line no-console -- keep the real failure reason visible for debugging
+        console.error("PDF canvas preview failed, falling back to native viewer:", error);
+        if (!cancelled) setCanvasFailed(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -159,6 +200,20 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({ file }) => {
     };
   }, [file]);
 
+  if (canvasFailed) {
+    return (
+      <object data={objectUrl} type="application/pdf" className="h-[70vh] w-full rounded-xl border border-[#e5e5e7]">
+        <p className="p-6 text-[13px] text-[#86868b]">
+          Preview isn&apos;t available in this browser —{" "}
+          <a href={objectUrl} target="_blank" rel="noreferrer" className="underline">
+            open it in a new tab
+          </a>{" "}
+          instead.
+        </p>
+      </object>
+    );
+  }
+
   return (
     <div className="max-h-[70vh] overflow-auto rounded-xl bg-[#f5f5f7] p-3">
       {loading && (
@@ -166,7 +221,6 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({ file }) => {
           <Loader2 size={18} className="animate-spin text-[#86868b]" />
         </div>
       )}
-      {error && <p className="p-6 text-[13px] text-[#86868b]">{error}</p>}
       <div ref={containerRef} />
     </div>
   );
