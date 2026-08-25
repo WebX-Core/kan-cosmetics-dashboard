@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, RotateCcw, Trash2, UploadCloud, X } from "lucide-react";
+import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, Trash2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { z } from "zod";
@@ -317,12 +317,10 @@ export const ProductVariantsPage: React.FC = () => {
   const location = useLocation();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const isDeletedView = location.pathname.endsWith("/deleted");
   const publicationView = (searchParams.get("status") ?? "published") as PublicationView;
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [pendingAction, setPendingAction] = React.useState<null | "delete" | "recover" | "destroy">(null);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
 
   const productFilter = searchParams.get("product") ?? "";
@@ -336,35 +334,29 @@ export const ProductVariantsPage: React.FC = () => {
       search: debouncedSearch || undefined,
       product: productFilter || undefined,
     },
-    !isDeletedView && publicationView === "published",
+    publicationView === "published",
   );
   const draftQuery = catalogApi.productVariants.hooks.useDraft(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined, product: productFilter || undefined },
-    !isDeletedView && publicationView === "draft",
+    publicationView === "draft",
   );
   const archivedQuery = catalogApi.productVariants.hooks.useArchived(
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined, product: productFilter || undefined },
-    !isDeletedView && publicationView === "archived",
-  );
-  const deletedQuery = catalogApi.productVariants.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView,
+    publicationView === "archived",
   );
   const inventoryQuery = catalogApi.inventory.hooks.useList({ page: 1, limit: 1000 }, Boolean(productFilter));
   const softDelete = catalogApi.productVariants.hooks.useSoftDelete();
-  const recover = catalogApi.productVariants.hooks.useRecover();
-  const destroy = catalogApi.productVariants.hooks.useDestroy();
   const updateStatus = catalogApi.productVariants.hooks.useUpdate();
 
   const rows = React.useMemo(() => {
     const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
-    const source = isDeletedView ? deletedQuery.data?.data : lifecycleQuery.data?.data;
+    const source = lifecycleQuery.data?.data;
     const base = toVariantRows(toRows(source));
     if (!productFilter) return base;
     return base.filter((row) => row.productId === productFilter);
-  }, [archivedQuery.data?.data, deletedQuery.data?.data, draftQuery.data?.data, isDeletedView, productFilter, publicationView, query.data?.data]);
+  }, [archivedQuery.data?.data, draftQuery.data?.data, productFilter, publicationView, query.data?.data]);
   const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
-  const totalPages = isDeletedView ? (deletedQuery.data?.totalPages ?? 1) : (lifecycleQuery.data?.totalPages ?? 1);
+  const totalPages = lifecycleQuery.data?.totalPages ?? 1;
   const inventoryByVariantId = React.useMemo(() => {
     const map = new Map<string, Record<string, unknown>>();
     const source = (inventoryQuery.data?.data ?? []) as ReadonlyArray<Record<string, unknown>>;
@@ -392,45 +384,26 @@ export const ProductVariantsPage: React.FC = () => {
       checked ? (prev.includes(variantId) ? prev : [...prev, variantId]) : prev.filter((entry) => entry !== variantId),
     );
   };
-  const openConfirm = (action: "delete" | "recover" | "destroy", ids: ReadonlyArray<string>) => {
+  const openConfirm = (ids: ReadonlyArray<string>) => {
     if (!ids.length) return;
-    setPendingAction(action);
     setPendingIds(ids);
     setConfirmOpen(true);
   };
   const handleConfirmAction = async () => {
-    if (!pendingAction || !pendingIds.length) return;
+    if (!pendingIds.length) return;
     try {
-      if (pendingAction === "delete") {
-        await Promise.all(pendingIds.map((entry) => softDelete.mutateAsync(entry)));
-      }
-      if (pendingAction === "recover") {
-        await recover.mutateAsync({ ids: pendingIds });
-      }
-      if (pendingAction === "destroy") {
-        await Promise.all(pendingIds.map((entry) => destroy.mutateAsync(entry)));
-      }
+      await Promise.all(pendingIds.map((entry) => softDelete.mutateAsync(entry)));
       await query.refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((entry) => !pendingIds.includes(entry)));
       toast.success(
-        pendingAction === "delete"
-          ? pendingIds.length === 1
-            ? "Variant deleted."
-            : `${pendingIds.length} variants deleted.`
-          : pendingAction === "recover"
-          ? pendingIds.length === 1
-            ? "Variant recovered."
-            : `${pendingIds.length} variants recovered.`
-          : pendingIds.length === 1
-          ? "Variant permanently deleted."
-          : `${pendingIds.length} variants permanently deleted.`,
+        pendingIds.length === 1
+          ? "Variant deleted."
+          : `${pendingIds.length} variants deleted.`,
       );
     } catch (error) {
       toast.error(parseApiError(error).message);
     } finally {
       setConfirmOpen(false);
-      setPendingAction(null);
       setPendingIds([]);
     }
   };
@@ -472,7 +445,7 @@ export const ProductVariantsPage: React.FC = () => {
       ),
     },
     { key: "status", label: "Status", render: (row: VariantRow) => <PublicationStatusBadge status={row.status} /> },
-    ...(!isDeletedView && productFilter
+    ...(productFilter
       ? [
           {
             key: "stockQuantity",
@@ -588,7 +561,7 @@ export const ProductVariantsPage: React.FC = () => {
           },
         ]
       : []),
-    ...(!isDeletedView ? [{ key: "actions", label: "Actions", render: (row: VariantRow) => <DropdownMenu>
+    { key: "actions", label: "Actions", render: (row: VariantRow) => <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}><Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal size={15} /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -598,64 +571,16 @@ export const ProductVariantsPage: React.FC = () => {
         {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
         {row.status !== "ARCHIVED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "ARCHIVED"); }}><Archive className="mr-2 h-4 w-4" />Archive</DropdownMenuItem> : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm("delete", [row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+        <DropdownMenuItem className="text-[#b42318] focus:text-[#b42318]" onClick={(event) => { event.stopPropagation(); openConfirm([row.id]); }}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
       </DropdownMenuContent>
-    </DropdownMenu> }] : []),
-    ...(isDeletedView
-      ? [
-          {
-            key: "deletedActions",
-            label: "Actions",
-            render: (row: VariantRow) => (
-              <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("recover", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={11} />
-                  Recover
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openConfirm("destroy", [row.id])}
-                  className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                >
-                  <Trash2 size={11} />
-                  Delete Permanently
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : []),
+    </DropdownMenu> },
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
       title="Product Variants"
       subtitle={productFilter ? `Manage variants for ${productName || "selected product"}.` : "Size, color, and other variant options."}
       onBack={productFilter ? () => navigate(returnPath) : undefined}
-      actions={
-        <div className="flex items-center gap-2">
-          {isDeletedView ? (
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  `/dashboard/product-variants?product=${encodeURIComponent(productFilter)}&productName=${encodeURIComponent(
-                    productName,
-                  )}&returnPath=${encodeURIComponent(returnPath)}`,
-                )
-              }
-              className="flex h-[34px] items-center gap-[8px] rounded-full border border-[#d2d2d7] bg-white px-[21px] text-[13px] font-medium text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-            >
-              Back to Variants
-            </button>
-          ) : null}
-        </div>
-      }
       onNew={() =>
         navigate(
           `/dashboard/product-variants/create${
@@ -677,52 +602,23 @@ export const ProductVariantsPage: React.FC = () => {
       </div>
 
       <DataTableV2
-        toolbarLeading={!isDeletedView ? <PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(searchParams); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} /> : undefined}
+        toolbarLeading={<PublicationTabs value={publicationView} onChange={(status) => { const next = new URLSearchParams(searchParams); next.set("status", status); navigate(`${location.pathname}?${next.toString()}`); }} />}
         columns={columns}
         data={rows}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("recover", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
-                  >
-                    <RotateCcw size={12} />
-                    Recover ({selectedIds.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openConfirm("destroy", selectedIds)}
-                    className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                  >
-                    <Trash2 size={12} />
-                    Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openConfirm("delete", selectedIds)}
-                  className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
-                >
-                  <Trash2 size={12} />
-                  Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => openConfirm(selectedIds)}
+              className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+            >
+              <Trash2 size={12} />
+              Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
-        emptyMessage={
-          (isDeletedView ? deletedQuery.isLoading : lifecycleQuery.isLoading)
-            ? "Loading variants..."
-            : isDeletedView
-            ? "No deleted variants found."
-            : "No product variants found."
-        }
+        emptyMessage={lifecycleQuery.isLoading ? "Loading variants..." : "No product variants found."}
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
@@ -732,44 +628,17 @@ export const ProductVariantsPage: React.FC = () => {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? "Recover variants?"
-                  : "Recover variant?"
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? "Delete variants permanently?"
-                  : "Delete variant permanently?"
-                : pendingIds.length > 1
-                ? "Delete variants?"
-                : "Delete variant?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{pendingIds.length > 1 ? "Delete variants?" : "Delete variant?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAction === "recover"
-                ? pendingIds.length > 1
-                  ? `This will recover ${pendingIds.length} variants.`
-                  : "This will recover this variant."
-                : pendingAction === "destroy"
-                ? pendingIds.length > 1
-                  ? `This will permanently delete ${pendingIds.length} variants. This cannot be undone.`
-                  : "This will permanently delete this variant. This cannot be undone."
-                : pendingIds.length > 1
+              {pendingIds.length > 1
                 ? `This permanently deletes ${pendingIds.length} variants and cannot be undone.`
                 : "This permanently deletes this variant and cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                pendingAction === "recover"
-                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
-              }
-              onClick={() => void handleConfirmAction()}
-            >
-              {pendingAction === "recover" ? "Recover" : pendingAction === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirmAction()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

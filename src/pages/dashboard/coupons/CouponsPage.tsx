@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Tag, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
@@ -57,22 +57,16 @@ const toCouponRow = (record: unknown): CouponRow => {
 
 export const CouponsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const toast = useToast();
   const [activeTab, setActiveTab] = React.useState("all");
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
 
-  const isDeletedView = location.pathname.endsWith("/deleted");
-  const listQuery = commerceApi.coupons.crud.hooks.useList({
+  const couponsQuery = commerceApi.coupons.crud.hooks.useList({
     page: state.page,
     limit: state.limit,
     search: debouncedSearch || undefined,
-  }, !isDeletedView);
-  const deletedQuery = commerceApi.coupons.crud.hooks.useDeleted({ page: state.page, limit: state.limit, search: debouncedSearch || undefined }, isDeletedView);
-  const couponsQuery = isDeletedView ? deletedQuery : listQuery;
+  });
   const deleteCoupon = commerceApi.coupons.crud.hooks.useSoftDelete();
-  const recoverCoupon = commerceApi.coupons.crud.hooks.useRecover();
-  const destroyCoupon = commerceApi.coupons.crud.hooks.useDestroy();
 
   const coupons = React.useMemo(
     () => (couponsQuery.data?.data ?? []).map(toCouponRow),
@@ -130,14 +124,13 @@ export const CouponsPage: React.FC = () => {
     { key: "validity", label: "Validity", render: (row: CouponRow) => (
       <span className="text-xs text-gray-500">{row.validFrom} – {row.validUntil}</span>
     )},
-    ...(isDeletedView ? [{ key: "restore", label: "Actions", render: (row: CouponRow) => <div className="flex gap-2"><button type="button" onClick={(event) => { event.stopPropagation(); void recoverCoupon.mutateAsync({ ids: [row.id] }); }} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">Recover</button><button type="button" onClick={(event) => { event.stopPropagation(); void (async () => { if (await confirmAction("Permanently delete this coupon?")) await destroyCoupon.mutateAsync(row.id); })(); }} className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100">Delete permanently</button></div> }] : []),
   ];
 
   return (
     <PageLayout
       title="Coupons"
       subtitle="Manage discount codes, activation windows, and usage tracking."
-      onNew={isDeletedView ? undefined : () => navigate("/dashboard/coupons/create")}
+      onNew={() => navigate("/dashboard/coupons/create")}
       newButtonLabel="New Coupon"
       actions={<ExportMenu basePath="/coupon" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="coupons"/>}
       searchValue={state.search}
@@ -158,8 +151,8 @@ export const CouponsPage: React.FC = () => {
         columns={columns}
         data={tabFiltered}
         searchValue={state.search}
-        onEdit={isDeletedView ? undefined : (row) => navigate(`/dashboard/coupons/${row.id}/edit`)}
-        onDelete={isDeletedView ? undefined : (row) => void handleDelete(row.id)}
+        onEdit={(row) => navigate(`/dashboard/coupons/${row.id}/edit`)}
+        onDelete={(row) => void handleDelete(row.id)}
         emptyMessage={couponsQuery.isLoading ? "Loading coupons..." : "No coupons found."}
         showPagination={true}
         currentPage={state.page}

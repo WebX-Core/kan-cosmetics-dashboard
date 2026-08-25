@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Mail, MessageSquare, Eye, Trash2, RotateCcw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Mail, MessageSquare, Eye, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -17,13 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import {
-  useContactList,
-  useSoftDeleteContact,
-  useRecoverContact,
-  useDestroyContact,
-  useContactDeleted,
-} from "@/features/contact";
+import { useContactList, useSoftDeleteContact } from "@/features/contact";
 import { engagementApi } from "@/features/engagement";
 import { formatDateTime } from "@/shared/utils/date";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
@@ -70,14 +64,9 @@ const mapContacts = (payload: unknown): ReadonlyArray<ContactRow> =>
     createdAt: text(row.createdAt),
   }));
 
-const LIVE_PATH = "/dashboard/contact";
-const DELETED_PATH = "/dashboard/contact/deleted";
-
 export const ContactPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const toast = useToast();
-  const isDeletedView = location.pathname === DELETED_PATH;
 
   const [viewedIds, setViewedIds] = React.useState<ReadonlySet<string>>(new Set());
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
@@ -85,23 +74,17 @@ export const ContactPage: React.FC = () => {
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const confirm = useConfirmAction();
 
-  const { data: contactsData, isLoading: liveLoading, refetch } = useContactList(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView,
-  );
-  const deletedQuery = useContactDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView,
-  );
+  const { data: contactsData, isLoading, refetch } = useContactList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  });
   const softDelete = useSoftDeleteContact();
-  const recover = useRecoverContact();
-  const destroy = useDestroyContact();
   const createReply = engagementApi.replies.hooks.useCreate();
 
-  const sourceData = isDeletedView ? deletedQuery.data : contactsData;
-  const contacts = React.useMemo(() => mapContacts(sourceData), [sourceData]);
-  const totalPages = (isDeletedView ? (deletedQuery.data as { totalPages?: number } | undefined)?.totalPages : contactsData?.totalPages) ?? 1;
-  const totalMessages = (isDeletedView ? (deletedQuery.data as { total?: number } | undefined)?.total : contactsData?.total) ?? contacts.length;
+  const contacts = React.useMemo(() => mapContacts(contactsData), [contactsData]);
+  const totalPages = contactsData?.totalPages ?? 1;
+  const totalMessages = contactsData?.total ?? contacts.length;
 
   React.useEffect(() => {
     try {
@@ -128,16 +111,13 @@ export const ContactPage: React.FC = () => {
     setSelectedIds((prev) => checked ? Array.from(new Set([...prev, ...visibleIds])) : prev.filter((id) => !visibleIds.includes(id)));
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await softDelete.mutateAsync(ids.join(","));
       await refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
+      toast.success("Deleted.");
     } catch (error) {
       toast.error(parseApiError(error).message);
     } finally {
@@ -155,8 +135,6 @@ export const ContactPage: React.FC = () => {
       throw error;
     }
   };
-
-  const isLoading = isDeletedView ? deletedQuery.isLoading : liveLoading;
 
   const columns = [
     {
@@ -189,25 +167,12 @@ export const ContactPage: React.FC = () => {
       key: "actions", label: "",
       render: (c: ContactRow) => (
         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-          {isDeletedView ? (
-            <>
-              <button type="button" onClick={() => confirm.prompt("recover", [c.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                <RotateCcw size={11} /> Recover
-              </button>
-              <button type="button" onClick={() => confirm.prompt("destroy", [c.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                <Trash2 size={11} /> Delete Permanently
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" onClick={() => setReplyTarget({ id: c.id, name: c.name })} className="flex items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
-                Reply
-              </button>
-              <button type="button" onClick={() => confirm.prompt("delete", [c.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                <Trash2 size={11} /> Delete
-              </button>
-            </>
-          )}
+          <button type="button" onClick={() => setReplyTarget({ id: c.id, name: c.name })} className="flex items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">
+            Reply
+          </button>
+          <button type="button" onClick={() => confirm.prompt("delete", [c.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
+            <Trash2 size={11} /> Delete
+          </button>
         </div>
       ),
     },
@@ -215,21 +180,17 @@ export const ContactPage: React.FC = () => {
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Messages" : "Contact Messages"}
-      subtitle={isDeletedView ? "Deleted contact form submissions." : "Customer inquiries and contact form submissions."}
-      onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
+      title="Contact Messages"
+      subtitle="Customer inquiries and contact form submissions."
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search messages..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCardV2 label="Total Messages" value={stats.total} icon={MessageSquare} colorVariant="blue" />
-          <StatCardV2 label="Unread" value={stats.unread} icon={Mail} colorVariant="red" />
-          <StatCardV2 label="Viewed" value={stats.viewed} icon={Eye} colorVariant="emerald" />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCardV2 label="Total Messages" value={stats.total} icon={MessageSquare} colorVariant="blue" />
+        <StatCardV2 label="Unread" value={stats.unread} icon={Mail} colorVariant="red" />
+        <StatCardV2 label="Viewed" value={stats.viewed} icon={Eye} colorVariant="emerald" />
+      </div>
 
       <DataTableV2
         columns={columns}
@@ -237,22 +198,9 @@ export const ContactPage: React.FC = () => {
         onRowClick={(row) => navigate(`/dashboard/contact/${String(row.id)}`)}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
-                    <RotateCcw size={12} /> Recover ({selectedIds.length})
-                  </button>
-                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                  <Trash2 size={12} /> Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+              <Trash2 size={12} /> Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
@@ -273,20 +221,13 @@ export const ContactPage: React.FC = () => {
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover message?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete message?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the selected message." : "This permanently deletes the message and cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete message?</AlertDialogTitle>
+            <AlertDialogDescription>This will delete the selected message(s).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
-              onClick={() => void handleConfirm()}
-            >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

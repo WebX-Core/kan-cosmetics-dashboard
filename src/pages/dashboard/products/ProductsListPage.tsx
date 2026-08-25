@@ -15,7 +15,6 @@ import {
   Boxes,
   Globe,
   Star,
-  RotateCcw,
   SlidersHorizontal,
 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
@@ -180,13 +179,11 @@ export const ProductsListPage: React.FC = () => {
     () => new URLSearchParams(location.search),
     [location.search],
   );
-  const isDeletedView = location.pathname === "/dashboard/products/deleted";
   const publicationView = (searchParams.get("status") ??
     "published") as PublicationView;
   const categoryId = searchParams.get("categoryId") ?? "";
   const subcategoryId = searchParams.get("subcategoryId") ?? "";
-  const showAddProductButton =
-    !isDeletedView && Boolean(categoryId && subcategoryId);
+  const showAddProductButton = Boolean(categoryId && subcategoryId);
 
   const canProductUpdate = usePermission("product:update");
   const canProductDelete = usePermission("product:delete");
@@ -215,7 +212,7 @@ export const ProductsListPage: React.FC = () => {
       limit: state.limit,
       search: debouncedSearch || undefined,
     },
-    !isDeletedView && publicationView === "published",
+    publicationView === "published",
   );
   const draftQuery = catalogApi.products.hooks.useDraft(
     {
@@ -223,7 +220,7 @@ export const ProductsListPage: React.FC = () => {
       limit: state.limit,
       search: debouncedSearch || undefined,
     },
-    !isDeletedView && publicationView === "draft",
+    publicationView === "draft",
   );
   const archivedQuery = catalogApi.products.hooks.useArchived(
     {
@@ -231,35 +228,25 @@ export const ProductsListPage: React.FC = () => {
       limit: state.limit,
       search: debouncedSearch || undefined,
     },
-    !isDeletedView && publicationView === "archived",
-  );
-  const deletedQuery = catalogApi.products.hooks.useDeleted(
-    {
-      page: state.page,
-      limit: state.limit,
-      search: debouncedSearch || undefined,
-    },
-    isDeletedView,
+    publicationView === "archived",
   );
   const inventoryQuery = catalogApi.inventory.hooks.useList(
     { page: 1, limit: 1000 },
-    !isDeletedView && canInventoryManage,
+    canInventoryManage,
   );
   const variantsQuery = catalogApi.productVariants.hooks.useList(
     { page: 1, limit: 1000 },
-    !isDeletedView && canInventoryManage,
+    canInventoryManage,
   );
   const draftVariantsQuery = catalogApi.productVariants.hooks.useDraft(
     { page: 1, limit: 1000 },
-    !isDeletedView && canInventoryManage,
+    canInventoryManage,
   );
   const archivedVariantsQuery = catalogApi.productVariants.hooks.useArchived(
     { page: 1, limit: 1000 },
-    !isDeletedView && canInventoryManage,
+    canInventoryManage,
   );
   const softDelete = catalogApi.products.hooks.useSoftDelete();
-  const recover = catalogApi.products.hooks.useRecover();
-  const destroy = catalogApi.products.hooks.useDestroy();
   const updateProduct = catalogApi.products.hooks.useUpdate();
 
   const lifecycleQuery =
@@ -268,7 +255,7 @@ export const ProductsListPage: React.FC = () => {
       : publicationView === "archived"
         ? archivedQuery
         : query;
-  const sourceData = isDeletedView ? deletedQuery.data : lifecycleQuery.data;
+  const sourceData = lifecycleQuery.data;
   const rows = React.useMemo(() => toRows(sourceData), [sourceData]);
   const totalPages =
     (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
@@ -276,12 +263,11 @@ export const ProductsListPage: React.FC = () => {
     (sourceData as { total?: number } | undefined)?.total ?? rows.length;
 
   const filtered = React.useMemo(() => {
-    if (isDeletedView) return rows;
     if (activeTab === "low-stock")
       return rows.filter((r) => r.stock > 0 && r.stock <= 5);
     if (activeTab === "out-of-stock") return rows.filter((r) => r.stock === 0);
     return rows;
-  }, [rows, activeTab, isDeletedView]);
+  }, [rows, activeTab]);
 
   const stats = React.useMemo(
     () => ({
@@ -355,23 +341,14 @@ export const ProductsListPage: React.FC = () => {
   ];
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete")
-        await Promise.all(ids.map((id) => softDelete.mutateAsync(id)));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy")
-        await Promise.all(ids.map((id) => destroy.mutateAsync(id)));
+      await Promise.all(ids.map((id) => softDelete.mutateAsync(id)));
       await query.refetch();
-      await deletedQuery.refetch();
       setSelectedIds(new Set());
       toast.success(
-        action === "recover"
-          ? `${ids.length === 1 ? "Product" : `${ids.length} products`} recovered.`
-          : action === "destroy"
-            ? `${ids.length === 1 ? "Product" : `${ids.length} products`} permanently deleted.`
-            : `${ids.length === 1 ? "Product" : `${ids.length} products`} deleted.`,
+        `${ids.length === 1 ? "Product" : `${ids.length} products`} deleted.`,
       );
     } finally {
       confirm.dismiss();
@@ -407,7 +384,7 @@ export const ProductsListPage: React.FC = () => {
           <div>
             <div className="font-medium text-gray-900">{r.name}</div>
             <div className="text-xs text-gray-400">{r.slug}</div>
-            {r.productType === "LIPSTICK" ? (
+            {/* {r.productType === "LIPSTICK" ? (
               <div className="mt-1 flex items-center gap-2">
                 <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-700">
                   Lipstick
@@ -416,7 +393,7 @@ export const ProductsListPage: React.FC = () => {
                   Variant image and try-on live in the variant editor
                 </span>
               </div>
-            ) : null}
+            ) : null} */}
           </div>
         </div>
       ),
@@ -454,224 +431,193 @@ export const ProductsListPage: React.FC = () => {
       label: "Status",
       render: (r: ProductRow) => <PublicationStatusBadge status={r.status} />,
     },
-    ...(!isDeletedView
-      ? [
-          {
-            key: "inventory",
-            label: "Inventory",
-            render: (r: ProductRow) => {
-              if (!canInventoryManage || productIdsWithVariants.has(r.id)) {
-                return <span className="text-[#86868b]">—</span>;
-              }
+    {
+      key: "inventory",
+      label: "Inventory",
+      render: (r: ProductRow) => {
+        if (!canInventoryManage || productIdsWithVariants.has(r.id)) {
+          return <span className="text-[#86868b]">—</span>;
+        }
 
-              const existing = productInventoryByProductId.get(r.id);
-              const hasInventory =
-                typeof existing?.id === "string" && existing.id.length > 0;
+        const existing = productInventoryByProductId.get(r.id);
+        const hasInventory =
+          typeof existing?.id === "string" && existing.id.length > 0;
 
-              return (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    navigateProductInventory(r);
-                  }}
-                  className="inline-flex h-7 items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
-                >
-                  {!hasInventory ? <PackagePlus size={12} /> : null}
-                  {hasInventory ? "Edit" : "Set"}
-                </button>
-              );
-            },
-          },
-        ]
-      : []),
+        return (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              navigateProductInventory(r);
+            }}
+            className="inline-flex h-7 items-center gap-1 rounded-full border border-[#d2d2d7] bg-white px-3 text-xs font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+          >
+            {!hasInventory ? <PackagePlus size={12} /> : null}
+            {hasInventory ? "Edit" : "Set"}
+          </button>
+        );
+      },
+    },
     {
       key: "actions",
       label: "Actions",
-      render: (r: ProductRow) =>
-        isDeletedView ? (
-          <div
-            className="flex items-center justify-end gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
+      render: (r: ProductRow) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
               type="button"
-              onClick={() => confirm.prompt("recover", [r.id])}
-              className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={(event) => event.stopPropagation()}
             >
-              <RotateCcw size={11} /> Recover
-            </button>
-            <button
-              type="button"
-              onClick={() => confirm.prompt("destroy", [r.id])}
-              className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-            >
-              <Trash2 size={11} /> Delete Permanently
-            </button>
-          </div>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={(event) => event.stopPropagation()}
+              <MoreHorizontal size={15} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            {canProductUpdate && (
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/products/${r.id}/edit`);
+                }}
               >
-                <MoreHorizontal size={15} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              {canProductUpdate && (
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    navigate(`/dashboard/products/${r.id}/edit`);
-                  }}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              )}
-              {canReviewView && (
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    navigate(
-                      `/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`,
-                    );
-                  }}
-                >
-                  <Star className="mr-2 h-4 w-4" />
-                  Reviews
-                </DropdownMenuItem>
-              )}
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+            )}
+            {canReviewView && (
               <DropdownMenuItem
                 onClick={(event) => {
                   event.stopPropagation();
                   navigate(
-                    `/dashboard/product-tags?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                    `/dashboard/products/${r.id}/reviews?name=${encodeURIComponent(r.name)}`,
                   );
                 }}
               >
-                <Tag className="mr-2 h-4 w-4" />
-                Edit Tags
+                <Star className="mr-2 h-4 w-4" />
+                Reviews
               </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(
+                  `/dashboard/product-tags?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                );
+              }}
+            >
+              <Tag className="mr-2 h-4 w-4" />
+              Edit Tags
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(
+                  `/dashboard/product-attributes?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                );
+              }}
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Edit Attributes
+            </DropdownMenuItem>
+            {canFaqView && (
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/dashboard/products/${r.id}/faqs`);
+                }}
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Manage FAQs
+              </DropdownMenuItem>
+            )}
+            {canVariantView && (
               <DropdownMenuItem
                 onClick={(event) => {
                   event.stopPropagation();
                   navigate(
-                    `/dashboard/product-attributes?productId=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
+                    `/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
                   );
                 }}
               >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Edit Attributes
+                <Boxes className="mr-2 h-4 w-4" />
+                Manage Variants
               </DropdownMenuItem>
-              {canFaqView && (
+            )}
+            {canSeoView && (
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(
+                    `/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`,
+                  );
+                }}
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                SEO
+              </DropdownMenuItem>
+            )}
+            {canProductUpdate ? <DropdownMenuSeparator /> : null}
+            {canProductUpdate && r.status !== "PUBLISHED" ? (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void changeStatus(r.id, "PUBLISHED");
+                }}
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                Publish
+              </DropdownMenuItem>
+            ) : null}
+            {canProductUpdate && r.status !== "DRAFT" ? (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void changeStatus(r.id, "DRAFT");
+                }}
+              >
+                <FilePenLine className="mr-2 h-4 w-4" />
+                Move to Draft
+              </DropdownMenuItem>
+            ) : null}
+            {canProductUpdate && r.status !== "ARCHIVED" ? (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void changeStatus(r.id, "ARCHIVED");
+                }}
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archive
+              </DropdownMenuItem>
+            ) : null}
+            {canProductDelete && (
+              <>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  className="text-[#b42318] focus:text-[#b42318]"
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate(`/dashboard/products/${r.id}/faqs`);
+                    confirm.prompt("delete", [r.id]);
                   }}
                 >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Manage FAQs
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
                 </DropdownMenuItem>
-              )}
-              {canVariantView && (
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    navigate(
-                      `/dashboard/product-variants?product=${encodeURIComponent(r.id)}&productName=${encodeURIComponent(r.name)}`,
-                    );
-                  }}
-                >
-                  <Boxes className="mr-2 h-4 w-4" />
-                  Manage Variants
-                </DropdownMenuItem>
-              )}
-              {canSeoView && (
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    navigate(
-                      `/dashboard/seo-metadata/create?entityType=PRODUCT&entityId=${encodeURIComponent(r.id)}&slug=${encodeURIComponent(r.slug)}`,
-                    );
-                  }}
-                >
-                  <Globe className="mr-2 h-4 w-4" />
-                  SEO
-                </DropdownMenuItem>
-              )}
-              {canProductUpdate ? <DropdownMenuSeparator /> : null}
-              {canProductUpdate && r.status !== "PUBLISHED" ? (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void changeStatus(r.id, "PUBLISHED");
-                  }}
-                >
-                  <Globe className="mr-2 h-4 w-4" />
-                  Publish
-                </DropdownMenuItem>
-              ) : null}
-              {canProductUpdate && r.status !== "DRAFT" ? (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void changeStatus(r.id, "DRAFT");
-                  }}
-                >
-                  <FilePenLine className="mr-2 h-4 w-4" />
-                  Move to Draft
-                </DropdownMenuItem>
-              ) : null}
-              {canProductUpdate && r.status !== "ARCHIVED" ? (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void changeStatus(r.id, "ARCHIVED");
-                  }}
-                >
-                  <Archive className="mr-2 h-4 w-4" />
-                  Archive
-                </DropdownMenuItem>
-              ) : null}
-              {canProductDelete && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-[#b42318] focus:text-[#b42318]"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      confirm.prompt("delete", [r.id]);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Products" : "Products"}
-      subtitle={
-        isDeletedView
-          ? "View soft-deleted products."
-          : "All products in the catalog."
-      }
-      onBack={isDeletedView ? () => navigate("/dashboard/products") : undefined}
+      title="Products"
+      subtitle="All products in the catalog."
       onNew={
         showAddProductButton
           ? () =>
@@ -682,88 +628,72 @@ export const ProductsListPage: React.FC = () => {
       }
       newButtonLabel="Add Product"
       actions={
-        !isDeletedView ? (
-          <ExportMenu
-            basePath="/product"
-            params={{
-              page: state.page,
-              limit: state.limit,
-              search: debouncedSearch || undefined,
-              subcategory: subcategoryId || undefined,
-            }}
-            filename="products"
-          />
-        ) : undefined
+        <ExportMenu
+          basePath="/product"
+          params={{
+            page: state.page,
+            limit: state.limit,
+            search: debouncedSearch || undefined,
+            subcategory: subcategoryId || undefined,
+          }}
+          filename="products"
+        />
       }
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search products..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCardV2
-            label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Products`}
-            value={stats.total}
-            icon={Package}
-            colorVariant="blue"
-          />
-          <StatCardV2
-            label="In Stock"
-            value={stats.inStock}
-            icon={Tag}
-            colorVariant="emerald"
-          />
-          <StatCardV2
-            label="Low Stock"
-            value={stats.lowStock}
-            icon={AlertTriangle}
-            colorVariant="amber"
-          />
-          <StatCardV2
-            label="Out of Stock"
-            value={stats.outOfStock}
-            icon={Layers}
-            colorVariant="red"
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCardV2
+          label={`${publicationView[0].toUpperCase()}${publicationView.slice(1)} Products`}
+          value={stats.total}
+          icon={Package}
+          colorVariant="blue"
+        />
+        <StatCardV2
+          label="In Stock"
+          value={stats.inStock}
+          icon={Tag}
+          colorVariant="emerald"
+        />
+        <StatCardV2
+          label="Low Stock"
+          value={stats.lowStock}
+          icon={AlertTriangle}
+          colorVariant="amber"
+        />
+        <StatCardV2
+          label="Out of Stock"
+          value={stats.outOfStock}
+          icon={Layers}
+          colorVariant="red"
+        />
+      </div>
       <DataTableV2
         toolbarLeading={
-          !isDeletedView ? (
-            <PublicationTabs
-              value={publicationView}
-              onChange={(status) => {
-                const next = new URLSearchParams(location.search);
-                next.set("status", status);
-                navigate(`${location.pathname}?${next.toString()}`);
-              }}
-            />
-          ) : undefined
+          <PublicationTabs
+            value={publicationView}
+            onChange={(status) => {
+              const next = new URLSearchParams(location.search);
+              next.set("status", status);
+              navigate(`${location.pathname}?${next.toString()}`);
+            }}
+          />
         }
-        tabs={!isDeletedView ? tabs : undefined}
-        activeTab={!isDeletedView ? activeTab : undefined}
-        onTabChange={
-          !isDeletedView
-            ? (t) => {
-                setActiveTab(t);
-                setState((p) => ({ ...p, page: 1 }));
-              }
-            : undefined
-        }
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(t) => {
+          setActiveTab(t);
+          setState((p) => ({ ...p, page: 1 }));
+        }}
         columns={columns}
         data={filtered}
         searchValue={state.search}
-        onRowClick={
-          !isDeletedView
-            ? (r) => navigate(`/dashboard/products/${r.id}`)
-            : undefined
-        }
+        onRowClick={(r) => navigate(`/dashboard/products/${r.id}`)}
         emptyMessage={
-          (isDeletedView ? deletedQuery.isLoading : lifecycleQuery.isLoading)
+          lifecycleQuery.isLoading
             ? "Loading products..."
-            : isDeletedView
-              ? "No deleted products."
-              : `No ${publicationView} products found.`
+            : `No ${publicationView} products found.`
         }
         showPagination
         currentPage={state.page}
@@ -773,34 +703,13 @@ export const ProductsListPage: React.FC = () => {
         selectedIds={selectedIds}
         onSelectionChange={(ids) => setSelectedIds(ids)}
         bulkActions={(ids) => (
-          <div className="flex items-center gap-2">
-            {isDeletedView ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => confirm.prompt("recover", [...ids])}
-                  className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                >
-                  <RotateCcw size={12} /> Recover ({ids.size})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirm.prompt("destroy", [...ids])}
-                  className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={12} /> Delete Permanently ({ids.size})
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => confirm.prompt("delete", [...ids])}
-                className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-              >
-                <Trash2 size={12} /> Delete ({ids.size})
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => confirm.prompt("delete", [...ids])}
+            className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+          >
+            <Trash2 size={12} /> Delete ({ids.size})
+          </button>
         )}
       />
 
@@ -810,19 +719,13 @@ export const ProductsListPage: React.FC = () => {
       >
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover"
-                ? "Recover products?"
-                : confirm.action === "destroy"
-                  ? "Delete permanently?"
-                  : "Delete products?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Delete products?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm.action === "recover"
-                ? `Recover ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`}.`
-                : confirm.action === "destroy"
-                  ? "This cannot be undone."
-                  : `Move ${confirm.ids.length === 1 ? "this product" : `${confirm.ids.length} products`} to trash.`}
+              Move{" "}
+              {confirm.ids.length === 1
+                ? "this product"
+                : `${confirm.ids.length} products`}{" "}
+              to trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -833,18 +736,10 @@ export const ProductsListPage: React.FC = () => {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className={
-                confirm.action === "recover"
-                  ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "rounded-full bg-red-600 text-white hover:bg-red-700"
-              }
+              className="rounded-full bg-red-600 text-white hover:bg-red-700"
               onClick={() => void handleConfirm()}
             >
-              {confirm.action === "recover"
-                ? "Recover"
-                : confirm.action === "destroy"
-                  ? "Delete Permanently"
-                  : "Delete"}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

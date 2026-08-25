@@ -1,7 +1,7 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Star, CheckCircle, Clock, XCircle, BarChart2, Trash2, RotateCcw, Globe, MoreHorizontal } from "lucide-react";
+import { Star, CheckCircle, Clock, XCircle, BarChart2, Trash2, Globe, MoreHorizontal } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -54,38 +54,28 @@ const Stars: React.FC<{ rating: number }> = ({ rating }) => (
   </div>
 );
 
-const LIVE_PATH = "/dashboard/reviews";
-const DELETED_PATH = "/dashboard/reviews/deleted";
-
 export const ReviewsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const toast = useToast();
-  const isDeletedView = location.pathname === DELETED_PATH;
 
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const confirm = useConfirmAction();
 
-  const query = engagementApi.reviews.crud.hooks.useList(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    !isDeletedView,
-  );
-  const deletedQuery = engagementApi.reviews.crud.hooks.useDeleted(
-    { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
-    isDeletedView,
-  );
+  const query = engagementApi.reviews.crud.hooks.useList({
+    page: state.page,
+    limit: state.limit,
+    search: debouncedSearch || undefined,
+  });
   const softDelete = engagementApi.reviews.crud.hooks.useSoftDelete();
-  const recover = engagementApi.reviews.crud.hooks.useRecover();
-  const destroy = engagementApi.reviews.crud.hooks.useDestroy();
   const siteQuery = useQuery({
     queryKey: ["reviews", "site", state.page, state.limit],
     queryFn: () => engagementApi.reviews.site({ page: state.page, limit: state.limit }),
-    enabled: activeTab === "site" && !isDeletedView,
+    enabled: activeTab === "site",
   });
 
-  const sourceData = isDeletedView ? deletedQuery.data : activeTab === "site" ? siteQuery.data : query.data;
+  const sourceData = activeTab === "site" ? siteQuery.data : query.data;
   const rows = React.useMemo(() => mapRows(sourceData), [sourceData]);
   const totalPages = (sourceData as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const total = (sourceData as { total?: number } | undefined)?.total ?? rows.length;
@@ -110,16 +100,13 @@ export const ReviewsPage: React.FC = () => {
   }), [rows, total]);
 
   const handleConfirm = async () => {
-    const { action, ids } = confirm;
+    const { ids } = confirm;
     if (!ids.length) return;
     try {
-      if (action === "delete") await softDelete.mutateAsync(ids.join(","));
-      if (action === "recover") await recover.mutateAsync({ ids });
-      if (action === "destroy") await destroy.mutateAsync(ids.join(","));
+      await softDelete.mutateAsync(ids.join(","));
       await query.refetch();
-      await deletedQuery.refetch();
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.success(action === "recover" ? "Recovered." : action === "destroy" ? "Permanently deleted." : "Deleted.");
+      toast.success("Deleted.");
     } catch (error) {
       toast.error(parseApiError(error).message);
     } finally {
@@ -127,7 +114,7 @@ export const ReviewsPage: React.FC = () => {
     }
   };
 
-  const isLoading = isDeletedView ? deletedQuery.isLoading : activeTab === "site" ? siteQuery.isLoading : query.isLoading;
+  const isLoading = activeTab === "site" ? siteQuery.isLoading : query.isLoading;
   const tabs = [{ key: "all", label: "All" }, { key: "published", label: "Published" }, { key: "pending", label: "Pending" }, { key: "rejected", label: "Rejected" }, { key: "site", label: "Site Reviews" }];
 
   const columns = [
@@ -155,35 +142,24 @@ export const ReviewsPage: React.FC = () => {
       key: "actions", label: "",
       render: (r: Row) => (
         <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-          {isDeletedView ? (
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => confirm.prompt("recover", [r.id])} className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                <RotateCcw size={11} /> Recover
-              </button>
-              <button type="button" onClick={() => confirm.prompt("destroy", [r.id])} className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-                <Trash2 size={11} /> Delete Permanently
-              </button>
-            </div>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                  <MoreHorizontal size={15} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/dashboard/seo-metadata/create?entityType=REVIEW&entityId=${encodeURIComponent(r.id)}`)}>
-                  <Globe className="mr-2 h-4 w-4" /> SEO
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirm.prompt("delete", [r.id])}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <MoreHorizontal size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/seo-metadata/create?entityType=REVIEW&entityId=${encodeURIComponent(r.id)}`)}>
+                <Globe className="mr-2 h-4 w-4" /> SEO
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirm.prompt("delete", [r.id])}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -191,48 +167,31 @@ export const ReviewsPage: React.FC = () => {
 
   return (
     <PageLayout
-      variant={isDeletedView ? "deleted" : undefined}
-      title={isDeletedView ? "Deleted Reviews" : "Reviews"}
-      subtitle={isDeletedView ? "Deleted review records." : "Moderate product and site reviews."}
-      onBack={isDeletedView ? () => navigate(LIVE_PATH) : undefined}
+      title="Reviews"
+      subtitle="Moderate product and site reviews."
       searchValue={state.search}
       onSearchChange={(v) => setState((p) => ({ ...p, page: 1, search: v }))}
       searchPlaceholder="Search reviews..."
     >
-      {!isDeletedView && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCardV2 label="Total" value={stats.total} icon={Star} colorVariant="blue" />
-          <StatCardV2 label="Published" value={stats.published} icon={CheckCircle} colorVariant="emerald" />
-          <StatCardV2 label="Pending" value={stats.pending} icon={Clock} colorVariant="amber" />
-          <StatCardV2 label="Rejected" value={stats.rejected} icon={XCircle} colorVariant="red" />
-          <StatCardV2 label="Avg Rating" value={stats.avgRating} icon={BarChart2} colorVariant="blue" />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCardV2 label="Total" value={stats.total} icon={Star} colorVariant="blue" />
+        <StatCardV2 label="Published" value={stats.published} icon={CheckCircle} colorVariant="emerald" />
+        <StatCardV2 label="Pending" value={stats.pending} icon={Clock} colorVariant="amber" />
+        <StatCardV2 label="Rejected" value={stats.rejected} icon={XCircle} colorVariant="red" />
+        <StatCardV2 label="Avg Rating" value={stats.avgRating} icon={BarChart2} colorVariant="blue" />
+      </div>
 
       <DataTableV2
-        tabs={!isDeletedView ? tabs : undefined}
+        tabs={tabs}
         activeTab={activeTab}
         onTabChange={(tab) => { setActiveTab(tab); setState((p) => ({ ...p, page: 1 })); }}
         columns={columns}
         data={tabFiltered}
         actions={
           selectedIds.length > 0 ? (
-            <div className="flex items-center gap-2">
-              {isDeletedView ? (
-                <>
-                  <button type="button" onClick={() => confirm.prompt("recover", selectedIds)} className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
-                    <RotateCcw size={12} /> Recover ({selectedIds.length})
-                  </button>
-                  <button type="button" onClick={() => confirm.prompt("destroy", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                    <Trash2 size={12} /> Delete Permanently ({selectedIds.length})
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
-                  <Trash2 size={12} /> Delete ({selectedIds.length})
-                </button>
-              )}
-            </div>
+            <button type="button" onClick={() => confirm.prompt("delete", selectedIds)} className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100">
+              <Trash2 size={12} /> Delete ({selectedIds.length})
+            </button>
           ) : undefined
         }
         searchValue={state.search}
@@ -246,20 +205,13 @@ export const ReviewsPage: React.FC = () => {
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm.action === "recover" ? "Recover review?" : confirm.action === "destroy" ? "Delete permanently?" : "Delete review?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm.action === "recover" ? "This will restore the selected review." : "This permanently deletes the review and cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete review?</AlertDialogTitle>
+            <AlertDialogDescription>This will delete the selected review(s).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full" onClick={confirm.dismiss}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={confirm.action === "recover" ? "rounded-full bg-emerald-600 text-white hover:bg-emerald-700" : "rounded-full bg-red-600 text-white hover:bg-red-700"}
-              onClick={() => void handleConfirm()}
-            >
-              {confirm.action === "recover" ? "Recover" : confirm.action === "destroy" ? "Delete Permanently" : "Delete"}
+            <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
