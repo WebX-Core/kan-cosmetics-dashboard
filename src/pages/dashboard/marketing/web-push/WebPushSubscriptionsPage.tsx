@@ -1,12 +1,19 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Users, CheckCircle, AlertCircle, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Users,
+  CheckCircle,
+  AlertCircle,
+  Trash2,
+} from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
+import { useToast } from "@/shared/components/feedback/ToastProvider";
+import { confirmAction } from "@/shared/utils/confirm";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 
@@ -29,11 +36,18 @@ const getRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
   const data = payload as { data?: { subscriptions?: unknown[] } | unknown[] };
   const rows: unknown[] = Array.isArray(data.data)
     ? data.data
-    : Array.isArray((data.data as { subscriptions?: unknown[] } | undefined)?.subscriptions)
-      ? (data.data as { subscriptions?: unknown[] } | undefined)?.subscriptions ?? []
+    : Array.isArray(
+          (data.data as { subscriptions?: unknown[] } | undefined)
+            ?.subscriptions,
+        )
+      ? ((data.data as { subscriptions?: unknown[] } | undefined)
+          ?.subscriptions ?? [])
       : [];
 
-  return rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null);
+  return rows.filter(
+    (row): row is Record<string, unknown> =>
+      typeof row === "object" && row !== null,
+  );
 };
 
 type SubscriptionRow = Readonly<{
@@ -47,13 +61,26 @@ type SubscriptionRow = Readonly<{
   createdAt: string;
 }>;
 
+const personName = (person: Record<string, unknown> | null): string => {
+  if (!person) return "";
+  const firstname = text(person.firstname);
+  const lastname = text(person.lastname);
+  return [firstname, lastname].filter(Boolean).join(" ") || text(person.email);
+};
+
 const toSubscriptionRows = (payload: unknown): ReadonlyArray<SubscriptionRow> =>
   getRows(payload).map((item) => {
-    const customer = typeof item.customer === "object" && item.customer !== null ? (item.customer as Record<string, unknown>) : null;
-    const user = typeof item.user === "object" && item.user !== null ? (item.user as Record<string, unknown>) : null;
+    const customer =
+      typeof item.customer === "object" && item.customer !== null
+        ? (item.customer as Record<string, unknown>)
+        : null;
+    const user =
+      typeof item.user === "object" && item.user !== null
+        ? (item.user as Record<string, unknown>)
+        : null;
     const owner =
-      text(customer?.id ?? item.customerId, "") ||
-      text(user?.id ?? item.userId, "") ||
+      personName(customer) ||
+      personName(user) ||
       text(item.sessionId, "") ||
       "—";
 
@@ -71,23 +98,42 @@ const toSubscriptionRows = (payload: unknown): ReadonlyArray<SubscriptionRow> =>
 
 export const WebPushSubscriptionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const isDeletedView = location.pathname === "/dashboard/marketing/web-push/subscriptions/deleted";
+  const toast = useToast();
   const [activeTab, setActiveTab] = React.useState("all");
-  const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
+  const { state, setState, debouncedSearch } = useListQueryState({
+    page: 1,
+    limit: 20,
+    search: "",
+  });
 
   const query = marketingApi.webPushSubscriptions.hooks.useList({
     page: state.page,
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
+  const softDelete = marketingApi.webPushSubscriptions.hooks.useSoftDelete();
 
-  const rows = React.useMemo(() => toSubscriptionRows(query.data), [query.data]);
-  const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
-  const total = (query.data as { total?: number } | undefined)?.total ?? rows.length;
+  const handleDelete = async (id: string) => {
+    const ok = await confirmAction("Delete this subscription?");
+    if (!ok) return;
+    await softDelete.mutateAsync(id);
+    toast.success("Subscription deleted.");
+  };
+
+  const rows = React.useMemo(
+    () => toSubscriptionRows(query.data),
+    [query.data],
+  );
+  const totalPages =
+    (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const total =
+    (query.data as { total?: number } | undefined)?.total ?? rows.length;
 
   const filtered = React.useMemo(
-    () => (activeTab === "all" ? rows : rows.filter((r) => r.isActive.toLowerCase() === activeTab)),
+    () =>
+      activeTab === "all"
+        ? rows
+        : rows.filter((r) => r.isActive.toLowerCase() === activeTab),
     [rows, activeTab],
   );
 
@@ -108,24 +154,11 @@ export const WebPushSubscriptionsPage: React.FC = () => {
 
   const columns = [
     {
-      key: "endpoint",
-      label: "Endpoint",
-      render: (r: SubscriptionRow) => (
-        <div className="max-w-[26rem]">
-          <div className="truncate font-mono text-xs text-[#1d1d1f]">{r.endpoint}</div>
-          <div className="mt-1 flex items-center gap-2 text-[11px] text-[#6e6e73]">
-            <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 font-medium text-[#1d1d1f]">
-              {r.owner}
-            </span>
-            <span>{r.browser}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
       key: "platform",
       label: "Platform",
-      render: (r: SubscriptionRow) => <span className="text-sm text-[#1d1d1f]">{r.platform}</span>,
+      render: (r: SubscriptionRow) => (
+        <span className="text-sm text-[#1d1d1f]">{r.platform}</span>
+      ),
     },
     {
       key: "isActive",
@@ -135,18 +168,36 @@ export const WebPushSubscriptionsPage: React.FC = () => {
     {
       key: "lastSeenAt",
       label: "Last Seen",
-      render: (r: SubscriptionRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.lastSeenAt)}</span>,
+      render: (r: SubscriptionRow) => (
+        <span className="text-xs text-[#6e6e73]">{fmt(r.lastSeenAt)}</span>
+      ),
     },
     {
       key: "createdAt",
       label: "Created",
-      render: (r: SubscriptionRow) => <span className="text-xs text-[#6e6e73]">{fmt(r.createdAt)}</span>,
+      render: (r: SubscriptionRow) => (
+        <span className="text-xs text-[#6e6e73]">{fmt(r.createdAt)}</span>
+      ),
     },
     {
       key: "actions",
       label: "",
-      render: () => <ChevronRight size={14} className="text-[#86868b]" />,
-      width: "44px",
+      render: (r: SubscriptionRow) => (
+        <div
+          className="flex items-center justify-end gap-[5px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => void handleDelete(r.id)}
+            className="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-red-50 hover:text-red-500"
+            aria-label={`Delete subscription ${r.id}`}
+          >
+            <Trash2 size={13} strokeWidth={2} />
+          </button>
+        </div>
+      ),
+      width: "80px",
     },
   ];
 
@@ -159,9 +210,24 @@ export const WebPushSubscriptionsPage: React.FC = () => {
       searchPlaceholder="Search subscriptions..."
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCardV2 label="Total Subscriptions" value={stats.total} icon={Users} colorVariant="blue" />
-        <StatCardV2 label="Active" value={stats.active} icon={CheckCircle} colorVariant="emerald" />
-        <StatCardV2 label="Inactive" value={stats.inactive} icon={AlertCircle} colorVariant="gray" />
+        <StatCardV2
+          label="Total Subscriptions"
+          value={stats.total}
+          icon={Users}
+          colorVariant="blue"
+        />
+        <StatCardV2
+          label="Active"
+          value={stats.active}
+          icon={CheckCircle}
+          colorVariant="emerald"
+        />
+        <StatCardV2
+          label="Inactive"
+          value={stats.inactive}
+          icon={AlertCircle}
+          colorVariant="gray"
+        />
       </div>
 
       <DataTableV2
@@ -174,8 +240,14 @@ export const WebPushSubscriptionsPage: React.FC = () => {
         columns={columns}
         data={filtered}
         searchValue={state.search}
-        onRowClick={!isDeletedView ? (row) => navigate(`/dashboard/marketing/web-push/subscriptions/${row.id}`) : undefined}
-        emptyMessage={query.isLoading ? "Loading subscriptions..." : "No subscriptions found."}
+        onRowClick={(row) =>
+          navigate(`/dashboard/marketing/web-push/subscriptions/${row.id}`)
+        }
+        emptyMessage={
+          query.isLoading
+            ? "Loading subscriptions..."
+            : "No subscriptions found."
+        }
         showPagination
         currentPage={state.page}
         totalPages={totalPages}
