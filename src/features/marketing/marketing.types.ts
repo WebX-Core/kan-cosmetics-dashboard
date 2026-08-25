@@ -58,10 +58,15 @@ export type EmailRecipientDto = Readonly<{
 }>;
 
 export type EmailQueueDto = Readonly<{
-  to: string;
-  subject: string;
-  body?: string;
+  campaignId: string;
+  recipientEmail: string;
+  recipientName?: string;
+  batchNumber?: number;
   status?: string;
+  retryCount?: number;
+  scheduledTime?: string;
+  scheduledAt?: string;
+  sentAt?: string;
   sortOrder?: number;
 }>;
 

@@ -161,7 +161,14 @@ export const EmailLogsPage: React.FC = () => {
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
       />
-      {selectedRow && <EmailLogDetailModal row={selectedRow} onClose={() => setSelectedRow(null)} />}
+      {selectedRow && (
+        <EmailLogDetailModal
+          row={selectedRow}
+          onClose={() => setSelectedRow(null)}
+          onRetry={(row) => void handleRetry(row)}
+          retrying={retryingId === selectedRow.id}
+        />
+      )}
     </PageLayout>
   );
 };
