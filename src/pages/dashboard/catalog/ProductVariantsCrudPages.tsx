@@ -43,6 +43,10 @@ type VariantForm = Readonly<{
   isTryOn: boolean;
   isVatIncluded: boolean;
   vatRate: string;
+  maxOrderQuantity: string;
+  maxCustomerPurchaseQuantity: string;
+  purchaseLimitStartsAt: string;
+  purchaseLimitEndsAt: string;
   status: PublicationStatus;
 }>;
 
@@ -61,6 +65,10 @@ const initialForm: VariantForm = {
   isTryOn: false,
   isVatIncluded: true,
   vatRate: "13",
+  maxOrderQuantity: "",
+  maxCustomerPurchaseQuantity: "",
+  purchaseLimitStartsAt: "",
+  purchaseLimitEndsAt: "",
   status: "DRAFT",
 };
 
@@ -84,7 +92,36 @@ const variantSchema = z.object({
   isTryOn: z.boolean(),
   isVatIncluded: z.boolean(),
   vatRate: z.coerce.number().min(0, "VAT rate cannot be negative").max(100, "VAT rate cannot exceed 100"),
+  maxOrderQuantity: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || (Number.isInteger(Number(value)) && Number(value) >= 0),
+      "Max quantity per order must be a whole number",
+    ),
+  maxCustomerPurchaseQuantity: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || (Number.isInteger(Number(value)) && Number(value) >= 0),
+      "Max quantity per customer must be a whole number",
+    ),
+  purchaseLimitStartsAt: z.string().trim().optional(),
+  purchaseLimitEndsAt: z.string().trim().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
+}).superRefine((value, ctx) => {
+  if (!value.purchaseLimitStartsAt || !value.purchaseLimitEndsAt) return;
+  const startsAt = new Date(value.purchaseLimitStartsAt).getTime();
+  const endsAt = new Date(value.purchaseLimitEndsAt).getTime();
+  if (Number.isFinite(startsAt) && Number.isFinite(endsAt) && startsAt > endsAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["purchaseLimitEndsAt"],
+      message: "Limit end date must be after the start date",
+    });
+  }
 });
 
 const inputClass =
@@ -151,6 +188,23 @@ const toVariantRows = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): 
   }));
 
 const readString = (value: unknown): string => (typeof value === "string" ? value : "");
+const readDateTimeLocal = (value: unknown): string => readString(value).slice(0, 16);
+const optionalLimitNumber = (
+  value: string | undefined,
+  clearEmpty = false,
+): number | "" | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed) return clearEmpty ? "" : undefined;
+  return Number(trimmed);
+};
+const optionalIsoDate = (
+  value: string | undefined,
+  clearEmpty = false,
+): string | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed) return clearEmpty ? "" : undefined;
+  return new Date(trimmed).toISOString();
+};
 
 const readStringArray = (...values: ReadonlyArray<unknown>): string[] =>
   Array.from(
@@ -774,6 +828,10 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
       isTryOn: Boolean(row.isTryOn),
       isVatIncluded: typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
       vatRate: row.vatRate != null ? String(row.vatRate) : "13",
+      maxOrderQuantity: row.maxOrderQuantity != null ? String(row.maxOrderQuantity) : "",
+      maxCustomerPurchaseQuantity: row.maxCustomerPurchaseQuantity != null ? String(row.maxCustomerPurchaseQuantity) : "",
+      purchaseLimitStartsAt: readDateTimeLocal(row.purchaseLimitStartsAt),
+      purchaseLimitEndsAt: readDateTimeLocal(row.purchaseLimitEndsAt),
       status: readPublicationStatus(row.status),
     });
     setKeyIngredients(readKeyIngredients(row.descriptionJson));
@@ -833,6 +891,10 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
         removeUrls: removedUrls.length ? removedUrls : undefined,
         colorHex: isLipstickProduct && parsed.colorHex ? parsed.colorHex : undefined,
         isTryOn: isLipstickProduct ? parsed.isTryOn : undefined,
+        maxOrderQuantity: optionalLimitNumber(parsed.maxOrderQuantity, isEdit),
+        maxCustomerPurchaseQuantity: optionalLimitNumber(parsed.maxCustomerPurchaseQuantity, isEdit),
+        purchaseLimitStartsAt: optionalIsoDate(parsed.purchaseLimitStartsAt, isEdit),
+        purchaseLimitEndsAt: optionalIsoDate(parsed.purchaseLimitEndsAt, isEdit),
       };
 
       if (isEdit && id) {
@@ -955,6 +1017,44 @@ const VariantFormPage: React.FC<Readonly<{ mode: "create" | "edit" }>> = ({ mode
             </FormField>
             <FormField label="VAT Rate (%)" required>
               <input type="number" min="0" max="100" step="0.01" value={form.vatRate} placeholder="VAT rate, e.g. 13" onChange={(e) => setForm((prev) => ({ ...prev, vatRate: e.target.value }))} className={inputClass} />
+            </FormField>
+            <FormField label="Max Quantity Per Order">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.maxOrderQuantity}
+                placeholder="No per-order limit"
+                onChange={(e) => setForm((prev) => ({ ...prev, maxOrderQuantity: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Max Quantity Per Customer">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.maxCustomerPurchaseQuantity}
+                placeholder="No customer purchase limit"
+                onChange={(e) => setForm((prev) => ({ ...prev, maxCustomerPurchaseQuantity: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Limit Starts At">
+              <input
+                type="datetime-local"
+                value={form.purchaseLimitStartsAt}
+                onChange={(e) => setForm((prev) => ({ ...prev, purchaseLimitStartsAt: e.target.value }))}
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Limit Ends At">
+              <input
+                type="datetime-local"
+                value={form.purchaseLimitEndsAt}
+                onChange={(e) => setForm((prev) => ({ ...prev, purchaseLimitEndsAt: e.target.value }))}
+                className={inputClass}
+              />
             </FormField>
             {isLipstickProduct ? (
               <FormField label="Color HEX">

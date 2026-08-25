@@ -49,9 +49,42 @@ const schema = z.object({
     .number()
     .min(0, "VAT rate cannot be negative")
     .max(100, "VAT rate cannot exceed 100"),
+  maxOrderQuantity: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) =>
+        !value ||
+        (Number.isInteger(Number(value)) && Number(value) >= 0),
+      "Max quantity per order must be a whole number",
+    ),
+  maxCustomerPurchaseQuantity: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) =>
+        !value ||
+        (Number.isInteger(Number(value)) && Number(value) >= 0),
+      "Max quantity per customer must be a whole number",
+    ),
+  purchaseLimitStartsAt: z.string().trim().optional(),
+  purchaseLimitEndsAt: z.string().trim().optional(),
   sortOrder: z.coerce.number().optional(),
   description: z.string().trim().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
+}).superRefine((value, ctx) => {
+  if (!value.purchaseLimitStartsAt || !value.purchaseLimitEndsAt) return;
+  const startsAt = new Date(value.purchaseLimitStartsAt).getTime();
+  const endsAt = new Date(value.purchaseLimitEndsAt).getTime();
+  if (Number.isFinite(startsAt) && Number.isFinite(endsAt) && startsAt > endsAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["purchaseLimitEndsAt"],
+      message: "Limit end date must be after the start date",
+    });
+  }
 });
 
 type Form = Readonly<{
@@ -67,6 +100,10 @@ type Form = Readonly<{
   occasionType: OccasionType;
   isVatIncluded: boolean;
   vatRate: string;
+  maxOrderQuantity: string;
+  maxCustomerPurchaseQuantity: string;
+  purchaseLimitStartsAt: string;
+  purchaseLimitEndsAt: string;
   sortOrder: string;
   description: string;
   status: PublicationStatus;
@@ -85,6 +122,10 @@ const initial: Form = {
   occasionType: "NONE",
   isVatIncluded: true,
   vatRate: "13",
+  maxOrderQuantity: "",
+  maxCustomerPurchaseQuantity: "",
+  purchaseLimitStartsAt: "",
+  purchaseLimitEndsAt: "",
   sortOrder: "0",
   description: "",
   status: "DRAFT",
@@ -92,6 +133,23 @@ const initial: Form = {
 
 const read = (value: unknown): string =>
   typeof value === "string" ? value : "";
+const readDateTimeLocal = (value: unknown): string => read(value).slice(0, 16);
+const optionalLimitNumber = (
+  value: string | undefined,
+  clearEmpty = false,
+): number | "" | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed) return clearEmpty ? "" : undefined;
+  return Number(trimmed);
+};
+const optionalIsoDate = (
+  value: string | undefined,
+  clearEmpty = false,
+): string | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed) return clearEmpty ? "" : undefined;
+  return new Date(trimmed).toISOString();
+};
 const readDescriptionText = (
   row: Readonly<Record<string, unknown>>,
 ): string => {
@@ -730,6 +788,14 @@ export const ProductCreatePage: React.FC = () => {
       isVatIncluded:
         typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
       vatRate: row.vatRate != null ? String(row.vatRate) : "13",
+      maxOrderQuantity:
+        row.maxOrderQuantity != null ? String(row.maxOrderQuantity) : "",
+      maxCustomerPurchaseQuantity:
+        row.maxCustomerPurchaseQuantity != null
+          ? String(row.maxCustomerPurchaseQuantity)
+          : "",
+      purchaseLimitStartsAt: readDateTimeLocal(row.purchaseLimitStartsAt),
+      purchaseLimitEndsAt: readDateTimeLocal(row.purchaseLimitEndsAt),
       sortOrder: row.sortOrder != null ? String(row.sortOrder) : "0",
       description: descriptionText,
       status:
@@ -900,6 +966,16 @@ export const ProductCreatePage: React.FC = () => {
       occasionType: parsed.occasionType,
       isVatIncluded: parsed.isVatIncluded,
       vatRate: parsed.vatRate,
+      maxOrderQuantity: optionalLimitNumber(parsed.maxOrderQuantity, isEdit),
+      maxCustomerPurchaseQuantity: optionalLimitNumber(
+        parsed.maxCustomerPurchaseQuantity,
+        isEdit,
+      ),
+      purchaseLimitStartsAt: optionalIsoDate(
+        parsed.purchaseLimitStartsAt,
+        isEdit,
+      ),
+      purchaseLimitEndsAt: optionalIsoDate(parsed.purchaseLimitEndsAt, isEdit),
       sortOrder: parsed.sortOrder ?? 0,
       description: parsed.description || undefined,
       descriptionJson: (() => {
@@ -1150,6 +1226,69 @@ export const ProductCreatePage: React.FC = () => {
                 />
                 Price includes VAT
               </label>
+            </FormField>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Purchase Limits"
+          description="Limit how many units a customer can buy during campaigns or heavy discounts. Leave empty for unlimited."
+        >
+          <div className="grid gap-3.25 md:grid-cols-2">
+            <FormField label="Max Quantity Per Order">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.maxOrderQuantity}
+                placeholder="No per-order limit"
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, maxOrderQuantity: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Max Quantity Per Customer">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.maxCustomerPurchaseQuantity}
+                placeholder="No customer purchase limit"
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    maxCustomerPurchaseQuantity: e.target.value,
+                  }))
+                }
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Limit Starts At">
+              <input
+                type="datetime-local"
+                value={form.purchaseLimitStartsAt}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    purchaseLimitStartsAt: e.target.value,
+                  }))
+                }
+                className={inputClass}
+              />
+            </FormField>
+            <FormField label="Limit Ends At">
+              <input
+                type="datetime-local"
+                value={form.purchaseLimitEndsAt}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    purchaseLimitEndsAt: e.target.value,
+                  }))
+                }
+                className={inputClass}
+              />
             </FormField>
           </div>
         </FormSection>

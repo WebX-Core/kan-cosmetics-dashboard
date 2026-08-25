@@ -84,6 +84,10 @@ export type ProductDto = Readonly<{
   occasionType?: OccasionType;
   isVatIncluded?: boolean;
   vatRate?: number;
+  maxOrderQuantity?: number | "";
+  maxCustomerPurchaseQuantity?: number | "";
+  purchaseLimitStartsAt?: string;
+  purchaseLimitEndsAt?: string;
   additionalInformationJson?: unknown;
   removeUrls?: ReadonlyArray<string>;
   removeMediaAssetIds?: ReadonlyArray<string>;
@@ -111,6 +115,10 @@ export type ProductVariantDto = Readonly<{
   isTryOn?: boolean;
   isVatIncluded?: boolean;
   vatRate?: number;
+  maxOrderQuantity?: number | "";
+  maxCustomerPurchaseQuantity?: number | "";
+  purchaseLimitStartsAt?: string;
+  purchaseLimitEndsAt?: string;
   descriptionJson?: ProductDescriptionJson | Record<string, unknown>;
   image?: File | null;
   images?: ReadonlyArray<File>;
