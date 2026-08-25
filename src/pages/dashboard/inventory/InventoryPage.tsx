@@ -192,7 +192,14 @@ export const InventoryPage: React.FC = () => {
   );
 
   const loading = inventoryQuery.isLoading;
-  const totalPages = (inventoryQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  // The underlying query always fetches everything (limit: 500) since status
+  // filtering happens client-side on visibleRows — so pagination here is
+  // also client-side, sliced by the page-size selector's state.limit.
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / state.limit));
+  const pagedRows = React.useMemo(() => {
+    const start = (state.page - 1) * state.limit;
+    return visibleRows.slice(start, start + state.limit);
+  }, [visibleRows, state.page, state.limit]);
 
   const handleConfirm = async () => {
     const { ids } = confirm;
@@ -235,20 +242,21 @@ export const InventoryPage: React.FC = () => {
   );
 
   const activeColumns = [
-    { key: "product", label: "Product / Variant", render: productColumn },
-    { key: "sku", label: "SKU", render: (row: InventoryRow) => <span className="text-[13px] text-[#6e6e73]">{row.sku}</span> },
-    { key: "stock", label: "Stock", render: (row: InventoryRow) => <span className="text-[14px] font-medium text-[#1d1d1f]">{row.stockQty}</span> },
-    { key: "reserved", label: "Reserved", render: (row: InventoryRow) => <span className="text-[14px] text-[#6e6e73]">{row.reservedQty}</span> },
+    { key: "product", label: "Product / Variant", sortValue: (row: InventoryRow) => row.productName, render: productColumn },
+    { key: "sku", label: "SKU", sortValue: (row: InventoryRow) => row.sku, render: (row: InventoryRow) => <span className="text-[13px] text-[#6e6e73]">{row.sku}</span> },
+    { key: "stock", label: "Stock", sortValue: (row: InventoryRow) => row.stockQty, render: (row: InventoryRow) => <span className="text-[14px] font-medium text-[#1d1d1f]">{row.stockQty}</span> },
+    { key: "reserved", label: "Reserved", sortValue: (row: InventoryRow) => row.reservedQty, render: (row: InventoryRow) => <span className="text-[14px] text-[#6e6e73]">{row.reservedQty}</span> },
     {
       key: "available",
       label: "Available",
+      sortValue: (row: InventoryRow) => row.available,
       render: (row: InventoryRow) => (
         <span className={`text-[14px] font-medium ${row.available <= 0 ? "text-red-600" : row.status === "Low Stock" ? "text-amber-600" : "text-emerald-600"}`}>
           {row.available}
         </span>
       ),
     },
-    { key: "status", label: "Status", render: (row: InventoryRow) => <StatusBadge status={row.status} /> },
+    { key: "status", label: "Status", sortValue: (row: InventoryRow) => row.status, render: (row: InventoryRow) => <StatusBadge status={row.status} /> },
   ];
 
   return (
@@ -283,7 +291,7 @@ export const InventoryPage: React.FC = () => {
 
       <DataTableV2
         columns={activeColumns}
-        data={visibleRows}
+        data={pagedRows}
         rowId={(row) => row.id}
         onRowClick={(row) => navigate(`/dashboard/inventory/${row.id}`)}
         tabs={tabs}
@@ -332,6 +340,8 @@ export const InventoryPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((p) => ({ ...p, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(limit) => setState((p) => ({ ...p, page: 1, limit }))}
         showPagination
       />
 
