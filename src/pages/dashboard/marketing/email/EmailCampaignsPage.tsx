@@ -116,6 +116,7 @@ export const EmailCampaignsPage: React.FC = () => {
     {
       key: "name",
       label: "Campaign",
+      sortValue: (r: CampaignRow) => r.name,
       render: (r: CampaignRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.name}</div>
@@ -123,9 +124,9 @@ export const EmailCampaignsPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "status", label: "Status", render: (r: CampaignRow) => <StatusBadge status={campaignBadgeStatus(r.status)} label={r.status} /> },
-    { key: "scheduledAt", label: "Scheduled", render: (r: CampaignRow) => <span className="text-xs text-gray-500">{fmt(r.scheduledAt)}</span> },
-    { key: "createdAt", label: "Created", render: (r: CampaignRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    { key: "status", label: "Status", sortValue: (r: CampaignRow) => r.status, render: (r: CampaignRow) => <StatusBadge status={campaignBadgeStatus(r.status)} label={r.status} /> },
+    { key: "scheduledAt", label: "Scheduled", sortValue: (r: CampaignRow) => r.scheduledAt, render: (r: CampaignRow) => <span className="text-xs text-gray-500">{fmt(r.scheduledAt)}</span> },
+    { key: "createdAt", label: "Created", sortValue: (r: CampaignRow) => r.createdAt, render: (r: CampaignRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
   ];
 
   return (
@@ -163,6 +164,8 @@ export const EmailCampaignsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

@@ -93,10 +93,11 @@ export const EmailLogsPage: React.FC = () => {
   };
 
   const columns = [
-    { key: "recipientEmail", label: "Who", render: (r: EmailLogRow) => <span className="font-medium text-gray-900">{r.recipientEmail}</span> },
+    { key: "recipientEmail", label: "Who", sortValue: (r: EmailLogRow) => r.recipientEmail, render: (r: EmailLogRow) => <span className="font-medium text-gray-900">{r.recipientEmail}</span> },
     {
       key: "campaign",
       label: "What",
+      sortValue: (r: EmailLogRow) => r.campaignTitle,
       render: (r: EmailLogRow) => (
         <div className="flex items-center gap-1.5">
           <StatusBadge status={["delivered", "sent"].includes(r.status.toLowerCase()) ? "Active" : "Inactive"} label={r.status} />
@@ -160,6 +161,8 @@ export const EmailLogsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
       {selectedRow && (
         <EmailLogDetailModal

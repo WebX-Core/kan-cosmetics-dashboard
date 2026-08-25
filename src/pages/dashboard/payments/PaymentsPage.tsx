@@ -157,9 +157,10 @@ export const PaymentsPage: React.FC = () => {
   const [settlementFilter, setSettlementFilter] = React.useState("");
   const [sourceFilter, setSourceFilter] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(20);
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const debouncedSearch = useDebouncedValue(search, 400);
-  const query = usePaymentsList({ page: paymentId ? 1 : page, limit: paymentId ? 10000 : 20, search: paymentId ? undefined : debouncedSearch || undefined, paymentStatus: paymentId ? undefined : activeTab !== "all" ? activeTab.toUpperCase() : undefined, settlementStatus: paymentId ? undefined : settlementFilter || undefined, paymentSource: paymentId ? undefined : sourceFilter || undefined });
+  const query = usePaymentsList({ page: paymentId ? 1 : page, limit: paymentId ? 10000 : limit, search: paymentId ? undefined : debouncedSearch || undefined, paymentStatus: paymentId ? undefined : activeTab !== "all" ? activeTab.toUpperCase() : undefined, settlementStatus: paymentId ? undefined : settlementFilter || undefined, paymentSource: paymentId ? undefined : sourceFilter || undefined });
   const [settling, setSettling] = React.useState(false);
 
   const payments = React.useMemo(
@@ -236,22 +237,22 @@ export const PaymentsPage: React.FC = () => {
       ),
       width: "44px",
     },
-    { key: "transactionId", label: "Transaction ID", render: (row: PaymentRow) => (
+    { key: "transactionId", label: "Transaction ID", sortValue: (row: PaymentRow) => row.transactionId, render: (row: PaymentRow) => (
       <span className="font-medium text-gray-900">{row.transactionId}</span>
     )},
-    { key: "customer", label: "Customer", render: (row: PaymentRow) => (
+    { key: "customer", label: "Customer", sortValue: (row: PaymentRow) => row.customerName, render: (row: PaymentRow) => (
       <div>
         <div className="font-medium text-gray-900">{row.customerName}</div>
         <div className="text-xs text-gray-400">{row.customerEmail}</div>
       </div>
     )},
-    { key: "orderNumber", label: "Order", render: (row: PaymentRow) => (
+    { key: "orderNumber", label: "Order", sortValue: (row: PaymentRow) => row.orderNumber, render: (row: PaymentRow) => (
       <span className="text-gray-700">{row.orderNumber}</span>
     )},
-    { key: "amount", label: "Amount", render: (row: PaymentRow) => (
+    { key: "amount", label: "Amount", sortValue: (row: PaymentRow) => row.amount, render: (row: PaymentRow) => (
       <span className="font-medium text-gray-900">Rs {row.amount.toFixed(2)}</span>
     )},
-    { key: "method", label: "Method", render: (row: PaymentRow) => (
+    { key: "method", label: "Method", sortValue: (row: PaymentRow) => row.method, render: (row: PaymentRow) => (
       <span className="text-gray-700">{row.method}</span>
     )},
     {
@@ -393,6 +394,8 @@ export const PaymentsPage: React.FC = () => {
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
+        pageSize={limit}
+        onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
         onRowClick={(row) => navigate(`/dashboard/payments/${row.id}`)}
       />
     </PageLayout>

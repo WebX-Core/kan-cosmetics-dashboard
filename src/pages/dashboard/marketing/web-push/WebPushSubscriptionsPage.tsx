@@ -156,6 +156,7 @@ export const WebPushSubscriptionsPage: React.FC = () => {
     {
       key: "platform",
       label: "Platform",
+      sortValue: (r: SubscriptionRow) => r.platform,
       render: (r: SubscriptionRow) => (
         <span className="text-sm text-[#1d1d1f]">{r.platform}</span>
       ),
@@ -163,11 +164,13 @@ export const WebPushSubscriptionsPage: React.FC = () => {
     {
       key: "isActive",
       label: "Status",
+      sortValue: (r: SubscriptionRow) => r.isActive,
       render: (r: SubscriptionRow) => <StatusBadge status={r.isActive} />,
     },
     {
       key: "lastSeenAt",
       label: "Last Seen",
+      sortValue: (r: SubscriptionRow) => r.lastSeenAt,
       render: (r: SubscriptionRow) => (
         <span className="text-xs text-[#6e6e73]">{fmt(r.lastSeenAt)}</span>
       ),
@@ -175,6 +178,7 @@ export const WebPushSubscriptionsPage: React.FC = () => {
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (r: SubscriptionRow) => r.createdAt,
       render: (r: SubscriptionRow) => (
         <span className="text-xs text-[#6e6e73]">{fmt(r.createdAt)}</span>
       ),
@@ -252,6 +256,8 @@ export const WebPushSubscriptionsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
     </PageLayout>
   );

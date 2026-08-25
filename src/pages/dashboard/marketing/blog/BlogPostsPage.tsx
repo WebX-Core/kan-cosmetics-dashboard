@@ -101,14 +101,14 @@ export const BlogPostsPage: React.FC = () => {
   ];
 
   const columns = [
-    { key: "post", label: "Post", render: (r: Row) => (
+    { key: "post", label: "Post", sortValue: (r: Row) => r.title, render: (r: Row) => (
       <div>
         <div className="font-medium text-gray-900">{r.title}</div>
         <div className="text-xs text-gray-400">{r.author} · {r.category}</div>
       </div>
     )},
-    { key: "views", label: "Views", render: (r: Row) => <span className="text-gray-600">{r.views}</span> },
-    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    { key: "views", label: "Views", sortValue: (r: Row) => r.views, render: (r: Row) => <span className="text-gray-600">{r.views}</span> },
+    { key: "status", label: "Status", sortValue: (r: Row) => r.status, render: (r: Row) => <StatusBadge status={r.status} /> },
     {
       key: "actions",
       label: "Actions",
@@ -178,6 +178,8 @@ export const BlogPostsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
     </PageLayout>
   );

@@ -154,6 +154,7 @@ export const EmailQueuePage: React.FC = () => {
     {
       key: "to",
       label: "To",
+      sortValue: (r: QueueRow) => r.recipientEmail,
       render: (r: QueueRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.recipientEmail}</div>
@@ -161,10 +162,11 @@ export const EmailQueuePage: React.FC = () => {
         </div>
       ),
     },
-    { key: "subject", label: "Subject", render: (r: QueueRow) => <span className="text-gray-600 line-clamp-1">{r.subject}</span> },
+    { key: "subject", label: "Subject", sortValue: (r: QueueRow) => r.subject, render: (r: QueueRow) => <span className="text-gray-600 line-clamp-1">{r.subject}</span> },
     {
       key: "status",
       label: "Status",
+      sortValue: (r: QueueRow) => r.status,
       render: (r: QueueRow) => (
         <StatusBadge
           status={r.status.toLowerCase() === "sent" ? "Active" : r.status.toLowerCase() === "failed" ? "Inactive" : "Pending"}
@@ -172,8 +174,8 @@ export const EmailQueuePage: React.FC = () => {
         />
       ),
     },
-    { key: "retryCount", label: "Attempts", render: (r: QueueRow) => <span className="text-gray-600">{r.retryCount}</span> },
-    { key: "createdAt", label: "Queued At", render: (r: QueueRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    { key: "retryCount", label: "Attempts", sortValue: (r: QueueRow) => r.retryCount, render: (r: QueueRow) => <span className="text-gray-600">{r.retryCount}</span> },
+    { key: "createdAt", label: "Queued At", sortValue: (r: QueueRow) => r.createdAt, render: (r: QueueRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
     {
       key: "actions",
       label: "",
@@ -250,6 +252,8 @@ export const EmailQueuePage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((prev) => ({ ...prev, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(open) => !open && confirm.dismiss()}>

@@ -94,6 +94,7 @@ export const NewsroomPage: React.FC = () => {
     {
       key: "title",
       label: "Title",
+      sortValue: (r: NewsroomRow) => r.title,
       render: (r: NewsroomRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.title}</div>
@@ -101,8 +102,8 @@ export const NewsroomPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "sort", label: "Sort", render: (r: NewsroomRow) => <span className="text-gray-600">{r.sortOrder ?? "—"}</span> },
-    { key: "updatedAt", label: "Updated", render: (r: NewsroomRow) => <span className="text-xs text-gray-400">{formatDateTime(r.updatedAt)}</span> },
+    { key: "sort", label: "Sort", sortValue: (r: NewsroomRow) => r.sortOrder ?? 0, render: (r: NewsroomRow) => <span className="text-gray-600">{r.sortOrder ?? "—"}</span> },
+    { key: "updatedAt", label: "Updated", sortValue: (r: NewsroomRow) => r.updatedAt ?? "", render: (r: NewsroomRow) => <span className="text-xs text-gray-400">{formatDateTime(r.updatedAt)}</span> },
   ];
 
   const deletedColumns = [
@@ -162,6 +163,8 @@ export const NewsroomPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
     </PageLayout>
   );

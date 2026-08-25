@@ -166,6 +166,7 @@ export const AdvertisementsPage: React.FC = () => {
     {
       key: "title",
       label: "Advertisement",
+      sortValue: (r: AdRow) => r.title,
       render: (r: AdRow) => (
         <div className="flex items-center gap-3">
           {r.image ? <img src={r.image} alt="" className="h-10 w-16 rounded-lg border border-[#e5e5ea] object-cover" /> : null}
@@ -179,6 +180,7 @@ export const AdvertisementsPage: React.FC = () => {
     {
       key: "targetType",
       label: "Target Type",
+      sortValue: (r: AdRow) => r.targetType,
       render: (r: AdRow) => (
         <StatusBadge
           status={r.targetType !== "—" ? "Active" : "Inactive"}
@@ -189,21 +191,25 @@ export const AdvertisementsPage: React.FC = () => {
     {
       key: "targetMode",
       label: "Mode",
+      sortValue: (r: AdRow) => r.targetMode,
       render: (r: AdRow) => <span className="text-sm text-gray-600">{r.targetMode}</span>,
     },
     {
       key: "season",
       label: "Season",
+      sortValue: (r: AdRow) => r.season,
       render: (r: AdRow) => <span className="text-sm text-gray-600">{r.season}</span>,
     },
     {
       key: "sortOrder",
       label: "Order",
+      sortValue: (r: AdRow) => r.sortOrder,
       render: (r: AdRow) => <span className="text-sm text-gray-500">{r.sortOrder || "—"}</span>,
     },
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (r: AdRow) => r.createdAt,
       render: (r: AdRow) => <span className="text-xs text-gray-400">{fmt(r.createdAt)}</span>,
     },
     ...(isDeletedView
@@ -343,6 +349,8 @@ export const AdvertisementsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

@@ -203,6 +203,7 @@ export const OrdersPage: React.FC = () => {
     {
       key: "orderNumber",
       label: "Order",
+      sortValue: (row: OrderRow) => row.placedAt,
       render: (row: OrderRow) => (
         <div>
           <div className="font-medium text-gray-900">{row.orderNumber}</div>
@@ -213,6 +214,7 @@ export const OrdersPage: React.FC = () => {
     {
       key: "customer",
       label: "Customer",
+      sortValue: (row: OrderRow) => row.customerName,
       render: (row: OrderRow) => (
         <div>
           <div className="font-medium text-gray-900">{row.customerName}</div>
@@ -238,6 +240,7 @@ export const OrdersPage: React.FC = () => {
     {
       key: "total",
       label: "Total",
+      sortValue: (row: OrderRow) => Number(row.total) || 0,
       render: (row: OrderRow) => (
         <span className="font-medium text-gray-900">{row.total}</span>
       ),
@@ -345,6 +348,8 @@ export const OrdersPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
       <AlertDialog open={Boolean(preview)} onOpenChange={(open) => { if (!open) { setPreview(null); setPreviewType(null); } }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Confirm bulk print</AlertDialogTitle><AlertDialogDescription>Preparing this preview creates immutable bill snapshots for orders that do not already have them.</AlertDialogDescription></AlertDialogHeader><div className="rounded-xl bg-[#f5f5f7] p-4 text-sm"><p><b>{preview?.bills.length ?? 0}</b> printable {previewType === "VAT_BILL" ? "VAT bills" : "shipping labels"}</p><p className="mt-1"><b>{preview?.missingOrderIds.length ?? 0}</b> missing orders</p>{preview?.missingOrderIds.length ? <p className="mt-2 break-all text-xs text-red-600">{preview.missingOrderIds.join(", ")}</p> : null}</div><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); void confirmBulkPrint(); }}>Open print preview</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <AlertDialog open={printedOrderIds.length > 0} onOpenChange={(open) => { if (!open) { setPrintedOrderIds([]); setPreviewType(null); } }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Did printing complete?</AlertDialogTitle><AlertDialogDescription>Only mark these bills printed if the browser print job was completed. Cancelling keeps print history unchanged.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Not printed</AlertDialogCancel>{canUpdateBill && <AlertDialogAction onClick={(event) => { event.preventDefault(); void confirmMarkedPrinted(); }}>Mark as printed</AlertDialogAction>}</AlertDialogFooter></AlertDialogContent></AlertDialog>

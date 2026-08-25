@@ -122,6 +122,7 @@ export const EmailRecipientsPage: React.FC = () => {
     {
       key: "recipient",
       label: "Recipient",
+      sortValue: (r: RecipientRow) => r.name || r.email,
       render: (r: RecipientRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.name}</div>
@@ -133,6 +134,7 @@ export const EmailRecipientsPage: React.FC = () => {
     {
       key: "status",
       label: "Status",
+      sortValue: (r: RecipientRow) => r.status,
       render: (r: RecipientRow) => (
         <StatusBadge
           status={r.status.toLowerCase() === "sent" ? "Active" : r.status.toLowerCase() === "failed" ? "Inactive" : "Pending"}
@@ -140,7 +142,7 @@ export const EmailRecipientsPage: React.FC = () => {
         />
       ),
     },
-    { key: "createdAt", label: "Added", render: (r: RecipientRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
+    { key: "createdAt", label: "Added", sortValue: (r: RecipientRow) => r.createdAt, render: (r: RecipientRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span> },
   ];
 
   return (
@@ -198,6 +200,8 @@ export const EmailRecipientsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

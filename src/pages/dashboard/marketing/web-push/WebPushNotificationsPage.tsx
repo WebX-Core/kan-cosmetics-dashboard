@@ -149,6 +149,7 @@ export const WebPushNotificationsPage: React.FC = () => {
     {
       key: "title",
       label: "Notification",
+      sortValue: (r: NotificationRow) => r.title,
       render: (r: NotificationRow) => (
         <div className="max-w-[240px]">
           <div className="truncate font-medium text-[#1d1d1f]">{r.title}</div>
@@ -162,11 +163,12 @@ export const WebPushNotificationsPage: React.FC = () => {
       width: "140px",
       render: (r: NotificationRow) => <span className="block max-w-[140px] truncate text-xs text-[#6e6e73]" title={r.target}>{r.target}</span>,
     },
-    { key: "status", label: "Status", width: "100px", render: (r: NotificationRow) => <StatusBadge status={r.status} /> },
+    { key: "status", label: "Status", width: "100px", sortValue: (r: NotificationRow) => r.status, render: (r: NotificationRow) => <StatusBadge status={r.status} /> },
     {
       key: "when",
       label: "When",
       width: "140px",
+      sortValue: (r: NotificationRow) => r.sentAt || r.deliveredAt || r.scheduledAt || r.createdAt,
       render: (r: NotificationRow) => (
         <span className="text-xs text-[#6e6e73]">
           {formatDateTime(r.sentAt || r.deliveredAt || r.scheduledAt || r.createdAt)}
@@ -222,6 +224,8 @@ export const WebPushNotificationsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

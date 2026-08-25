@@ -107,6 +107,7 @@ export const EmailRecipientBucketsPage: React.FC = () => {
     {
       key: "name",
       label: "Bucket Name",
+      sortValue: (r: BucketRow) => r.name,
       render: (r: BucketRow) => (
         <div>
           <div className="font-medium text-gray-900">{r.name}</div>
@@ -132,11 +133,13 @@ export const EmailRecipientBucketsPage: React.FC = () => {
     {
       key: "limit",
       label: "Limit",
+      sortValue: (r: BucketRow) => r.limit,
       render: (r: BucketRow) => <span className="text-sm text-gray-600">{r.limit || "—"}</span>,
     },
     {
       key: "createdAt",
       label: "Created",
+      sortValue: (r: BucketRow) => r.createdAt,
       render: (r: BucketRow) => <span className="text-xs text-gray-500">{fmt(r.createdAt)}</span>,
     },
   ];
@@ -174,6 +177,8 @@ export const EmailRecipientBucketsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
 
       <AlertDialog open={confirm.open} onOpenChange={(o) => !o && confirm.dismiss()}>

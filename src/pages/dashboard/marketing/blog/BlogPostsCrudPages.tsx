@@ -212,6 +212,7 @@ export const BlogPostsPage: React.FC = () => {
     {
       key: "post",
       label: "Post",
+      sortValue: (r: Row) => r.title,
       render: (r: Row) => (
         <div>
           <div className="font-medium text-gray-900">{r.title}</div>
@@ -219,8 +220,8 @@ export const BlogPostsPage: React.FC = () => {
         </div>
       ),
     },
-    { key: "views", label: "Views", render: (r: Row) => <span className="text-gray-600">{r.views}</span> },
-    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    { key: "views", label: "Views", sortValue: (r: Row) => r.views, render: (r: Row) => <span className="text-gray-600">{r.views}</span> },
+    { key: "status", label: "Status", sortValue: (r: Row) => r.status, render: (r: Row) => <StatusBadge status={r.status} /> },
   ];
 
   return (
@@ -262,6 +263,8 @@ export const BlogPostsPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(page) => setState((prev) => ({ ...prev, page }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
     </PageLayout>
   );

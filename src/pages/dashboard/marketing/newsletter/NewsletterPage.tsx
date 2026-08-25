@@ -100,14 +100,14 @@ export const NewsletterPage: React.FC = () => {
   ];
 
   const columns = [
-    { key: "subscriber", label: "Subscriber", render: (r: Row) => (
+    { key: "subscriber", label: "Subscriber", sortValue: (r: Row) => r.name || r.email, render: (r: Row) => (
       <div>
         <div className="font-medium text-gray-900">{r.name}</div>
         <div className="text-xs text-gray-400">{r.email}</div>
       </div>
     )},
-    { key: "source", label: "Source", render: (r: Row) => <span className="text-gray-600">{r.source}</span> },
-    { key: "status", label: "Status", render: (r: Row) => <StatusBadge status={r.status} /> },
+    { key: "source", label: "Source", sortValue: (r: Row) => r.source, render: (r: Row) => <span className="text-gray-600">{r.source}</span> },
+    { key: "status", label: "Status", sortValue: (r: Row) => r.status, render: (r: Row) => <StatusBadge status={r.status} /> },
   ];
 
   return (
@@ -151,6 +151,8 @@ export const NewsletterPage: React.FC = () => {
         currentPage={state.page}
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
+        pageSize={state.limit}
+        onPageSizeChange={(size) => setState((p) => ({ ...p, page: 1, limit: size }))}
       />
     </PageLayout>
   );
