@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   Archive,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Edit2,
   History,
@@ -70,6 +72,13 @@ type InventoryBulkUploadHistoryRow = Readonly<{
   failedRows: number;
 }>;
 
+type InventoryBulkUploadHistoryMeta = Readonly<{
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}>;
+
 const toText = (value: unknown, fallback = ""): string =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 
@@ -127,6 +136,22 @@ const toUploadHistoryRows = (payload: unknown): ReadonlyArray<InventoryBulkUploa
       failedRows: toNumber(item.failedRows),
     }))
     .filter((item) => item.id.length > 0);
+};
+
+const toUploadHistoryMeta = (payload: unknown): InventoryBulkUploadHistoryMeta => {
+  const record = toRecord(payload);
+  const data = toRecord(record.data ?? payload);
+  const page = Math.max(1, toNumber(data.page ?? record.page, 1));
+  const limit = Math.max(1, toNumber(data.limit ?? record.limit, 10));
+  const total = Math.max(0, toNumber(data.total ?? record.total, 0));
+  const totalPages = Math.max(1, toNumber(data.totalPages ?? record.totalPages, Math.ceil(total / limit) || 1));
+
+  return {
+    total,
+    page,
+    limit,
+    totalPages,
+  };
 };
 
 const downloadBlob = (blob: Blob, filename: string) => {
@@ -208,6 +233,8 @@ export const InventoryPage: React.FC = () => {
   const [downloadingTemplate, setDownloadingTemplate] = React.useState(false);
   const [uploadingCsv, setUploadingCsv] = React.useState(false);
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [historyPage, setHistoryPage] = React.useState(1);
+  const [historyLimit, setHistoryLimit] = React.useState(10);
   const confirm = useConfirmAction();
 
   const inventoryQuery = catalogApi.inventory.hooks.useList({
@@ -218,10 +245,20 @@ export const InventoryPage: React.FC = () => {
 
   const softDelete = catalogApi.inventory.hooks.useSoftDelete();
   const bulkHistoryQuery = useQuery({
-    queryKey: ["inventory", "bulk-upload-history"],
-    queryFn: () => catalogApi.inventory.getBulkUploadHistory({ page: 1, limit: 10 }),
+    queryKey: ["inventory", "bulk-upload-history", historyPage, historyLimit],
+    queryFn: () => catalogApi.inventory.getBulkUploadHistory({ page: historyPage, limit: historyLimit }),
     enabled: historyOpen,
   });
+
+  const uploadHistoryRows = React.useMemo(
+    () => toUploadHistoryRows(bulkHistoryQuery.data),
+    [bulkHistoryQuery.data],
+  );
+
+  const uploadHistoryMeta = React.useMemo(
+    () => toUploadHistoryMeta(bulkHistoryQuery.data),
+    [bulkHistoryQuery.data],
+  );
 
   const inventoryRows = React.useMemo<ReadonlyArray<InventoryRow>>(
     () => toRows(inventoryQuery.data).map(normalizeInventoryRow),
@@ -304,7 +341,10 @@ export const InventoryPage: React.FC = () => {
       toast.success(
         `Inventory upload done. ${createdRows} created, ${updatedRows} updated, ${failedRows} failed from ${totalRows} rows.`,
       );
-      if (failedRows > 0) setHistoryOpen(true);
+      if (failedRows > 0) {
+        setHistoryPage(1);
+        setHistoryOpen(true);
+      }
     } catch (error) {
       toast.error(String(error));
     } finally {
@@ -395,7 +435,10 @@ export const InventoryPage: React.FC = () => {
             variant="outline"
             size="sm"
             className="rounded-full"
-            onClick={() => setHistoryOpen(true)}
+            onClick={() => {
+              setHistoryPage(1);
+              setHistoryOpen(true);
+            }}
           >
             <History size={13} className="mr-2" />
             History
@@ -502,7 +545,7 @@ export const InventoryPage: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Inventory upload history</AlertDialogTitle>
             <AlertDialogDescription>
-              Recent CSV uploads and row outcomes.
+              Paginated sheet uploads and row outcomes.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -528,8 +571,8 @@ export const InventoryPage: React.FC = () => {
                       Loading upload history...
                     </td>
                   </tr>
-                ) : toUploadHistoryRows(bulkHistoryQuery.data).length ? (
-                  toUploadHistoryRows(bulkHistoryQuery.data).map((row) => (
+                ) : uploadHistoryRows.length ? (
+                  uploadHistoryRows.map((row) => (
                     <tr key={row.id} className="border-t border-[#f0f0f2]">
                       <td className="px-3 py-3 font-medium text-[#1d1d1f]">{row.fileName}</td>
                       <td className="px-3 py-3"><StatusBadge status={row.status} /></td>
@@ -552,6 +595,49 @@ export const InventoryPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-xl border border-[#e5e5ea] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-[12px] text-[#6e6e73]">
+              Page {uploadHistoryMeta.page} of {uploadHistoryMeta.totalPages} · {uploadHistoryMeta.total} uploads
+              {bulkHistoryQuery.isFetching && !bulkHistoryQuery.isLoading ? " · Refreshing..." : ""}
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={historyLimit}
+                onChange={(event) => {
+                  setHistoryLimit(Number(event.target.value));
+                  setHistoryPage(1);
+                }}
+                className="h-8 rounded-full border border-[#d2d2d7] bg-white px-3 text-[12px] text-[#1d1d1f] outline-none"
+              >
+                <option value={10}>10 rows</option>
+                <option value={20}>20 rows</option>
+                <option value={50}>50 rows</option>
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={historyPage <= 1 || bulkHistoryQuery.isFetching}
+                onClick={() => setHistoryPage((current) => Math.max(1, current - 1))}
+              >
+                <ChevronLeft size={13} className="mr-1" />
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={historyPage >= uploadHistoryMeta.totalPages || bulkHistoryQuery.isFetching}
+                onClick={() => setHistoryPage((current) => Math.min(uploadHistoryMeta.totalPages, current + 1))}
+              >
+                Next
+                <ChevronRight size={13} className="ml-1" />
+              </Button>
+            </div>
           </div>
 
           <AlertDialogFooter>
