@@ -1,14 +1,19 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Archive,
   CheckCircle,
+  Download,
   Edit2,
+  History,
+  Loader2,
   MoreHorizontal,
   Package,
   Search,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
@@ -53,6 +58,18 @@ type InventoryRow = Readonly<{
   status: "In Stock" | "Low Stock" | "Limited Stock" | "Out of Stock";
 }>;
 
+type InventoryBulkUploadHistoryRow = Readonly<{
+  id: string;
+  createdAt: string;
+  fileName: string;
+  status: string;
+  totalRows: number;
+  createdRows: number;
+  updatedRows: number;
+  skippedRows: number;
+  failedRows: number;
+}>;
+
 const toText = (value: unknown, fallback = ""): string =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 
@@ -89,6 +106,38 @@ const toRows = (payload: unknown): ReadonlyArray<Record<string, unknown>> => {
     }
   }
   return [];
+};
+
+const toUploadHistoryRows = (payload: unknown): ReadonlyArray<InventoryBulkUploadHistoryRow> => {
+  const record = toRecord(payload);
+  const data = toRecord(record.data ?? payload);
+  const source = Array.isArray(data.uploads) ? data.uploads : Array.isArray(record.uploads) ? record.uploads : [];
+
+  return source
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item) => ({
+      id: toText(item.id),
+      createdAt: toText(item.createdAt),
+      fileName: toText(item.fileName, "inventory-upload.csv"),
+      status: toText(item.status, "COMPLETED"),
+      totalRows: toNumber(item.totalRows),
+      createdRows: toNumber(item.createdRows),
+      updatedRows: toNumber(item.updatedRows),
+      skippedRows: toNumber(item.skippedRows),
+      failedRows: toNumber(item.failedRows),
+    }))
+    .filter((item) => item.id.length > 0);
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 };
 
 const getVariant = (row: Record<string, unknown>): Record<string, unknown> =>
@@ -148,6 +197,7 @@ const normalizeInventoryRow = (row: Record<string, unknown>): InventoryRow => {
 export const InventoryPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const { state, setState, debouncedSearch } = useListQueryState({
     page: 1,
@@ -155,6 +205,9 @@ export const InventoryPage: React.FC = () => {
     search: "",
   });
   const [activeTab, setActiveTab] = React.useState("all");
+  const [downloadingTemplate, setDownloadingTemplate] = React.useState(false);
+  const [uploadingCsv, setUploadingCsv] = React.useState(false);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
   const confirm = useConfirmAction();
 
   const inventoryQuery = catalogApi.inventory.hooks.useList({
@@ -164,6 +217,11 @@ export const InventoryPage: React.FC = () => {
   });
 
   const softDelete = catalogApi.inventory.hooks.useSoftDelete();
+  const bulkHistoryQuery = useQuery({
+    queryKey: ["inventory", "bulk-upload-history"],
+    queryFn: () => catalogApi.inventory.getBulkUploadHistory({ page: 1, limit: 10 }),
+    enabled: historyOpen,
+  });
 
   const inventoryRows = React.useMemo<ReadonlyArray<InventoryRow>>(
     () => toRows(inventoryQuery.data).map(normalizeInventoryRow),
@@ -216,6 +274,44 @@ export const InventoryPage: React.FC = () => {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      setDownloadingTemplate(true);
+      const blob = await catalogApi.inventory.downloadBulkTemplate();
+      const date = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `inventory-bulk-template-${date}.csv`);
+      toast.success("Inventory CSV template downloaded.");
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleCsvChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      setUploadingCsv(true);
+      const result = await catalogApi.inventory.bulkUploadCsv(file);
+      const totalRows = toNumber(result.totalRows);
+      const updatedRows = toNumber(result.updatedRows);
+      const createdRows = toNumber(result.createdRows);
+      const failedRows = toNumber(result.failedRows);
+      await inventoryQuery.refetch();
+      toast.success(
+        `Inventory upload done. ${createdRows} created, ${updatedRows} updated, ${failedRows} failed from ${totalRows} rows.`,
+      );
+      if (failedRows > 0) setHistoryOpen(true);
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      setUploadingCsv(false);
+    }
+  };
+
   const tabs = [
     { key: "all", label: "All" },
     { key: "instock", label: "In Stock" },
@@ -265,6 +361,45 @@ export const InventoryPage: React.FC = () => {
       subtitle="Manage stock levels for all inventory records."
       actions={
         <div className="flex items-center gap-[8px]">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(event) => void handleCsvChange(event)}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => void handleDownloadTemplate()}
+            disabled={downloadingTemplate}
+          >
+            {downloadingTemplate ? <Loader2 size={13} className="mr-2 animate-spin" /> : <Download size={13} className="mr-2" />}
+            Template
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingCsv}
+          >
+            {uploadingCsv ? <Loader2 size={13} className="mr-2 animate-spin" /> : <Upload size={13} className="mr-2" />}
+            Upload CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setHistoryOpen(true)}
+          >
+            <History size={13} className="mr-2" />
+            History
+          </Button>
           <ExportMenu basePath="/inventory" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="inventory"/>
           <div className="relative">
             <Search
@@ -358,6 +493,69 @@ export const InventoryPage: React.FC = () => {
             <AlertDialogAction className="rounded-full bg-red-600 text-white hover:bg-red-700" onClick={() => void handleConfirm()}>
               Confirm
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <AlertDialogContent className="w-[min(94vw,860px)] max-w-none bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inventory upload history</AlertDialogTitle>
+            <AlertDialogDescription>
+              Recent CSV uploads and row outcomes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="max-h-[420px] overflow-auto rounded-xl border border-[#e5e5ea]">
+            <table className="w-full text-left text-[12px]">
+              <thead className="bg-[#f5f5f7] text-[10px] uppercase tracking-[0.12em] text-[#86868b]">
+                <tr>
+                  <th className="px-3 py-2">File</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Rows</th>
+                  <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2">Updated</th>
+                  <th className="px-3 py-2">Skipped</th>
+                  <th className="px-3 py-2">Failed</th>
+                  <th className="px-3 py-2">Uploaded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bulkHistoryQuery.isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-8 text-center text-[#86868b]">
+                      <Loader2 size={16} className="mx-auto mb-2 animate-spin" />
+                      Loading upload history...
+                    </td>
+                  </tr>
+                ) : toUploadHistoryRows(bulkHistoryQuery.data).length ? (
+                  toUploadHistoryRows(bulkHistoryQuery.data).map((row) => (
+                    <tr key={row.id} className="border-t border-[#f0f0f2]">
+                      <td className="px-3 py-3 font-medium text-[#1d1d1f]">{row.fileName}</td>
+                      <td className="px-3 py-3"><StatusBadge status={row.status} /></td>
+                      <td className="px-3 py-3">{row.totalRows}</td>
+                      <td className="px-3 py-3">{row.createdRows}</td>
+                      <td className="px-3 py-3">{row.updatedRows}</td>
+                      <td className="px-3 py-3">{row.skippedRows}</td>
+                      <td className={row.failedRows > 0 ? "px-3 py-3 font-semibold text-red-600" : "px-3 py-3"}>{row.failedRows}</td>
+                      <td className="px-3 py-3 text-[#6e6e73]">
+                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-8 text-center text-[#86868b]">
+                      No inventory uploads yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

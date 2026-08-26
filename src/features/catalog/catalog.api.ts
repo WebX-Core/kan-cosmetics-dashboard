@@ -116,7 +116,36 @@ export const catalogApi = {
   ),
   productTags: makeStandardCrud<Record<string, unknown>, ProductTagDto, ProductTagDto>({ key: "productTags", basePath: "/product-tag" }),
   productAttributes: makeStandardCrud<Record<string, unknown>, ProductAttributeDto, ProductAttributeDto>({ key: "productAttributes", basePath: "/product-attribute" }),
-  inventory: makeStandardCrud<Record<string, unknown>, InventoryDto, InventoryDto>({ key: "inventory", basePath: "/inventory" }),
+  inventory: {
+    ...makeStandardCrud<Record<string, unknown>, InventoryDto, InventoryDto>({ key: "inventory", basePath: "/inventory" }),
+    downloadBulkTemplate: async () => {
+      const response = await api.get("/inventory/bulk-upload/template", {
+        responseType: "blob",
+      });
+      return response.data as Blob;
+    },
+    bulkUploadCsv: async (file: File, note?: string) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (note?.trim()) formData.append("note", note.trim());
+      return unwrap<Record<string, unknown>>(
+        await api.post("/inventory/bulk-upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        }),
+      );
+    },
+    getBulkUploadHistory: async (params?: Readonly<Record<string, unknown>>) =>
+      unwrap<Record<string, unknown>>(
+        await api.get("/inventory/bulk-upload/history", { params }),
+      ),
+    getBulkUploadDetail: async (
+      id: string,
+      params?: Readonly<Record<string, unknown>>,
+    ) =>
+      unwrap<Record<string, unknown>>(
+        await api.get(`/inventory/bulk-upload/history/${id}`, { params }),
+      ),
+  },
   productsBulkCreate: async (payload: ReadonlyArray<ProductDto>) => unwrap<unknown>(await api.post("/product/bulk-create", payload)),
   productsBulkUploadImages: async (payload: unknown) => unwrap<unknown>(await api.post("/product/bulk-upload-images", payload)),
 };
