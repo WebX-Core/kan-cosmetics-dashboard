@@ -364,7 +364,7 @@ export const InventoryPage: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,.xls,.numbers,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.apple.numbers"
             className="hidden"
             onChange={(event) => void handleCsvChange(event)}
           />
@@ -388,7 +388,7 @@ export const InventoryPage: React.FC = () => {
             disabled={uploadingCsv}
           >
             {uploadingCsv ? <Loader2 size={13} className="mr-2 animate-spin" /> : <Upload size={13} className="mr-2" />}
-            Upload CSV
+            Upload Sheet
           </Button>
           <Button
             type="button"
