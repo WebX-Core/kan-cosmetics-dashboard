@@ -197,7 +197,9 @@ export function DataTableV2<T extends Record<string, unknown>>({
       const childNodes = React.Children.toArray(value.props.children);
       if (childNodes.length === 0) return value;
       const highlightedChildren = childNodes.map((child) => withHighlight(child));
-      return React.cloneElement(value, { ...value.props }, highlightedChildren);
+      // Spread so a single child stays a single child — Radix `asChild`/Slot
+      // triggers throw if their children arrive wrapped in a 1-element array.
+      return React.cloneElement(value, { ...value.props }, ...highlightedChildren);
     }
 
     return value;
