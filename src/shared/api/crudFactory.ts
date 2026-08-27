@@ -269,7 +269,8 @@ export function makeCrud<TItem, TCreate, TUpdate>(
 
       useEffect(() => {
         if (!enabled) return;
-        if (!q?.page || !q?.limit) return;
+        // limit:1 queries are count-only badge probes — page 2 of a 1-row page is never rendered.
+        if (!q?.page || !q?.limit || q.limit <= 1) return;
         const totalPages = query.data?.totalPages;
         if (!totalPages || q.page >= totalPages) return;
         const next = { ...q, page: q.page + 1 };
@@ -320,7 +321,7 @@ export function makeCrud<TItem, TCreate, TUpdate>(
 
       useEffect(() => {
         if (!enabled) return;
-        if (!q?.page || !q?.limit) return;
+        if (!q?.page || !q?.limit || q.limit <= 1) return;
         const totalPages = query.data?.totalPages;
         if (!totalPages || q.page >= totalPages) return;
         const next = { ...q, page: q.page + 1 };

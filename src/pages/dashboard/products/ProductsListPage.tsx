@@ -349,7 +349,7 @@ export const ProductsListPage: React.FC = () => {
     if (!ids.length) return;
     try {
       await Promise.all(ids.map((id) => softDelete.mutateAsync(id)));
-      await query.refetch();
+      await lifecycleQuery.refetch();
       setSelectedIds(new Set());
       toast.success(
         `${ids.length === 1 ? "Product" : `${ids.length} products`} deleted.`,
@@ -710,7 +710,9 @@ export const ProductsListPage: React.FC = () => {
         totalPages={totalPages}
         onPageChange={(p) => setState((prev) => ({ ...prev, page: p }))}
         pageSize={state.limit}
-        onPageSizeChange={(size) => setState((prev) => ({ ...prev, page: 1, limit: size }))}
+        onPageSizeChange={(size) =>
+          setState((prev) => ({ ...prev, page: 1, limit: size }))
+        }
         rowId={(r) => r.id}
         selectedIds={selectedIds}
         onSelectionChange={(ids) => setSelectedIds(ids)}

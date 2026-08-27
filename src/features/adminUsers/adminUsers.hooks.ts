@@ -25,7 +25,7 @@ export const useAdminUsersList = (q?: ApiListQuery, enabled = true) => {
 
   useEffect(() => {
     if (!enabled) return;
-    if (!q?.page || !q?.limit) return;
+    if (!q?.page || !q?.limit || q.limit <= 1) return;
     const totalPages = query.data?.totalPages;
     if (!totalPages || q.page >= totalPages) return;
     const next = { ...q, page: q.page + 1 };

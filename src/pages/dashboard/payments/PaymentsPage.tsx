@@ -1,6 +1,6 @@
 import React from "react";
 import { CreditCard, CheckCircle, Clock, XCircle, DollarSign, X } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
@@ -150,8 +150,15 @@ const DetailField: React.FC<{ label: string; value: React.ReactNode }> = ({ labe
 
 export const PaymentsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { id: paymentId } = useParams<{ id?: string }>();
+  // Row click passes the already-loaded row via router state so opening a
+  // detail view doesn't need a fetch at all. Backend has no GET /payment/get/:id
+  // route and no id filter on get-all, so a direct link or refresh still has to
+  // fall back to the expensive full-list fetch below.
+  const navPayment = (location.state as { payment?: PaymentRow } | null)?.payment;
+  const hasNavPayment = Boolean(navPayment && navPayment.id === paymentId);
   const [search, setSearch] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("all");
   const [settlementFilter, setSettlementFilter] = React.useState("");
@@ -160,7 +167,13 @@ export const PaymentsPage: React.FC = () => {
   const [limit, setLimit] = React.useState(20);
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const debouncedSearch = useDebouncedValue(search, 400);
-  const query = usePaymentsList({ page: paymentId ? 1 : page, limit: paymentId ? 10000 : limit, search: paymentId ? undefined : debouncedSearch || undefined, paymentStatus: paymentId ? undefined : activeTab !== "all" ? activeTab.toUpperCase() : undefined, settlementStatus: paymentId ? undefined : settlementFilter || undefined, paymentSource: paymentId ? undefined : sourceFilter || undefined });
+  const query = usePaymentsList(
+    // No GET /payment/get/:id and no id filter on get-all, so a refreshed/direct
+    // detail link can't target the exact row — fetch only the most recent page
+    // instead of the whole table; falls back to "not found" if it's older than that.
+    { page: paymentId ? 1 : page, limit: paymentId ? 20 : limit, search: paymentId ? undefined : debouncedSearch || undefined, paymentStatus: paymentId ? undefined : activeTab !== "all" ? activeTab.toUpperCase() : undefined, settlementStatus: paymentId ? undefined : settlementFilter || undefined, paymentSource: paymentId ? undefined : sourceFilter || undefined },
+    !hasNavPayment,
+  );
   const [settling, setSettling] = React.useState(false);
 
   const payments = React.useMemo(
@@ -204,8 +217,8 @@ export const PaymentsPage: React.FC = () => {
   }), [backendTotal, payments]);
 
   const selectedPayment = React.useMemo(
-    () => payments.find((payment) => payment.id === paymentId) ?? null,
-    [paymentId, payments],
+    () => (hasNavPayment ? navPayment! : payments.find((payment) => payment.id === paymentId) ?? null),
+    [hasNavPayment, navPayment, paymentId, payments],
   );
 
   const tabs = [
@@ -396,7 +409,7 @@ export const PaymentsPage: React.FC = () => {
         onPageChange={setPage}
         pageSize={limit}
         onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
-        onRowClick={(row) => navigate(`/dashboard/payments/${row.id}`)}
+        onRowClick={(row) => navigate(`/dashboard/payments/${row.id}`, { state: { payment: row } })}
       />
     </PageLayout>
   );

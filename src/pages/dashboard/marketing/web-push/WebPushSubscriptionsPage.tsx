@@ -14,6 +14,7 @@ import { marketingApi } from "@/features/marketing";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { confirmAction } from "@/shared/utils/confirm";
+import { parseApiError } from "@/shared/utils/apiError";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 
@@ -116,8 +117,13 @@ export const WebPushSubscriptionsPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     const ok = await confirmAction("Delete this subscription?");
     if (!ok) return;
-    await softDelete.mutateAsync(id);
-    toast.success("Subscription deleted.");
+    try {
+      await softDelete.mutateAsync(id);
+      await query.refetch();
+      toast.success("Subscription deleted.");
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
   };
 
   const rows = React.useMemo(

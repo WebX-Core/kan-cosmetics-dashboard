@@ -44,7 +44,7 @@ import { usePermission } from "@/shared/hooks/usePermission";
 import { Sidebar } from "@/shared/components/dashboard/Sidebar";
 import { TopNav } from "@/shared/components/dashboard/TopNav";
 import { useContactList } from "@/features/contact";
-import { useOrders, usePaymentsAggregate } from "@/features/commerce";
+import { useOrders, usePaymentsList } from "@/features/commerce";
 import { useShipmentList } from "@/features/delivery";
 import {
   useInquiryList,
@@ -64,13 +64,13 @@ export const DashboardLayout: React.FC = () => {
   const canContactManage = usePermission("contact:manage");
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [viewedContactIds, setViewedContactIds] = React.useState<ReadonlySet<string>>(new Set());
-  const contactList = useContactList({ page: 1, limit: 100 }, Boolean(state.user) && canContactManage);
+  const contactList = useContactList({ page: 1, limit: 20 }, Boolean(state.user) && canContactManage);
   const ordersList = useOrders({ page: 1, limit: 1 }, Boolean(state.user));
   const shipmentsList = useShipmentList({ page: 1, limit: 1 }, Boolean(state.user));
   const inquiryList = useInquiryList({ page: 1, limit: 1 }, Boolean(state.user));
   const siteInquiryList = useSiteInquiryList({ page: 1, limit: 1 }, Boolean(state.user));
   const reviewList = useReviewList({ page: 1, limit: 1 }, Boolean(state.user));
-  const paymentsAggregate = usePaymentsAggregate();
+  const paymentsList = usePaymentsList({ page: 1, limit: 1 }, Boolean(state.user));
   const userId = typeof state.user?.id === "string" ? state.user.id : "";
   const currentUserQuery = useAdminUsersGet(userId, Boolean(userId));
 
@@ -108,16 +108,11 @@ export const DashboardLayout: React.FC = () => {
     const siteInquiriesCount = (siteInquiryList.data as { total?: number } | undefined)?.total ?? 0;
     const reviewsCount = (reviewList.data as { total?: number } | undefined)?.total ?? 0;
 
-    const paymentsRows = (paymentsAggregate.data ?? []).flatMap((entry) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
-      const payload = (entry as { paymentPayload?: unknown }).paymentPayload;
-      if (Array.isArray(payload)) return payload;
-      return ((payload as { data?: unknown[] } | undefined)?.data ?? []);
-    });
+    const paymentsCount = (paymentsList.data as { total?: number } | undefined)?.total ?? 0;
 
     return {
       orders: ordersCount,
-      payments: paymentsRows.length,
+      payments: paymentsCount,
       delivery: deliveryCount,
       "product-inquiries": inquiriesCount,
       "site-inquiries": siteInquiriesCount,
@@ -127,7 +122,7 @@ export const DashboardLayout: React.FC = () => {
   }, [
     inquiryList.data,
     ordersList.data,
-    paymentsAggregate.data,
+    paymentsList.data,
     reviewList.data,
     shipmentsList.data,
     siteInquiryList.data,

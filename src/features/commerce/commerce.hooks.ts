@@ -33,7 +33,7 @@ export const useOrders = (q?: ApiListQuery, enabled = true) => {
   });
 
   useEffect(() => {
-    if (!enabled || !q?.page || !q?.limit) return;
+    if (!enabled || !q?.page || !q?.limit || q.limit <= 1) return;
     const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages;
     if (!totalPages || q.page >= totalPages) return;
     const next = { ...q, page: q.page + 1 };

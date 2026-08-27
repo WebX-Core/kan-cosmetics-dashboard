@@ -208,10 +208,14 @@ export const ReadyForPickupPage: React.FC = () => {
     ids: Set<string>,
     clearSelection: () => void,
   ) => {
-    await bulkPickup.mutateAsync(Array.from(ids));
-    clearSelection();
-    setSelectedIds(new Set());
-    await query.refetch();
+    try {
+      await bulkPickup.mutateAsync(Array.from(ids));
+      clearSelection();
+      setSelectedIds(new Set());
+      await query.refetch();
+    } catch (error) {
+      toast.error(parseApiError(error).message);
+    }
   };
 
   const handleSyncDelivery = async () => {
