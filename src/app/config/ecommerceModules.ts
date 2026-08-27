@@ -59,7 +59,6 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
 
   { key: "loyalty", label: "Loyalty", path: "/dashboard/loyalty", section: "Loyalty", description: "Customer leaderboard, yearly points, dynamic tiers, and cycle administration.", icon: Trophy },
 
-  { key: "product-inquiries", label: "Inquiries", path: "/dashboard/support/product-inquiries", section: "Support", description: "Inbox, handled flags, and reply threads for product questions.", icon: Bell },
   { key: "site-inquiries", label: "Site Inquiries", path: "/dashboard/support/site-inquiries", section: "Support", description: "AI digital hair color and site-level inquiry inbox with notes and replies.", icon: SearchCheck },
   { key: "contacts", label: "Contacts", path: "/dashboard/support/contacts", section: "Support", description: "General contact inbox with view and handled state through replies.", icon: Users },
   { key: "reviews", label: "Reviews", path: "/dashboard/reviews", section: "Support", description: "Review moderation with product and site review split.", icon: Star },

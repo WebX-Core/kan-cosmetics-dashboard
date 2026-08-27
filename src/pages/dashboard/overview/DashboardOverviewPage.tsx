@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   ArrowRight,
@@ -15,10 +16,15 @@ import {
   ShoppingCart,
   MessageSquare,
 } from "lucide-react";
-import { useOrders, usePaymentsAggregate, useUpdateOrderStatus } from "@/features/commerce";
+import {
+  useOrders,
+  usePaymentsAggregate,
+  useUpdateOrderStatus,
+} from "@/features/commerce";
 import { useDashboardOverview } from "@/features/dashboard";
 import { catalogApi } from "@/features/catalog";
 import { useAdminUsersList } from "@/features/adminUsers";
+import { useContactList } from "@/features/contact";
 import { useUserMetadataList } from "@/features/telemetry";
 import {
   groupRowsByField,
@@ -31,7 +37,7 @@ import {
 import { getListRows, getOrderRows } from "@/shared/utils/orderMapping";
 import FunnelChart from "@/shared/components/charts/FunnelChart";
 
-const USE_FAKE_OVERVIEW_DATA = true;
+const USE_FAKE_OVERVIEW_DATA = false;
 
 type CategorySalesStat = Readonly<{
   name: string;
@@ -308,9 +314,9 @@ const getCutoffTime = (range: "7d" | "1m" | "6m" | "12m" | "30d"): number => {
 const getCategoryName = (row: Record<string, unknown>): string =>
   toText(
     toRecord(toRecord(row.subcategory).category).title ??
-    toRecord(row.subcategory).title ??
-    row.title ??
-    row.name,
+      toRecord(row.subcategory).title ??
+      row.title ??
+      row.name,
     "Uncategorized",
   );
 
@@ -446,12 +452,6 @@ const orderStatusOptions: ReadonlyArray<OrderStatus> = [
   "RETURNED",
 ];
 
-const inquiryTypeStyle: Record<"Product" | "Site", string> = {
-  Product:
-    "bg-[color-mix(in_srgb,var(--primary)_16%,white)] text-[var(--badge-primary-text)]",
-  Site: "bg-slate-100 text-slate-700",
-};
-
 const formatOrderStatusLabel = (status: string): OrderStatus => {
   const normalized = status.trim().toUpperCase().replace(/\s+/g, "_");
   if (normalized in orderStatusStyle) return normalized as OrderStatus;
@@ -465,17 +465,6 @@ type PaymentRow = Readonly<{
   amount: number;
   status: "Completed" | "Pending" | "Failed" | "Refunded";
   date: string;
-}>;
-type InquiryRow = Readonly<{
-  id: string;
-  customerName: string;
-  email: string;
-  subject: string;
-  message: string;
-  type: "Product" | "Site";
-  status: "New" | "Resolved";
-  date: string;
-  createdAt: number;
 }>;
 const normalizePaymentStatus = (value: unknown): PaymentRow["status"] => {
   const status = toText(value, "pending").toLowerCase();
@@ -505,47 +494,6 @@ const textOrFallback = (value: unknown, fallback: string): string =>
   typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : fallback;
-
-const isHandledValue = (row: Record<string, unknown>): boolean => {
-  if (row.isHandled === true) return true;
-  const status = textOrFallback(row.status, "New").toLowerCase();
-  return (
-    status.includes("resolve") ||
-    status.includes("handled") ||
-    status.includes("close")
-  );
-};
-
-const normalizeInquiryRow = (
-  entry: unknown,
-  type: InquiryRow["type"],
-): InquiryRow => {
-  const row = toRecord(entry);
-  return {
-    id: textOrFallback(row.id ?? row._id, crypto.randomUUID()),
-    customerName: textOrFallback(
-      row.customerName ?? row.fullname ?? row.fullName ?? row.name,
-      "Unknown",
-    ),
-    email: textOrFallback(row.email, "—"),
-    subject:
-      type === "Product"
-        ? textOrFallback(
-          row.subject ?? row.targetName ?? row.targetType ?? row.inquiryType,
-          "Inquiry",
-        )
-        : textOrFallback(row.subject ?? row.inquiryType, "Site Inquiry"),
-    message:
-      type === "Product"
-        ? textOrFallback(row.message, "—")
-        : textOrFallback(row.message ?? row.details, "—"),
-    type,
-    status: isHandledValue(row) ? "Resolved" : "New",
-    date: toText(row.createdAt, ""),
-    createdAt: new Date(toText(row.createdAt, "")).getTime(),
-  };
-};
-
 
 const getDashboardCustomerName = (row: Record<string, unknown>): string => {
   const customer = toRecord(row.customer);
@@ -588,22 +536,18 @@ const toDashboardRecentOrderRow = (entry: unknown): RecentOrderRow => {
     customer: getDashboardCustomerName(row),
     email: getDashboardCustomerEmail(row),
     amount: formatNpr(toNum(row.totalAmount ?? row.total ?? row.grandTotal)),
-    status: formatOrderStatusLabel(toText(row.orderStatus ?? row.status, "PENDING")),
+    status: formatOrderStatusLabel(
+      toText(row.orderStatus ?? row.status, "PENDING"),
+    ),
     date: formatDate(createdAtText),
   };
 };
 
-const toDashboardRecentInquiryRow = (entry: unknown): InquiryRow =>
-  normalizeInquiryRow(entry, "Product");
 const useCountUp = (value: number, durationMs = 900): number => {
   const [display, setDisplay] = React.useState(0);
 
   React.useEffect(() => {
     const target = Number.isFinite(value) ? Math.max(0, value) : 0;
-    if (target === 0) {
-      setDisplay(0);
-      return;
-    }
     const startedAt = performance.now();
     let rafId = 0;
 
@@ -716,8 +660,7 @@ const createMockDashboardData = (): MockDashboardData => {
     customerName,
     customerEmail,
     paymentMethod: "Cash on Delivery",
-    paymentStatus:
-      status === "DELIVERED" ? "PAID" : "PENDING",
+    paymentStatus: status === "DELIVERED" ? "PAID" : "PENDING",
     total: total.toFixed(2),
     placedAt: daysAgo(daysOffset),
     createdAt: daysAgo(daysOffset),
@@ -1096,8 +1039,7 @@ export const DashboardOverviewPage: React.FC = () => {
     "7d",
   );
   const [animateRows, setAnimateRows] = React.useState(false);
-  const [showAllOrders, setShowAllOrders] = React.useState(false);
-  const [showAllInquiries, setShowAllInquiries] = React.useState(false);
+  const navigate = useNavigate();
   const [visitorsRange, setVisitorsRange] = React.useState<
     "today" | "7d" | "30d"
   >("today");
@@ -1158,37 +1100,52 @@ export const DashboardOverviewPage: React.FC = () => {
         : getListRows(usersQuery.data),
     [usersQuery.data],
   );
-  const inquiries = React.useMemo(() => {
-    return (dashboardOverviewQuery.data?.recentInquiries ?? [])
-      .map((entry) => toDashboardRecentInquiryRow(entry))
-      .filter((row) => row.createdAt > 0 || row.id.length > 0)
-      .sort((a, b) => b.createdAt - a.createdAt)
+  const contactsQuery = useContactList({ page: 1, limit: 10 }, !USE_FAKE_OVERVIEW_DATA);
+  const contacts = React.useMemo(() => {
+    const raw = (contactsQuery.data as { data?: unknown } | undefined)?.data;
+    const rows = (Array.isArray(raw) ? raw : []) as ReadonlyArray<
+      Record<string, unknown>
+    >;
+    return rows
+      .map((r) => ({
+        id: String(r.id ?? r._id ?? crypto.randomUUID()),
+        name: String(r.name ?? r.fullname ?? r.fullName ?? "").trim() || "Unknown",
+        email: String(r.email ?? "").trim() || "—",
+        message: String(r.message ?? r.details ?? "").trim() || "—",
+        isView: r.isView === true || r.isViewed === true,
+        createdAt: typeof r.createdAt === "string" ? r.createdAt : "",
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+      )
       .slice(0, 10);
-  }, [dashboardOverviewQuery.data]);
+  }, [contactsQuery.data]);
 
   const payments = React.useMemo(
     () =>
       USE_FAKE_OVERVIEW_DATA
         ? MOCK_OVERVIEW_DATA.payments.flatMap((entry) =>
-          toPaymentRows(entry.paymentPayload),
-        )
+            toPaymentRows(entry.paymentPayload),
+          )
         : (paymentsQuery.data ?? []).flatMap((entry) => {
-          if (!entry || typeof entry !== "object" || Array.isArray(entry))
-            return [];
-          return toPaymentRows(
-            (entry as { paymentPayload?: unknown }).paymentPayload,
-          );
-        }),
+            if (!entry || typeof entry !== "object" || Array.isArray(entry))
+              return [];
+            return toPaymentRows(
+              (entry as { paymentPayload?: unknown }).paymentPayload,
+            );
+          }),
     [paymentsQuery.data],
   );
 
   const paymentRevenue = React.useMemo(() => {
-    if (dashboardOverview?.summary) return dashboardOverview.summary.totalRevenue;
+    if (dashboardOverview?.summary)
+      return dashboardOverview.summary.totalRevenue;
 
     return payments
       .filter((p) => p.status === "Completed")
       .reduce((sum, p) => sum + p.amount, 0);
-  }, [dashboardOverview?.summary, payments]);
+  }, [dashboardOverview, payments]);
   const paymentMonthly = React.useMemo(() => {
     const apiPoints = dashboardOverview?.salesOverview?.[salesRange];
     if (apiPoints && apiPoints.length > 0) {
@@ -1212,13 +1169,13 @@ export const DashboardOverviewPage: React.FC = () => {
       const dt =
         salesRange === "7d"
           ? new Date(
-            now.getTime() - (dayWindow - 1 - offset) * 24 * 60 * 60 * 1000,
-          )
+              now.getTime() - (dayWindow - 1 - offset) * 24 * 60 * 60 * 1000,
+            )
           : new Date(
-            now.getFullYear(),
-            now.getMonth() - (months - 1 - offset),
-            1,
-          );
+              now.getFullYear(),
+              now.getMonth() - (months - 1 - offset),
+              1,
+            );
       const key =
         salesRange === "7d"
           ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
@@ -1249,9 +1206,8 @@ export const DashboardOverviewPage: React.FC = () => {
   const totalOrders = dashboardOverview?.summary.totalOrders ?? orders.length;
   const totalSales =
     dashboardOverview?.summary.totalSales ??
-    orders.filter((row) =>
-      toText(row.status).toLowerCase() === "delivered",
-    ).length;
+    orders.filter((row) => toText(row.status).toLowerCase() === "delivered")
+      .length;
   const shippedCount =
     dashboardOverview?.salesActivity.shipped ??
     orders.filter((row) =>
@@ -1259,9 +1215,8 @@ export const DashboardOverviewPage: React.FC = () => {
     ).length;
   const deliveredCount =
     dashboardOverview?.salesActivity.delivered ??
-    orders.filter((row) =>
-      toText(row.status).toLowerCase() === "delivered",
-    ).length;
+    orders.filter((row) => toText(row.status).toLowerCase() === "delivered")
+      .length;
   const pendingCount =
     dashboardOverview?.salesActivity.packed ??
     orders.filter((row) =>
@@ -1299,7 +1254,8 @@ export const DashboardOverviewPage: React.FC = () => {
   }, [dashboardOverview?.summary, users, currentTime]);
 
   const topProducts = React.useMemo(() => {
-    const apiProducts = dashboardOverview?.topProducts?.[topProductsRange] ?? [];
+    const apiProducts =
+      dashboardOverview?.topProducts?.[topProductsRange] ?? [];
     if (apiProducts.length > 0) {
       return apiProducts.map((item) => ({
         name: item.name,
@@ -1316,7 +1272,7 @@ export const DashboardOverviewPage: React.FC = () => {
         const sku = toText(row.sku);
         const category = toText(
           toRecord(toRecord(row.subcategory).category).title ??
-          toRecord(row.subcategory).title,
+            toRecord(row.subcategory).title,
           "Catalog",
         );
         return [id, { title, sku, category }];
@@ -1431,9 +1387,9 @@ export const DashboardOverviewPage: React.FC = () => {
     () =>
       currentCategories.length > 0
         ? currentCategories.map((category) => ({
-          label: category.name,
-          value: category.count,
-        }))
+            label: category.name,
+            value: category.count,
+          }))
         : [{ label: "Category", value: 0 }],
     [currentCategories],
   );
@@ -1456,10 +1412,10 @@ export const DashboardOverviewPage: React.FC = () => {
     const cutoff =
       visitorsRange === "today"
         ? new Date(
-          new Date().getFullYear(),
-          new Date().getMonth(),
-          new Date().getDate(),
-        ).getTime()
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            new Date().getDate(),
+          ).getTime()
         : now - (visitorsRange === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
 
     return visitorRecords.filter((row) => {
@@ -1534,46 +1490,34 @@ export const DashboardOverviewPage: React.FC = () => {
   );
 
   const displayedRecentOrders = React.useMemo(
-    () => (showAllOrders ? recentOrders : recentOrders.slice(0, 5)),
-    [recentOrders, showAllOrders],
+    () => recentOrders.slice(0, 5),
+    [recentOrders],
   );
 
-  const displayedInquiries = React.useMemo(
-    () => (showAllInquiries ? inquiries : inquiries.slice(0, 5)),
-    [inquiries, showAllInquiries],
+  const displayedContacts = React.useMemo(
+    () => contacts.slice(0, 5),
+    [contacts],
   );
   const updateOrderStatus = useUpdateOrderStatus();
-  const [updatingRecentOrderId, setUpdatingRecentOrderId] =
-    React.useState<string | null>(null);
-  const [recentOrderStatuses, setRecentOrderStatuses] = React.useState<
+  const [updatingRecentOrderId, setUpdatingRecentOrderId] = React.useState<
+    string | null
+  >(null);
+  // Optimistic status overrides keyed by order id; anything not overridden
+  // falls back to the server value. Derived — no effect needed to resync.
+  const [statusOverrides, setStatusOverrides] = React.useState<
     Record<string, OrderStatus>
-  >(
+  >({});
+
+  const recentOrderStatuses = React.useMemo(
     () =>
       Object.fromEntries(
-        recentOrders.map((order) => [order.id, order.status]),
-      ) as Record<string, OrderStatus>,
-  );
-
-  React.useEffect(() => {
-    setRecentOrderStatuses((current) => {
-      const next = Object.fromEntries(
         recentOrders.map((order) => [
           order.id,
-          updatingRecentOrderId === order.id
-            ? (current[order.id] ?? order.status)
-            : order.status,
+          statusOverrides[order.id] ?? order.status,
         ]),
-      ) as Record<string, OrderStatus>;
-
-      const currentKeys = Object.keys(current);
-      const nextKeys = Object.keys(next);
-      const hasChanged =
-        currentKeys.length !== nextKeys.length ||
-        nextKeys.some((key) => current[key] !== next[key]);
-
-      return hasChanged ? next : current;
-    });
-  }, [recentOrders, updatingRecentOrderId]);
+      ) as Record<string, OrderStatus>,
+    [recentOrders, statusOverrides],
+  );
 
   const updateRecentOrderStatus = React.useCallback(
     async (orderId: string, status: OrderStatus) => {
@@ -1584,7 +1528,7 @@ export const DashboardOverviewPage: React.FC = () => {
       if (!orderId || status === previousStatus) return;
 
       setUpdatingRecentOrderId(orderId);
-      setRecentOrderStatuses((current) => ({ ...current, [orderId]: status }));
+      setStatusOverrides((current) => ({ ...current, [orderId]: status }));
 
       try {
         await updateOrderStatus.mutateAsync({
@@ -1592,13 +1536,18 @@ export const DashboardOverviewPage: React.FC = () => {
           payload: { orderStatus: status },
         });
         await dashboardOverviewQuery.refetch();
+        // Server now reflects the new status — drop the local override.
+        setStatusOverrides((current) => {
+          const next = { ...current };
+          delete next[orderId];
+          return next;
+        });
       } catch {
-        if (previousStatus) {
-          setRecentOrderStatuses((current) => ({
-            ...current,
-            [orderId]: previousStatus,
-          }));
-        }
+        setStatusOverrides((current) => {
+          const next = { ...current };
+          delete next[orderId];
+          return next;
+        });
       } finally {
         setUpdatingRecentOrderId(null);
       }
@@ -1615,7 +1564,9 @@ export const DashboardOverviewPage: React.FC = () => {
     {
       label: "Total Orders",
       value: totalOrdersCount.toLocaleString(),
-      trend: formatTrendPercent(dashboardOverview?.summary.orderTrendPercent ?? 0),
+      trend: formatTrendPercent(
+        dashboardOverview?.summary.orderTrendPercent ?? 0,
+      ),
       trendPositive: (dashboardOverview?.summary.orderTrendPercent ?? 0) >= 0,
       tone: statCardTones[0],
       icon: <RotateCcw size={18} strokeWidth={2.25} />,
@@ -1623,7 +1574,9 @@ export const DashboardOverviewPage: React.FC = () => {
     {
       label: "Total Sales",
       value: totalSalesCount.toLocaleString(),
-      trend: formatTrendPercent(dashboardOverview?.summary.salesTrendPercent ?? 0),
+      trend: formatTrendPercent(
+        dashboardOverview?.summary.salesTrendPercent ?? 0,
+      ),
       trendPositive: (dashboardOverview?.summary.salesTrendPercent ?? 0) >= 0,
       tone: statCardTones[1],
       icon: <ShoppingCart size={18} strokeWidth={2.25} />,
@@ -1639,7 +1592,9 @@ export const DashboardOverviewPage: React.FC = () => {
     {
       label: "Total Revenue",
       value: formatNpr(revenueCount),
-      trend: formatTrendPercent(dashboardOverview?.summary.revenueTrendPercent ?? 0),
+      trend: formatTrendPercent(
+        dashboardOverview?.summary.revenueTrendPercent ?? 0,
+      ),
       trendPositive: (dashboardOverview?.summary.revenueTrendPercent ?? 0) >= 0,
       tone: statCardTones[3],
       icon: <CoinIcon />,
@@ -1755,10 +1710,11 @@ export const DashboardOverviewPage: React.FC = () => {
 
                   return (
                     <p
-                      className={`flex items-center gap-0.5 text-xs font-medium ${revenueTrend >= 0
-                        ? "text-(--badge-success-text)"
-                        : "text-red-700"
-                        }`}
+                      className={`flex items-center gap-0.5 text-xs font-medium ${
+                        revenueTrend >= 0
+                          ? "text-(--badge-success-text)"
+                          : "text-red-700"
+                      }`}
                     >
                       <RevenueTrendIcon size={10} />
                       {formatTrendPercent(revenueTrend)}
@@ -1796,15 +1752,11 @@ export const DashboardOverviewPage: React.FC = () => {
             </h2>
             <button
               type="button"
-              onClick={() => setShowAllOrders((prev) => !prev)}
+              onClick={() => navigate("/dashboard/orders")}
               className={viewAllButtonClassName}
             >
-              <span>{showAllOrders ? "Show less" : "View all"}</span>
-              <ArrowRight
-                size={14}
-                strokeWidth={2}
-                className={`transition-transform duration-200 ${showAllOrders ? "rotate-90" : ""}`}
-              />
+              <span>View all</span>
+              <ArrowRight size={14} strokeWidth={2} />
             </button>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50">
@@ -1859,7 +1811,8 @@ export const DashboardOverviewPage: React.FC = () => {
                     </tr>
                   ) : (
                     displayedRecentOrders.map((o) => {
-                      const currentStatus = recentOrderStatuses[o.id] ?? o.status;
+                      const currentStatus =
+                        recentOrderStatuses[o.id] ?? o.status;
                       const isUpdatingStatus = updatingRecentOrderId === o.id;
 
                       return (
@@ -1893,7 +1846,9 @@ export const DashboardOverviewPage: React.FC = () => {
                                   <span className="truncate">
                                     {isUpdatingStatus
                                       ? "UPDATING"
-                                      : formatOrderStatusLabelText(currentStatus)}
+                                      : formatOrderStatusLabelText(
+                                          currentStatus,
+                                        )}
                                   </span>
                                   <ChevronDown size={11} />
                                 </button>
@@ -1909,7 +1864,10 @@ export const DashboardOverviewPage: React.FC = () => {
                                       key={status}
                                       disabled={isUpdatingStatus}
                                       onSelect={() => {
-                                        void updateRecentOrderStatus(o.id, status);
+                                        void updateRecentOrderStatus(
+                                          o.id,
+                                          status,
+                                        );
                                       }}
                                       className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-700 outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50"
                                     >
@@ -1939,76 +1897,62 @@ export const DashboardOverviewPage: React.FC = () => {
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
             <div className="flex items-center gap-2">
               <MessageSquare size={14} className="text-(--text-secondary)" />
-              <h2 className="text-sm font-semibold text-(--text)">Inquiries</h2>
+              <h2 className="text-sm font-semibold text-(--text)">Contacts</h2>
             </div>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                {inquiries.filter((i) => i.status === "New").length} new
+                {contacts.filter((c) => !c.isView).length} new
               </span>
               <button
                 type="button"
-                onClick={() => setShowAllInquiries((prev) => !prev)}
+                onClick={() => navigate("/dashboard/support/contacts")}
                 className={viewAllButtonClassName}
               >
-                <span>{showAllInquiries ? "Show less" : "View all"}</span>
-                <ArrowRight
-                  size={14}
-                  strokeWidth={2}
-                  className={`transition-transform duration-200 ${showAllInquiries ? "rotate-90" : ""}`}
-                />
+                <span>View all</span>
+                <ArrowRight size={14} strokeWidth={2} />
               </button>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50">
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 border-b border-(--line) bg-(--bg) px-2 py-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 text-sm">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-center gap-x-2 border-b border-(--line) bg-(--bg) px-5 py-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                Customer
+                Contact
               </div>
               <div className="text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                Subject
-              </div>
-              <div className="text-right text-[11px] font-semibold uppercase tracking-wide text-(--text-secondary)">
-                Type
+                Message
               </div>
             </div>
             <div className="divide-y divide-(--line)">
-              {dashboardOverviewQuery.isLoading ? (
-                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
-                  Loading inquiries...
+              {contactsQuery.isLoading ? (
+                <div className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)">
+                  Loading contacts...
                 </div>
-              ) : dashboardOverviewQuery.isError ? (
-                <div className="px-2 py-8 text-center text-xs font-medium text-red-600">
-                  Unable to load inquiries.
+              ) : contactsQuery.isError ? (
+                <div className="px-5 py-8 text-center text-xs font-medium text-red-600">
+                  Unable to load contacts.
                 </div>
-              ) : displayedInquiries.length === 0 ? (
-                <div className="px-2 py-8 text-center text-xs font-medium text-(--text-secondary)">
-                  No recent inquiries found.
+              ) : displayedContacts.length === 0 ? (
+                <div className="px-5 py-8 text-center text-xs font-medium text-(--text-secondary)">
+                  No recent contacts found.
                 </div>
               ) : (
-                displayedInquiries.map((inq) => (
+                displayedContacts.map((contact) => (
                   <div
-                    key={inq.id}
-                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_72px] items-center gap-x-2 px-2 py-3 transition-colors hover:bg-(--bg)"
+                    key={contact.id}
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-center gap-x-2 px-5 py-3.5 transition-colors hover:bg-(--bg)"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-(--text)">
-                        {inq.customerName}
+                      <p className="truncate font-medium text-(--text)">
+                        {contact.name}
                       </p>
                       <p className="truncate text-[10px] text-(--text-tertiary)">
-                        {inq.email}
+                        {contact.email}
                       </p>
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm text-(--text-secondary)">
-                        {inq.subject}
+                      <p className="truncate text-(--text-secondary)">
+                        {contact.message}
                       </p>
-                    </div>
-                    <div className="flex justify-end">
-                      <span
-                        className={`inline-flex w-18 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-medium ${inquiryTypeStyle[inq.type]}`}
-                      >
-                        {inq.type}
-                      </span>
                     </div>
                   </div>
                 ))
@@ -2018,15 +1962,13 @@ export const DashboardOverviewPage: React.FC = () => {
         </div>
       </div>
 
-
-
       {/* ── Row 4: Product Sales Category ── */}
       <div
         className={`grid grid-cols-12 gap-4 ${animateRows ? "overview-rise" : "opacity-0"}`}
         style={rowAnimation(270)}
       >
         <div className="col-span-12">
-          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfcfe_100%)] shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="relative overflow-hidden rounded-[28px]  bg-white">
             <div
               className="grid"
               style={{
@@ -2056,11 +1998,12 @@ export const DashboardOverviewPage: React.FC = () => {
 
             <div className="pointer-events-none absolute inset-x-0 top-28 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent" />
 
-            <div className="border-t border-slate-200/70 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.04),transparent_50%)]">
+            <div className=" ">
               <FunnelChart
                 data={funnelStages}
                 height={236}
                 className="w-full"
+                card={false}
                 startColor={[220, 237, 253]}
                 endColor={[31, 95, 229]}
                 showStageLabels={false}
