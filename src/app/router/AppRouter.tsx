@@ -32,6 +32,8 @@ import { CompanySettingsPage } from "@/pages/dashboard/billing/CompanySettingsPa
 import { CompanySettingFormPage } from "@/pages/dashboard/billing/CompanySettingFormPage";
 import { InventoryPage } from "../../pages/dashboard/inventory/InventoryPage";
 import { InventoryDetailsPage } from "../../pages/dashboard/inventory/InventoryDetailsPage";
+import { InventoryUploadHistoryPage } from "../../pages/dashboard/inventory/InventoryUploadHistoryPage";
+import { InventoryUploadHistoryDetailPage } from "../../pages/dashboard/inventory/InventoryUploadHistoryDetailPage";
 import { ReportsPage } from "../../pages/dashboard/reports/ReportsPage";
 import { ReportDetailsPage } from "../../pages/dashboard/reports/ReportDetailsPage";
 import { CategoriesPage } from "../../pages/dashboard/categories/CategoriesPage";
@@ -267,6 +269,14 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/company-settings/:id/edit" element={<CompanySettingFormPage />} />
           </Route>
           <Route path="/dashboard/inventory" element={<InventoryPage />} />
+          <Route
+            path="/dashboard/inventory/upload-history"
+            element={<InventoryUploadHistoryPage />}
+          />
+          <Route
+            path="/dashboard/inventory/upload-history/:id"
+            element={<InventoryUploadHistoryDetailPage />}
+          />
           <Route
             path="/dashboard/inventory/create"
             element={<InventoryDetailsPage />}
