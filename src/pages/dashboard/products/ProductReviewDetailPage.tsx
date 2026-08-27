@@ -7,6 +7,7 @@ import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { engagementApi } from "@/features/engagement";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
 import { parseApiError } from "@/shared/utils/apiError";
+import { Tooltip } from "@/shared/components/ui/Tooltip";
 
 const text = (v: unknown, fb = ""): string => (typeof v === "string" ? v : fb);
 const num = (v: unknown): number => (typeof v === "number" ? v : 0);
@@ -58,16 +59,6 @@ const DataCell: React.FC<{ label: string; children: React.ReactNode; wide?: bool
     <p className="text-[11px] uppercase tracking-[0.08em] text-[#86868b]">{label}</p>
     <div className="mt-1 text-[14px] font-medium text-[#1d1d1f]">{children}</div>
   </div>
-);
-
-const Tooltip: React.FC<{ text: string; children: React.ReactNode }> = ({ text: tip, children }) => (
-  <span className="group/tip relative inline-flex">
-    {children}
-    <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#1d1d1f] px-2.5 py-1.5 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity group-hover/tip:opacity-100">
-      {tip}
-      <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1d1d1f]" />
-    </span>
-  </span>
 );
 
 export const ProductReviewDetailPage: React.FC = () => {
