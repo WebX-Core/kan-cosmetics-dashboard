@@ -79,6 +79,14 @@ const RichTextEditor: React.FC<Props> = ({
   outputMode = "html",
 }) => {
   const lastEmittedRef = React.useRef(initialContent);
+  // Guards onUpdate against transient events fired while we programmatically
+  // replace the document (Tiptap 3 can emit an "empty" update mid-transaction
+  // even with emitUpdate:false), which would clobber the parent's value.
+  const settingContentRef = React.useRef(false);
+  // Tiptap emits one "empty" onUpdate on editor creation; ignore updates until
+  // the first render tick has passed so that mount-time event can't reset the
+  // parent's value before hydration.
+  const readyRef = React.useRef(false);
   const editor = useEditor({
     immediatelyRender: false,
     editable: !disabled,
@@ -114,6 +122,7 @@ const RichTextEditor: React.FC<Props> = ({
       },
     },
     onUpdate: ({ editor: activeEditor }) => {
+      if (settingContentRef.current || !readyRef.current) return;
       const content = activeEditor.isEmpty
         ? ""
         : outputMode === "text"
@@ -131,12 +140,21 @@ const RichTextEditor: React.FC<Props> = ({
 
   React.useEffect(() => {
     if (!editor) return;
+    const id = window.setTimeout(() => {
+      readyRef.current = true;
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [editor]);
+
+  React.useEffect(() => {
+    if (!editor) return;
     const current = editor.isEmpty
       ? ""
       : outputMode === "text"
         ? editor.getText({ blockSeparator: "\n" })
         : editor.getHTML();
     if (initialContent !== current) {
+      settingContentRef.current = true;
       editor.commands.setContent(
         outputMode === "text"
           ? textToTiptapContent(initialContent)
@@ -144,6 +162,9 @@ const RichTextEditor: React.FC<Props> = ({
         { emitUpdate: false },
       );
       lastEmittedRef.current = initialContent;
+      queueMicrotask(() => {
+        settingContentRef.current = false;
+      });
     }
   }, [editor, initialContent, outputMode]);
 

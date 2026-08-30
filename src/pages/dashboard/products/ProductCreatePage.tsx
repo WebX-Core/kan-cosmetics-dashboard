@@ -194,15 +194,18 @@ type ComboProductOption = {
 };
 
 const getFreeFromValue = (row: Readonly<Record<string, unknown>>): unknown => {
+  // `||` not `??`: an empty-string editorContent should fall through to the
+  // legacy keyFeatures data for products saved before the rename.
   const directValue =
-    row.editorContent ??
-    row.editor_content ??
-    row.keyFeatures ??
-    row.key_features ??
-    row.freeFrom ??
-    row.free_from ??
+    row.editorContent ||
+    row.editor_content ||
+    row.keyFeatures ||
+    row.key_features ||
+    row.freeFrom ||
+    row.free_from ||
     row.freeFromPromise;
-  if (directValue !== undefined && directValue !== null) return directValue;
+  if (directValue !== undefined && directValue !== null && directValue !== "")
+    return directValue;
 
   for (const nestedKey of ["product", "data", "item", "result"]) {
     const nested = row[nestedKey];
@@ -293,9 +296,6 @@ const parseFreeFrom = (value: unknown): FreeFromItem[] => {
     })
     .filter((item) => item.title);
 };
-
-const hasFreeFromValue = (row: Readonly<Record<string, unknown>>): boolean =>
-  parseFreeFrom(getFreeFromValue(row)).length > 0;
 
 type DescriptionJsonForm = {
   problemItSolves: string[];
@@ -608,10 +608,6 @@ export const ProductCreatePage: React.FC = () => {
   const [form, setForm] = React.useState<Form>(initial);
   const [manualSlug, setManualSlug] = React.useState(false);
   const [resolvedProductId, setResolvedProductId] = React.useState("");
-  const [fallbackEditProduct, setFallbackEditProduct] = React.useState<Record<
-    string,
-    unknown
-  > | null>(null);
   const [resolvedReturnPath, setResolvedReturnPath] = React.useState("");
 
   const [coverImageFile, setCoverImageFile] = React.useState<File | null>(null);
@@ -744,63 +740,14 @@ export const ProductCreatePage: React.FC = () => {
   }, [isEdit, prefillSubcategoryId]);
 
   React.useEffect(() => {
-    let active = true;
-    const loadFallback = async () => {
-      if (!isEdit || !id) return;
-      const source = getQuery.data as Record<string, unknown> | undefined;
-      const candidate =
-        source && typeof source.product === "object" && source.product !== null
-          ? (source.product as Record<string, unknown>)
-          : source;
-      if (
-        candidate &&
-        (read(candidate.id) || read(candidate.slug) || read(candidate.title)) &&
-        hasFreeFromValue(candidate)
-      )
-        return;
-      try {
-        const list = await catalogApi.products.service.list({
-          page: 1,
-          limit: 1000,
-        });
-        const matched = list.data.find((entry) => {
-          if (typeof entry !== "object" || entry === null) return false;
-          const row = entry as Record<string, unknown>;
-          return read(row.id) === id || read(row.slug) === id;
-        });
-        if (!active) return;
-        setFallbackEditProduct(
-          typeof matched === "object" && matched !== null
-            ? (matched as Record<string, unknown>)
-            : null,
-        );
-      } catch {
-        if (!active) return;
-        setFallbackEditProduct(null);
-      }
-    };
-    void loadFallback();
-    return () => {
-      active = false;
-    };
-  }, [getQuery.data, getQuery.isError, id, isEdit]);
-
-  React.useEffect(() => {
     if (!isEdit) return;
-    const source = getQuery.data ?? fallbackEditProduct;
+    const source = getQuery.data;
     if (!source) return;
     const raw = source as Record<string, unknown>;
-    const primaryRow =
+    const row =
       typeof raw.product === "object" && raw.product !== null
         ? (raw.product as Record<string, unknown>)
         : raw;
-    const row =
-      !hasFreeFromValue(primaryRow) && fallbackEditProduct
-        ? {
-            ...primaryRow,
-            keyFeatures: getFreeFromValue(fallbackEditProduct),
-          }
-        : primaryRow;
 
     setResolvedProductId(read(row.id) || read(raw.id) || (id ?? ""));
     const subId = read(
@@ -856,10 +803,13 @@ export const ProductCreatePage: React.FC = () => {
           : "DRAFT",
     });
 
+    const freeFromValue = getFreeFromValue(row);
     setFreeFrom(
-      parseFreeFrom(getFreeFromValue(row))
-        .map((item) => item.title)
-        .join(" "),
+      typeof freeFromValue === "string"
+        ? freeFromValue
+        : parseFreeFrom(freeFromValue)
+            .map((item) => item.title)
+            .join("\n"),
     );
     setComboItems(parseComboItems(row.comboItems));
     setDescJson(parseDescJson(row.descriptionJson));
@@ -877,7 +827,7 @@ export const ProductCreatePage: React.FC = () => {
     setGalleryFiles([]);
 
     setManualSlug(Boolean(read(row.slug)));
-  }, [fallbackEditProduct, getQuery.data, id, isEdit]);
+  }, [getQuery.data, id, isEdit]);
 
   React.useEffect(() => {
     if (manualSlug) return;
