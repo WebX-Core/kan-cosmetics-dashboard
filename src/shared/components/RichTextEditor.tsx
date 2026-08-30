@@ -5,7 +5,6 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
-import Underline from "@tiptap/extension-underline";
 import {
   AlignCenter,
   AlignLeft,
@@ -60,6 +59,16 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({ label, active = false, di
   </button>
 );
 
+const textToTiptapContent = (content: string) => ({
+  type: "doc",
+  content: content
+    .split(/\r?\n/)
+    .map((line) => ({
+      type: "paragraph",
+      content: line ? [{ type: "text", text: line }] : [],
+    })),
+});
+
 const RichTextEditor: React.FC<Props> = ({
   initialContent = "",
   onChange,
@@ -73,7 +82,8 @@ const RichTextEditor: React.FC<Props> = ({
   const editor = useEditor({
     immediatelyRender: false,
     editable: !disabled,
-    content: initialContent,
+    content:
+      outputMode === "text" ? textToTiptapContent(initialContent) : initialContent,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -96,7 +106,6 @@ const RichTextEditor: React.FC<Props> = ({
       }),
       Placeholder.configure({ placeholder }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Underline,
     ],
     editorProps: {
       attributes: {
@@ -127,8 +136,16 @@ const RichTextEditor: React.FC<Props> = ({
       : outputMode === "text"
         ? editor.getText({ blockSeparator: "\n" })
         : editor.getHTML();
-    if (initialContent !== current && initialContent !== lastEmittedRef.current) {
-      editor.commands.setContent(initialContent, { emitUpdate: false });
+    if (import.meta.env.DEV) {
+      console.log("[RTE sync]", { initialContent, current, willSet: initialContent !== current });
+    }
+    if (initialContent !== current) {
+      editor.commands.setContent(
+        outputMode === "text"
+          ? textToTiptapContent(initialContent)
+          : initialContent,
+        { emitUpdate: false },
+      );
       lastEmittedRef.current = initialContent;
     }
   }, [editor, initialContent, outputMode]);
