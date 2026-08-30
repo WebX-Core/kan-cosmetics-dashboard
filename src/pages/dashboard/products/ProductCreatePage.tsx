@@ -195,6 +195,8 @@ type ComboProductOption = {
 
 const getFreeFromValue = (row: Readonly<Record<string, unknown>>): unknown => {
   const directValue =
+    row.editorContent ??
+    row.editor_content ??
     row.keyFeatures ??
     row.key_features ??
     row.freeFrom ??
@@ -295,12 +297,6 @@ const parseFreeFrom = (value: unknown): FreeFromItem[] => {
 const hasFreeFromValue = (row: Readonly<Record<string, unknown>>): boolean =>
   parseFreeFrom(getFreeFromValue(row)).length > 0;
 
-const splitFreeFromText = (value: string): string[] =>
-  value
-    .split(/\r?\n|,/)
-    .flatMap((chunk) => chunk.split(/(?=\p{Extended_Pictographic})/gu))
-    .map((item) => item.trim())
-    .filter(Boolean);
 type DescriptionJsonForm = {
   problemItSolves: string[];
   whoItsFor: string[];
@@ -806,13 +802,6 @@ export const ProductCreatePage: React.FC = () => {
           }
         : primaryRow;
 
-    if (import.meta.env.DEV) {
-      console.log("raw getQuery.data", getQuery.data);
-      console.log("resolved product", row);
-      console.log("resolved keyFeatures", getFreeFromValue(row));
-      console.log("freeFrom text", parseFreeFrom(getFreeFromValue(row)));
-    }
-
     setResolvedProductId(read(row.id) || read(raw.id) || (id ?? ""));
     const subId = read(
       (row.subcategory as Record<string, unknown>)?.id ?? row.subcategoryId,
@@ -1066,10 +1055,7 @@ export const ProductCreatePage: React.FC = () => {
         }
         return obj;
       })(),
-      keyFeatures: (() => {
-        const items = splitFreeFromText(freeFrom).map((title) => ({ title }));
-        return items.length ? items : undefined;
-      })(),
+      editorContent: freeFrom,
       comboItems: isComboType ? normalizedComboItems : undefined,
       coverImage: coverImageFile ?? undefined,
       hoverImage: hoverImageFile ?? undefined,

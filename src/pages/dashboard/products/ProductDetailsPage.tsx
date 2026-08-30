@@ -77,6 +77,8 @@ const splitFreeFromText = (value: string): string[] =>
 const getFreeFromValue = (
   product: Readonly<Record<string, unknown>> | undefined,
 ): unknown =>
+  product?.editorContent ??
+  product?.editor_content ??
   product?.keyFeatures ??
   product?.key_features ??
   product?.freeFrom ??
