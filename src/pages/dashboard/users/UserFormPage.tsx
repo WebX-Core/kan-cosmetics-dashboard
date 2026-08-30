@@ -28,7 +28,7 @@ const createSchema = z.object({
   isEmailReceivable: z.boolean().default(true),
 });
 
-const editSchema = createSchema.omit({ password: true, isEmailReceivable: true });
+const editSchema = createSchema.omit({ password: true });
 
 const inputCls =
   "h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 disabled:bg-[#f5f5f7] disabled:text-[#86868b]";
@@ -431,6 +431,7 @@ export const UserFormPage: React.FC = () => {
             address: form.address,
             gender: form.gender,
             isVerified: form.isVerified,
+            isEmailReceivable: form.isEmailReceivable,
             roleIds: selectedRoleIds,
             permissionIds,
             profile: profileFile,
@@ -555,7 +556,7 @@ export const UserFormPage: React.FC = () => {
         </FormSection>
 
         <FormSection title="Account Settings">
-          <div className={`grid gap-4 ${isEdit ? "" : "md:grid-cols-2"}`}>
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Verification">
               <label className="flex h-11 cursor-pointer items-center gap-3">
                 <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isVerified ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}>
@@ -565,17 +566,15 @@ export const UserFormPage: React.FC = () => {
                 <input type="checkbox" checked={form.isVerified} onChange={(e) => setForm((p) => ({ ...p, isVerified: e.target.checked }))} className="sr-only" />
               </label>
             </FormField>
-            {!isEdit && (
-              <FormField label="Email Preferences">
-                <label className="flex h-11 cursor-pointer items-center gap-3">
-                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isEmailReceivable ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}>
-                    {form.isEmailReceivable && <Check size={11} strokeWidth={3} className="text-white" />}
-                  </div>
-                  <span className="text-sm text-[#1d1d1f]">Allow this user to receive emails</span>
-                  <input type="checkbox" checked={form.isEmailReceivable} onChange={(e) => setForm((p) => ({ ...p, isEmailReceivable: e.target.checked }))} className="sr-only" />
-                </label>
-              </FormField>
-            )}
+            <FormField label="Email Preferences">
+              <label className="flex h-11 cursor-pointer items-center gap-3">
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${form.isEmailReceivable ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#d2d2d7] bg-white"}`}>
+                  {form.isEmailReceivable && <Check size={11} strokeWidth={3} className="text-white" />}
+                </div>
+                <span className="text-sm text-[#1d1d1f]">Allow this user to receive emails</span>
+                <input type="checkbox" checked={form.isEmailReceivable} onChange={(e) => setForm((p) => ({ ...p, isEmailReceivable: e.target.checked }))} className="sr-only" />
+              </label>
+            </FormField>
           </div>
         </FormSection>
 

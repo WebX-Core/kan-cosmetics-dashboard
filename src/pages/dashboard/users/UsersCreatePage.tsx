@@ -30,6 +30,7 @@ const schema = z.object({
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   roleId: z.string().min(1, "Role is required"),
   isVerified: z.boolean().default(true),
+  isEmailReceivable: z.boolean().default(true),
   profile: z.instanceof(File).nullable().optional(),
 });
 
@@ -37,7 +38,7 @@ type FormValues = Readonly<{
   firstname: string; middlename: string; lastname: string;
   email: string; phone: string; password: string;
   address: string; gender: "MALE" | "FEMALE" | "OTHER";
-  roleId: string; isVerified: boolean; profile: File | null;
+  roleId: string; isVerified: boolean; isEmailReceivable: boolean; profile: File | null;
 }>;
 type SubmitValues = z.output<typeof schema>;
 
@@ -63,6 +64,7 @@ const baseFields: ReadonlyArray<EntityFieldConfig> = [
   { name: "address", label: "Address", type: "text" },
   { name: "gender", label: "Gender", type: "select", options: [{ label: "Male", value: "MALE" }, { label: "Female", value: "FEMALE" }, { label: "Other", value: "OTHER" }] },
   { name: "isVerified", label: "Verified", type: "checkbox" },
+  { name: "isEmailReceivable", label: "Receive Emails", type: "checkbox" },
   { name: "profile", label: "Profile", type: "file", accept: "image/*" },
 ];
 
@@ -89,7 +91,7 @@ export const UsersCreatePage: React.FC = () => {
       firstname: "", middlename: "", lastname: "",
       email: "", phone: "", password: "",
       address: "", gender: "MALE",
-      roleId: "", isVerified: true, profile: null,
+      roleId: "", isVerified: true, isEmailReceivable: true, profile: null,
     },
     successMessage: "User created",
     onSubmit: async (p) => {

@@ -1,53 +1,32 @@
 import React from "react";
-import { CKEditor } from "@ckeditor/ckeditor5-react";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
+import TextAlign from "@tiptap/extension-text-align";
+import Underline from "@tiptap/extension-underline";
 import {
-  Alignment,
-  AutoImage,
-  AutoLink,
-  Base64UploadAdapter,
-  BlockQuote,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
-  ClassicEditor,
   Code,
-  CodeBlock,
-  Essentials,
-  FontColor,
-  FontFamily,
-  FontSize,
-  Heading,
-  HorizontalLine,
-  ImageBlock,
-  ImageCaption,
-  ImageInsert,
-  ImageInsertViaUrl,
-  ImageResize,
-  ImageStyle,
-  ImageToolbar,
-  ImageUpload,
-  Indent,
-  IndentBlock,
+  Heading1,
+  Heading2,
+  Heading3,
+  ImageIcon,
   Italic,
-  Link,
-  LinkImage,
+  LinkIcon,
   List,
-  ListProperties,
-  Paragraph,
-  PasteFromOffice,
-  RemoveFormat,
+  ListOrdered,
+  Quote,
+  Redo2,
   Strikethrough,
-  Table,
-  TableCaption,
-  TableCellProperties,
-  TableColumnResize,
-  TableProperties,
-  TableSelection,
-  TableToolbar,
-  TextTransformation,
-  Underline,
-  type EditorConfig,
-} from "ckeditor5";
+  Underline as UnderlineIcon,
+  Undo2,
+} from "lucide-react";
 
-import "ckeditor5/ckeditor5.css";
 import "@/styles/ckeditor-custom.css";
 
 type Props = Readonly<{
@@ -57,7 +36,29 @@ type Props = Readonly<{
   className?: string;
   disabled?: boolean;
   minHeight?: string;
+  outputMode?: "html" | "text";
 }>;
+
+type ToolbarButtonProps = Readonly<{
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}>;
+
+const ToolbarButton: React.FC<ToolbarButtonProps> = ({ label, active = false, disabled = false, onClick, children }) => (
+  <button
+    type="button"
+    aria-label={label}
+    title={label}
+    className={["rte-toolbar-button", active ? "is-active" : ""].filter(Boolean).join(" ")}
+    disabled={disabled}
+    onClick={onClick}
+  >
+    {children}
+  </button>
+);
 
 const RichTextEditor: React.FC<Props> = ({
   initialContent = "",
@@ -66,211 +67,242 @@ const RichTextEditor: React.FC<Props> = ({
   className,
   disabled = false,
   minHeight = "400px",
+  outputMode = "html",
 }) => {
   const lastEmittedRef = React.useRef(initialContent);
-  const editorRef = React.useRef<{ getData: () => string; setData: (data: string) => void } | null>(null);
+  const editor = useEditor({
+    immediatelyRender: false,
+    editable: !disabled,
+    content: initialContent,
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        link: false,
+      }),
+      Image.configure({
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "rte-image",
+        },
+      }),
+      Link.configure({
+        autolink: true,
+        defaultProtocol: "https",
+        openOnClick: false,
+        HTMLAttributes: {
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+      }),
+      Placeholder.configure({ placeholder }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Underline,
+    ],
+    editorProps: {
+      attributes: {
+        class: "rte-content",
+        style: `min-height: ${minHeight}`,
+      },
+    },
+    onUpdate: ({ editor: activeEditor }) => {
+      const content = activeEditor.isEmpty
+        ? ""
+        : outputMode === "text"
+          ? activeEditor.getText({ blockSeparator: "\n" })
+          : activeEditor.getHTML();
+      lastEmittedRef.current = content;
+      onChange(content);
+    },
+  });
 
   React.useEffect(() => {
-    const editor = editorRef.current;
     if (!editor) return;
-    const current = editor.getData();
+    editor.setEditable(!disabled);
+  }, [disabled, editor]);
+
+  React.useEffect(() => {
+    if (!editor) return;
+    const current = editor.isEmpty
+      ? ""
+      : outputMode === "text"
+        ? editor.getText({ blockSeparator: "\n" })
+        : editor.getHTML();
     if (initialContent !== current && initialContent !== lastEmittedRef.current) {
-      editor.setData(initialContent);
+      editor.commands.setContent(initialContent, { emitUpdate: false });
       lastEmittedRef.current = initialContent;
     }
-  }, [initialContent]);
+  }, [editor, initialContent, outputMode]);
 
-  const editorConfig: EditorConfig = React.useMemo(
-    () => ({
-      licenseKey: "GPL",
-      toolbar: {
-        items: [
-          "heading",
-          "|",
-          "fontSize",
-          "fontFamily",
-          "fontColor",
-          "|",
-          "bold",
-          "italic",
-          "underline",
-          "strikethrough",
-          "code",
-          "removeFormat",
-          "|",
-          "alignment",
-          "|",
-          "bulletedList",
-          "numberedList",
-          "|",
-          "outdent",
-          "indent",
-          "|",
-          "link",
-          "insertImage",
-          "insertTable",
-          "blockQuote",
-          "codeBlock",
-          "horizontalLine",
-        ],
-        shouldNotGroupWhenFull: true,
-      },
-      plugins: [
-        Alignment,
-        AutoImage,
-        AutoLink,
-        Base64UploadAdapter,
-        BlockQuote,
-        Bold,
-        Code,
-        CodeBlock,
-        Essentials,
-        FontColor,
-        FontFamily,
-        FontSize,
-        Heading,
-        HorizontalLine,
-        ImageBlock,
-        ImageCaption,
-        ImageInsert,
-        ImageInsertViaUrl,
-        ImageResize,
-        ImageStyle,
-        ImageToolbar,
-        ImageUpload,
-        Indent,
-        IndentBlock,
-        Italic,
-        Link,
-        LinkImage,
-        List,
-        ListProperties,
-        Paragraph,
-        PasteFromOffice,
-        RemoveFormat,
-        Strikethrough,
-        Table,
-        TableCaption,
-        TableCellProperties,
-        TableColumnResize,
-        TableProperties,
-        TableToolbar,
-        TableSelection,
-        TextTransformation,
-        Underline,
-      ],
-      balloonToolbar: ["bold", "italic", "|", "link"],
-      fontFamily: {
-        options: [
-          "default",
-          "Arial, Helvetica, sans-serif",
-          "Courier New, Courier, monospace",
-          "Georgia, serif",
-          "Lucida Sans Unicode, Lucida Grande, sans-serif",
-          "Tahoma, Geneva, sans-serif",
-          "Times New Roman, Times, serif",
-          "Trebuchet MS, Helvetica, sans-serif",
-          "Verdana, Geneva, sans-serif",
-        ],
-        supportAllValues: true,
-      },
-      fontSize: {
-        options: [10, 12, 14, "default", 18, 20, 22, 24, 26, 28, 36, 48, 72],
-        supportAllValues: true,
-      },
-      heading: {
-        options: [
-          { model: "paragraph", title: "Paragraph", class: "ck-heading_paragraph" },
-          { model: "heading1", view: "h1", title: "Heading 1", class: "ck-heading_heading1" },
-          { model: "heading2", view: "h2", title: "Heading 2", class: "ck-heading_heading2" },
-          { model: "heading3", view: "h3", title: "Heading 3", class: "ck-heading_heading3" },
-          { model: "heading4", view: "h4", title: "Heading 4", class: "ck-heading_heading4" },
-          { model: "heading5", view: "h5", title: "Heading 5", class: "ck-heading_heading5" },
-          { model: "heading6", view: "h6", title: "Heading 6", class: "ck-heading_heading6" },
-        ],
-      },
-      image: {
-        toolbar: [
-          "toggleImageCaption",
-          "imageTextAlternative",
-          "|",
-          "imageStyle:alignLeft",
-          "imageStyle:alignCenter",
-          "imageStyle:alignRight",
-          "|",
-          "resizeImage",
-          "|",
-          "linkImage",
-        ],
-        insert: { integrations: ["upload", "url"] },
-        resizeUnit: "px",
-        resizeOptions: [
-          { name: "resizeImage:original", label: "Original", value: null },
-          { name: "resizeImage:25", label: "25%", value: "25" },
-          { name: "resizeImage:50", label: "50%", value: "50" },
-          { name: "resizeImage:75", label: "75%", value: "75" },
-          { name: "resizeImage:100", label: "100%", value: "100" },
-        ],
-        styles: {
-          options: ["alignLeft", "alignCenter", "alignRight", "alignBlockLeft", "alignBlockRight", "block", "side"],
-        },
-      },
-      link: {
-        addTargetToExternalLinks: true,
-        defaultProtocol: "https://",
-        decorators: {
-          toggleDownloadable: {
-            mode: "manual",
-            label: "Downloadable",
-            attributes: { download: "file" },
-          },
-          openInNewTab: {
-            mode: "manual",
-            label: "Open in a new tab",
-            defaultValue: true,
-            attributes: { target: "_blank", rel: "noopener noreferrer" },
-          },
-        },
-      },
-      list: {
-        properties: {
-          styles: true,
-          startIndex: true,
-          reversed: true,
-        },
-      },
-      placeholder,
-      table: {
-        contentToolbar: [
-          "tableColumn",
-          "tableRow",
-          "mergeTableCells",
-          "tableProperties",
-          "tableCellProperties",
-          "toggleTableCaption",
-        ],
-      },
-    }),
-    [placeholder]
-  );
+  const setLink = React.useCallback(() => {
+    if (!editor) return;
+    const currentUrl = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Enter URL", currentUrl ?? "");
+
+    if (url === null) return;
+    if (url.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
+  }, [editor]);
+
+  const insertImage = React.useCallback(() => {
+    if (!editor) return;
+    const src = window.prompt("Enter image URL");
+    if (!src?.trim()) return;
+    editor.chain().focus().setImage({ src: src.trim() }).run();
+  }, [editor]);
+
+  const toolbarDisabled = disabled || !editor;
 
   return (
-    <div className={["ckeditor-wrapper", className].filter(Boolean).join(" ")} style={{ minHeight }}>
-      <CKEditor
-        editor={ClassicEditor}
-        config={editorConfig}
-        data={initialContent}
-        disabled={disabled}
-        disableWatchdog
-        onReady={(editor: { getData: () => string; setData: (data: string) => void }) => {
-          editorRef.current = editor;
-        }}
-        onChange={(_event: unknown, editor: { getData: () => string }) => {
-          const data = editor.getData();
-          lastEmittedRef.current = data;
-          onChange(data);
-        }}
-      />
+    <div className={["ckeditor-wrapper", "rte-wrapper", className].filter(Boolean).join(" ")}>
+      <div className="rte-toolbar" aria-label="Rich text formatting toolbar">
+        <ToolbarButton
+          label="Undo"
+          disabled={toolbarDisabled || !editor?.can().chain().focus().undo().run()}
+          onClick={() => editor?.chain().focus().undo().run()}
+        >
+          <Undo2 size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Redo"
+          disabled={toolbarDisabled || !editor?.can().chain().focus().redo().run()}
+          onClick={() => editor?.chain().focus().redo().run()}
+        >
+          <Redo2 size={16} />
+        </ToolbarButton>
+        <span className="rte-toolbar-divider" />
+        <ToolbarButton
+          label="Heading 1"
+          active={editor?.isActive("heading", { level: 1 })}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+        >
+          <Heading1 size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Heading 2"
+          active={editor?.isActive("heading", { level: 2 })}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+        >
+          <Heading2 size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Heading 3"
+          active={editor?.isActive("heading", { level: 3 })}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+        >
+          <Heading3 size={16} />
+        </ToolbarButton>
+        <span className="rte-toolbar-divider" />
+        <ToolbarButton
+          label="Bold"
+          active={editor?.isActive("bold")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+        >
+          <Bold size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Italic"
+          active={editor?.isActive("italic")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+        >
+          <Italic size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Underline"
+          active={editor?.isActive("underline")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+        >
+          <UnderlineIcon size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Strikethrough"
+          active={editor?.isActive("strike")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleStrike().run()}
+        >
+          <Strikethrough size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Inline code"
+          active={editor?.isActive("code")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleCode().run()}
+        >
+          <Code size={16} />
+        </ToolbarButton>
+        <span className="rte-toolbar-divider" />
+        <ToolbarButton
+          label="Bulleted list"
+          active={editor?.isActive("bulletList")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+        >
+          <List size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Numbered list"
+          active={editor?.isActive("orderedList")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+        >
+          <ListOrdered size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Block quote"
+          active={editor?.isActive("blockquote")}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+        >
+          <Quote size={16} />
+        </ToolbarButton>
+        <span className="rte-toolbar-divider" />
+        <ToolbarButton
+          label="Align left"
+          active={editor?.isActive({ textAlign: "left" })}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().setTextAlign("left").run()}
+        >
+          <AlignLeft size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Align center"
+          active={editor?.isActive({ textAlign: "center" })}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().setTextAlign("center").run()}
+        >
+          <AlignCenter size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Align right"
+          active={editor?.isActive({ textAlign: "right" })}
+          disabled={toolbarDisabled}
+          onClick={() => editor?.chain().focus().setTextAlign("right").run()}
+        >
+          <AlignRight size={16} />
+        </ToolbarButton>
+        <span className="rte-toolbar-divider" />
+        <ToolbarButton
+          label="Link"
+          active={editor?.isActive("link")}
+          disabled={toolbarDisabled}
+          onClick={setLink}
+        >
+          <LinkIcon size={16} />
+        </ToolbarButton>
+        <ToolbarButton label="Image" disabled={toolbarDisabled} onClick={insertImage}>
+          <ImageIcon size={16} />
+        </ToolbarButton>
+      </div>
+      <EditorContent editor={editor} />
     </div>
   );
 };

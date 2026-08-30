@@ -13,6 +13,7 @@ import {
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
+import RichTextEditor from "@/shared/components/RichTextEditor";
 import {
   OCCASION_TYPES,
   PRODUCT_TYPES,
@@ -253,6 +254,13 @@ const parseFreeFrom = (value: unknown): FreeFromItem[] => {
     }))
     .filter((item) => item.title);
 };
+
+const splitFreeFromText = (value: string): string[] =>
+  value
+    .split(/\r?\n|,/)
+    .flatMap((chunk) => chunk.split(/(?=\p{Extended_Pictographic})/gu))
+    .map((item) => item.trim())
+    .filter(Boolean);
 type DescriptionJsonForm = {
   problemItSolves: string[];
   whoItsFor: string[];
@@ -596,7 +604,7 @@ export const ProductCreatePage: React.FC = () => {
   const [removedMediaAssetIds, setRemovedMediaAssetIds] = React.useState<
     ReadonlyArray<string>
   >([]);
-  const [freeFrom, setFreeFrom] = React.useState<FreeFromItem[]>([]);
+  const [freeFrom, setFreeFrom] = React.useState("");
   const [comboItems, setComboItems] = React.useState<ComboItemForm[]>([]);
   const [comboProductOptions, setComboProductOptions] = React.useState<
     ComboProductOption[]
@@ -804,7 +812,7 @@ export const ProductCreatePage: React.FC = () => {
           : "DRAFT",
     });
 
-    setFreeFrom(parseFreeFrom(row.keyFeatures));
+    setFreeFrom(parseFreeFrom(row.keyFeatures).map((item) => item.title).join(" "));
     setComboItems(parseComboItems(row.comboItems));
     setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
@@ -1000,9 +1008,7 @@ export const ProductCreatePage: React.FC = () => {
         return obj;
       })(),
       keyFeatures: (() => {
-        const items = freeFrom
-          .filter(({ title }) => title.trim())
-          .map(({ title }) => ({ title: title.trim() }));
+        const items = splitFreeFromText(freeFrom).map((title) => ({ title }));
         return items.length ? items : undefined;
       })(),
       comboItems: isComboType ? normalizedComboItems : undefined,
@@ -1781,45 +1787,13 @@ export const ProductCreatePage: React.FC = () => {
           title="Free From"
           description="Highlight what this product is free from (e.g. Paraben Free, Sulfate Free)."
         >
-          <div className="space-y-2">
-            {freeFrom.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">
-                  {idx + 1}.
-                </span>
-                <input
-                  type="text"
-                  value={item.title}
-                  onChange={(e) =>
-                    setFreeFrom((prev) =>
-                      prev.map((it, i) =>
-                        i === idx ? { title: e.target.value } : it,
-                      ),
-                    )
-                  }
-                  placeholder="e.g. Paraben Free"
-                  className="h-9.5 flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10"
-                />
-                <button
-                  type="button"
-                  title="Remove item"
-                  onClick={() =>
-                    setFreeFrom((prev) => prev.filter((_, i) => i !== idx))
-                  }
-                  className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setFreeFrom((prev) => [...prev, { title: "" }])}
-              className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-(--primary) hover:text-(--primary)"
-            >
-              <Plus size={12} /> Add item
-            </button>
-          </div>
+          <RichTextEditor
+            initialContent={freeFrom}
+            minHeight="120px"
+            outputMode="text"
+            placeholder="e.g. 🌿 Paraben Free 🧪 Dermatologist Tested"
+            onChange={setFreeFrom}
+          />
         </FormSection>
 
         <FormSection

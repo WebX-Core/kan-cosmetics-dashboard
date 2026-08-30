@@ -67,6 +67,13 @@ const parseArray = (value: unknown): ReadonlyArray<unknown> => {
   return [];
 };
 
+const splitFreeFromText = (value: string): string[] =>
+  value
+    .split(/\r?\n|,/)
+    .flatMap((chunk) => chunk.split(/(?=\p{Extended_Pictographic})/gu))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const formatCurrency = (value: unknown): string => {
   const amount =
     typeof value === "number"
@@ -288,7 +295,7 @@ export const ProductDetailsPage: React.FC = () => {
 
   const freeFromItems = parseArray(product?.keyFeatures)
     .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
-    .map((item) => readText(item.title))
+    .flatMap((item) => splitFreeFromText(readText(item.title)))
     .filter(Boolean);
 
   const comboItemRows = parseArray(product?.comboItems).flatMap((entry, index) => {
