@@ -74,6 +74,38 @@ const splitFreeFromText = (value: string): string[] =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const getFreeFromValue = (
+  product: Readonly<Record<string, unknown>> | undefined,
+): unknown =>
+  product?.keyFeatures ??
+  product?.key_features ??
+  product?.freeFrom ??
+  product?.free_from ??
+  product?.freeFromPromise;
+
+const parseFreeFromItems = (value: unknown): string[] => {
+  const parsed = parseArray(value);
+  if (typeof value === "string" && parsed.length === 0) {
+    return splitFreeFromText(value);
+  }
+  return parsed
+    .flatMap((item) => {
+      if (typeof item === "string") return splitFreeFromText(item);
+      if (typeof item !== "object" || item === null) return [];
+      const record = item as Record<string, unknown>;
+      return splitFreeFromText(
+        readText(
+          record.title ??
+            record.label ??
+            record.name ??
+            record.value ??
+            record.text,
+        ),
+      );
+    })
+    .filter(Boolean);
+};
+
 const formatCurrency = (value: unknown): string => {
   const amount =
     typeof value === "number"
@@ -293,10 +325,7 @@ export const ProductDetailsPage: React.FC = () => {
     return readText(descJson.text, "No description available.");
   })();
 
-  const freeFromItems = parseArray(product?.keyFeatures)
-    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
-    .flatMap((item) => splitFreeFromText(readText(item.title)))
-    .filter(Boolean);
+  const freeFromItems = parseFreeFromItems(getFreeFromValue(product ?? undefined));
 
   const comboItemRows = parseArray(product?.comboItems).flatMap((entry, index) => {
     if (typeof entry !== "object" || entry === null) return [];

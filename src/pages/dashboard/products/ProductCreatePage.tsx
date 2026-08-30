@@ -193,6 +193,26 @@ type ComboProductOption = {
   variants: Array<{ id: string; title: string; sku: string }>;
 };
 
+const getFreeFromValue = (row: Readonly<Record<string, unknown>>): unknown => {
+  const directValue =
+    row.keyFeatures ??
+    row.key_features ??
+    row.freeFrom ??
+    row.free_from ??
+    row.freeFromPromise;
+  if (directValue !== undefined && directValue !== null) return directValue;
+
+  for (const nestedKey of ["product", "data", "item", "result"]) {
+    const nested = row[nestedKey];
+    if (typeof nested === "object" && nested !== null && !Array.isArray(nested)) {
+      const value = getFreeFromValue(nested as Record<string, unknown>);
+      if (value !== undefined && value !== null) return value;
+    }
+  }
+
+  return undefined;
+};
+
 const parseComboItems = (value: unknown): ComboItemForm[] => {
   const parsed =
     typeof value === "string"
@@ -239,21 +259,41 @@ const parseFreeFrom = (value: unknown): FreeFromItem[] => {
           try {
             return JSON.parse(value) as unknown;
           } catch {
-            return [];
+            return value;
           }
         })()
       : value;
+  if (typeof arr === "string")
+    return [{ title: arr }].filter((item) => item.title);
   if (!Array.isArray(arr)) return [];
   return arr
-    .filter(
-      (item): item is Record<string, unknown> =>
-        typeof item === "object" && item !== null,
-    )
-    .map((item) => ({
-      title: typeof item.title === "string" ? item.title : "",
-    }))
+    .map((item) => {
+      if (typeof item === "string") return { title: item };
+      if (typeof item !== "object" || item === null) return { title: "" };
+      const record = item as Record<string, unknown>;
+      const known =
+        record.title ??
+        record.label ??
+        record.name ??
+        record.value ??
+        record.text ??
+        record.feature ??
+        record.keyFeature ??
+        record.content ??
+        record.description;
+      // Last resort: backend relation rows may name the text column anything.
+      const fallback =
+        known ??
+        Object.values(record).find(
+          (v) => typeof v === "string" && v.trim().length > 0,
+        );
+      return { title: read(fallback) };
+    })
     .filter((item) => item.title);
 };
+
+const hasFreeFromValue = (row: Readonly<Record<string, unknown>>): boolean =>
+  parseFreeFrom(getFreeFromValue(row)).length > 0;
 
 const splitFreeFromText = (value: string): string[] =>
   value
@@ -718,7 +758,8 @@ export const ProductCreatePage: React.FC = () => {
           : source;
       if (
         candidate &&
-        (read(candidate.id) || read(candidate.slug) || read(candidate.title))
+        (read(candidate.id) || read(candidate.slug) || read(candidate.title)) &&
+        hasFreeFromValue(candidate)
       )
         return;
       try {
@@ -753,10 +794,24 @@ export const ProductCreatePage: React.FC = () => {
     const source = getQuery.data ?? fallbackEditProduct;
     if (!source) return;
     const raw = source as Record<string, unknown>;
-    const row =
+    const primaryRow =
       typeof raw.product === "object" && raw.product !== null
         ? (raw.product as Record<string, unknown>)
         : raw;
+    const row =
+      !hasFreeFromValue(primaryRow) && fallbackEditProduct
+        ? {
+            ...primaryRow,
+            keyFeatures: getFreeFromValue(fallbackEditProduct),
+          }
+        : primaryRow;
+
+    if (import.meta.env.DEV) {
+      console.log("raw getQuery.data", getQuery.data);
+      console.log("resolved product", row);
+      console.log("resolved keyFeatures", getFreeFromValue(row));
+      console.log("freeFrom text", parseFreeFrom(getFreeFromValue(row)));
+    }
 
     setResolvedProductId(read(row.id) || read(raw.id) || (id ?? ""));
     const subId = read(
@@ -812,7 +867,11 @@ export const ProductCreatePage: React.FC = () => {
           : "DRAFT",
     });
 
-    setFreeFrom(parseFreeFrom(row.keyFeatures).map((item) => item.title).join(" "));
+    setFreeFrom(
+      parseFreeFrom(getFreeFromValue(row))
+        .map((item) => item.title)
+        .join(" "),
+    );
     setComboItems(parseComboItems(row.comboItems));
     setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
