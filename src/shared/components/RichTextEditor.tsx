@@ -136,9 +136,6 @@ const RichTextEditor: React.FC<Props> = ({
       : outputMode === "text"
         ? editor.getText({ blockSeparator: "\n" })
         : editor.getHTML();
-    if (import.meta.env.DEV) {
-      console.log("[RTE sync]", { initialContent, current, willSet: initialContent !== current });
-    }
     if (initialContent !== current) {
       editor.commands.setContent(
         outputMode === "text"

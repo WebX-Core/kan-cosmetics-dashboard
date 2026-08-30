@@ -45,20 +45,22 @@ export const marketingApi = {
     { key: "advertisements", basePath: "/advertisement" },
     {
       create: (dto) => {
-        const { image, ...rest } = dto;
+        const { image, targetIds, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
+            targetIds: targetIds !== undefined ? JSON.stringify(targetIds) : undefined,
             image: typeof image === "string" ? image : undefined,
           },
           files: { image: image instanceof File ? image : undefined },
         };
       },
       update: (dto) => {
-        const { image, ...rest } = dto;
+        const { image, targetIds, ...rest } = dto;
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
+            targetIds: targetIds !== undefined ? JSON.stringify(targetIds) : undefined,
             image: typeof image === "string" ? image : undefined,
           },
           files: { image: image instanceof File ? image : undefined },

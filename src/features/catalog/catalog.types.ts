@@ -16,7 +16,7 @@ export type PublicationFields = Readonly<{
   publishedAt?: string | null;
 }>;
 
-// Sent to backend as `keyFeatures`; labelled "Free From" in the UI
+// Legacy shape; kept for reading old records. New writes use `editorContent`.
 export type ProductFreeFrom = Readonly<{
   title: string;
 }>;
@@ -75,6 +75,8 @@ export type ProductDto = Readonly<{
   description?: string;
   descriptionJson?: ProductDescriptionJson | Record<string, unknown>;
   keyFeatures?: ReadonlyArray<ProductFreeFrom>;
+  // "Free From" rich-text field, stored verbatim (emoji + text).
+  editorContent?: string;
   weight?: string;
   weightUnit?: string;
   sku?: string;
