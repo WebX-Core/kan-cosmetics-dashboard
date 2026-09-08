@@ -44,7 +44,8 @@ const toCrudPaths = ({
   getOne: getOne ? (id) => `${basePath}${dashboardGetOne ? "/dashboard" : ""}/get/${id}` : undefined,
   create: `${basePath}/create`,
   update: update ? (id) => `${basePath}/update/${id}` : undefined,
-  softDelete: (ids) => `${basePath}/delete/${ids}`,
+  // Dashboard deletes are hard deletes: route softDelete at /destroy/ like the raw makeCrud modules do.
+  softDelete: (ids) => `${basePath}/destroy/${ids}`,
   deletedList: deleted ? `${basePath}/deleted` : `${basePath}/get-all`,
   recover: recover ? `${basePath}/recover` : `${basePath}/create`,
   destroy: (ids) => `${basePath}/destroy/${ids}`,
