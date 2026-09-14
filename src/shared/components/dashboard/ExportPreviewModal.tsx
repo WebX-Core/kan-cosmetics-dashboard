@@ -91,7 +91,6 @@ const ExcelPreview: React.FC<ExcelPreviewProps> = ({ file }) => {
     readExcelPreview(file.blob)
       .then(setData)
       .catch((error: unknown) => {
-        // eslint-disable-next-line no-console -- keep the real failure reason visible for debugging
         console.error("Excel preview failed:", error);
         setError("Could not preview this file.");
       });
@@ -187,7 +186,6 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({ file }) => {
     let cancelled = false;
     renderPdfPages(file.blob, container, () => cancelled)
       .catch((error: unknown) => {
-        // eslint-disable-next-line no-console -- keep the real failure reason visible for debugging
         console.error("PDF canvas preview failed, falling back to native viewer:", error);
         if (!cancelled) setCanvasFailed(true);
       })

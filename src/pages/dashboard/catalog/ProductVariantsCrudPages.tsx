@@ -356,7 +356,7 @@ export const ProductVariantsPage: React.FC = () => {
     const base = toVariantRows(toRows(source));
     if (!productFilter) return base;
     return base.filter((row) => row.productId === productFilter);
-  }, [archivedQuery.data?.data, draftQuery.data?.data, productFilter, publicationView, query.data?.data]);
+  }, [archivedQuery, draftQuery, productFilter, publicationView, query]);
   const lifecycleQuery = publicationView === "draft" ? draftQuery : publicationView === "archived" ? archivedQuery : query;
   const totalPages = lifecycleQuery.data?.totalPages ?? 1;
   const inventoryByVariantId = React.useMemo(() => {

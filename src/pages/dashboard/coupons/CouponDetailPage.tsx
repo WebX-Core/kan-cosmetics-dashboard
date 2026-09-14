@@ -202,6 +202,15 @@ export const CouponDetailPage: React.FC = () => {
 
   const coupon = couponQuery.data as Record<string, unknown> | undefined;
   const insights = insightsQuery.data as Record<string, unknown> | undefined;
+  const couponStatus = React.useMemo(() => {
+    if (!coupon || coupon.isActive === false) return "Inactive";
+    const now = Date.now();
+    const expiresAt = new Date(text(coupon.expiresAt)).getTime();
+    if (Number.isFinite(expiresAt) && expiresAt < now) return "Expired";
+    const startsAt = new Date(text(coupon.startsAt)).getTime();
+    if (Number.isFinite(startsAt) && startsAt > now) return "Scheduled";
+    return "Active";
+  }, [coupon]);
   const assignedCustomers = React.useMemo<CustomerOption[]>(() => {
     const values = Array.isArray(insights?.assignedCustomers) ? insights.assignedCustomers : [];
     return values.flatMap((value) => {
@@ -306,7 +315,7 @@ export const CouponDetailPage: React.FC = () => {
           </div>
           <div className="rounded-xl border border-gray-100 bg-white p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide">Status</p>
-            <div className="mt-1"><StatusBadge status={coupon.isActive === false ? "Inactive" : new Date(text(coupon.expiresAt)).getTime() < Date.now() ? "Expired" : new Date(text(coupon.startsAt)).getTime() > Date.now() ? "Scheduled" : "Active"} /></div>
+            <div className="mt-1"><StatusBadge status={couponStatus} /></div>
           </div>
         </div>
         {typeof coupon.description === "string" && coupon.description ? (

@@ -13,7 +13,7 @@ import {
 import { slugify } from "@/shared/utils/slug";
 import { validateOrToast } from "@/shared/utils/validation";
 import { parseApiError } from "@/shared/utils/apiError";
-import RichTextEditor from "@/shared/components/RichTextEditor";
+import { IconPickerButton } from "@/shared/components/forms/IconPickerModal";
 import {
   OCCASION_TYPES,
   PRODUCT_TYPES,
@@ -174,7 +174,7 @@ const readDescriptionText = (
   return "";
 };
 
-type FreeFromItem = { title: string };
+type FreeFromItem = { icon?: string; title: string };
 const COMBO_PRODUCT_TYPES: ReadonlyArray<ProductType> = [
   "COMBO_OFFER",
   "GIFT_SET",
@@ -194,13 +194,12 @@ type ComboProductOption = {
 };
 
 const getFreeFromValue = (row: Readonly<Record<string, unknown>>): unknown => {
-  // `||` not `??`: an empty-string editorContent should fall through to the
-  // legacy keyFeatures data for products saved before the rename.
+  // Check keyFeatures FIRST so structured icon + title data takes precedence over plain editorContent
   const directValue =
-    row.editorContent ||
-    row.editor_content ||
     row.keyFeatures ||
     row.key_features ||
+    row.editorContent ||
+    row.editor_content ||
     row.freeFrom ||
     row.free_from ||
     row.freeFromPromise;
@@ -268,13 +267,18 @@ const parseFreeFrom = (value: unknown): FreeFromItem[] => {
           }
         })()
       : value;
-  if (typeof arr === "string")
-    return [{ title: arr }].filter((item) => item.title);
+  if (typeof arr === "string") {
+    return arr
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((title) => ({ icon: "", title }));
+  }
   if (!Array.isArray(arr)) return [];
   return arr
     .map((item) => {
-      if (typeof item === "string") return { title: item };
-      if (typeof item !== "object" || item === null) return { title: "" };
+      if (typeof item === "string") return { icon: "", title: item.trim() };
+      if (typeof item !== "object" || item === null) return { icon: "", title: "" };
       const record = item as Record<string, unknown>;
       const known =
         record.title ??
@@ -286,15 +290,20 @@ const parseFreeFrom = (value: unknown): FreeFromItem[] => {
         record.keyFeature ??
         record.content ??
         record.description;
-      // Last resort: backend relation rows may name the text column anything.
       const fallback =
         known ??
         Object.values(record).find(
           (v) => typeof v === "string" && v.trim().length > 0,
         );
-      return { title: read(fallback) };
+      const icon = read(
+        record.icon ?? record.iconName ?? record.iconUrl ?? record.svg,
+      );
+      return {
+        icon: icon || "",
+        title: read(fallback),
+      };
     })
-    .filter((item) => item.title);
+    .filter((item) => item.title.trim().length > 0 || item.icon.trim().length > 0);
 };
 
 type DescriptionJsonForm = {
@@ -417,6 +426,99 @@ const StringListInput: React.FC<{
           Add item
         </button>
       </div>
+    </div>
+  );
+};
+
+const FreeFromListInput: React.FC<{
+  items: FreeFromItem[];
+  onChange: (items: FreeFromItem[]) => void;
+}> = ({ items, onChange }) => {
+  const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
+  const updateTitle = (index: number, title: string) => {
+    const next = [...items];
+    next[index] = { ...next[index], title };
+    onChange(next);
+  };
+
+  const updateIcon = (index: number, icon: string) => {
+    const next = [...items];
+    next[index] = { ...next[index], icon };
+    onChange(next);
+  };
+
+  const remove = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const add = () => {
+    onChange([...items, { icon: "", title: "" }]);
+    setTimeout(() => inputRefs.current[items.length]?.focus(), 0);
+  };
+
+  const onKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (index === items.length - 1) add();
+      else inputRefs.current[index + 1]?.focus();
+    }
+    if (
+      e.key === "Backspace" &&
+      items[index]?.title === "" &&
+      !items[index]?.icon &&
+      items.length > 0
+    ) {
+      e.preventDefault();
+      remove(index);
+      setTimeout(() => inputRefs.current[Math.max(0, index - 1)]?.focus(), 0);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {items.map((item, index) => (
+        <div key={index} className="flex items-center gap-2">
+          <span className="w-5 shrink-0 text-center text-[12px] text-[#86868b] select-none">
+            {index + 1}.
+          </span>
+          <IconPickerButton
+            value={item.icon}
+            onChange={(icon) => updateIcon(index, icon)}
+          />
+          <input
+            ref={(el) => {
+              inputRefs.current[index] = el;
+            }}
+            type="text"
+            value={item.title}
+            onChange={(e) => updateTitle(index, e.target.value)}
+            onKeyDown={(e) => onKeyDown(e, index)}
+            placeholder="e.g. Paraben-Free, Sulfate-Free, Cruelty-Free…"
+            className="h-9.5 flex-1 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] placeholder:text-[#86868b] outline-none transition focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/10"
+          />
+          <button
+            type="button"
+            onClick={() => remove(index)}
+            title="Remove item"
+            className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg border border-[#d2d2d7] text-[#86868b] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={add}
+        className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#d2d2d7] px-3 py-1.5 text-[12px] text-[#86868b] transition hover:border-(--primary) hover:text-(--primary)"
+      >
+        <Plus size={12} />
+        Add item
+      </button>
     </div>
   );
 };
@@ -636,7 +738,7 @@ export const ProductCreatePage: React.FC = () => {
   const [removedMediaAssetIds, setRemovedMediaAssetIds] = React.useState<
     ReadonlyArray<string>
   >([]);
-  const [freeFrom, setFreeFrom] = React.useState("");
+  const [freeFromItems, setFreeFromItems] = React.useState<FreeFromItem[]>([]);
   const [comboItems, setComboItems] = React.useState<ComboItemForm[]>([]);
   const [comboProductOptions, setComboProductOptions] = React.useState<
     ComboProductOption[]
@@ -804,13 +906,7 @@ export const ProductCreatePage: React.FC = () => {
     });
 
     const freeFromValue = getFreeFromValue(row);
-    setFreeFrom(
-      typeof freeFromValue === "string"
-        ? freeFromValue
-        : parseFreeFrom(freeFromValue)
-            .map((item) => item.title)
-            .join("\n"),
-    );
+    setFreeFromItems(parseFreeFrom(freeFromValue));
     setComboItems(parseComboItems(row.comboItems));
     setDescJson(parseDescJson(row.descriptionJson));
     setExistingCoverImage(read(row.coverImage));
@@ -1005,7 +1101,20 @@ export const ProductCreatePage: React.FC = () => {
         }
         return obj;
       })(),
-      editorContent: freeFrom,
+      keyFeatures: (() => {
+        const cleaned = freeFromItems
+          .map((item) => ({
+            icon: item.icon?.trim() || "",
+            title: item.title.trim(),
+          }))
+          .filter((item) => item.title.length > 0 || item.icon.length > 0);
+        return cleaned.length > 0 ? cleaned : null;
+      })(),
+      editorContent:
+        freeFromItems
+          .map((item) => item.title.trim())
+          .filter(Boolean)
+          .join(", ") || undefined,
       comboItems: isComboType ? normalizedComboItems : undefined,
       coverImage: coverImageFile ?? undefined,
       hoverImage: hoverImageFile ?? undefined,
@@ -1021,6 +1130,13 @@ export const ProductCreatePage: React.FC = () => {
     };
 
     try {
+      if (import.meta.env.DEV) {
+        console.log("[ProductCreatePage onSubmit] sending payload:", {
+          id: resolvedProductId || id,
+          keyFeatures: payload.keyFeatures,
+          editorContent: payload.editorContent,
+        });
+      }
       if (isEdit && (resolvedProductId || id)) {
         await updateMutation.mutateAsync({
           id: resolvedProductId || (id as string),
@@ -1782,12 +1898,9 @@ export const ProductCreatePage: React.FC = () => {
           title="Free From"
           description="Highlight what this product is free from (e.g. Paraben Free, Sulfate Free)."
         >
-          <RichTextEditor
-            initialContent={freeFrom}
-            minHeight="120px"
-            outputMode="text"
-            placeholder="e.g. 🌿 Paraben Free 🧪 Dermatologist Tested"
-            onChange={setFreeFrom}
+          <FreeFromListInput
+            items={freeFromItems}
+            onChange={setFreeFromItems}
           />
         </FormSection>
 

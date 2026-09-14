@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React from "react";
 import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";

@@ -143,7 +143,7 @@ export const WebPushNotificationFormPage: React.FC = () => {
     return form.targetId.trim()
       ? { label: "Session", value: form.targetId.trim(), meta: "Direct session target." }
       : { label: "Session", value: "No session selected", meta: "Enter a session ID to target a single session." };
-  }, [form.targetId, form.targetType, selectedCustomer, selectedSubscription, selectedUser]);
+  }, [form.broadcastAll, form.targetId, form.targetType, selectedCustomer, selectedSubscription, selectedUser]);
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();

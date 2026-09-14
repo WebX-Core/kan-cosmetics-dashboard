@@ -153,17 +153,17 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
     () => visibleIds.length > 0 && visibleIds.every((entry) => selectedIds.includes(entry)),
     [visibleIds, selectedIds],
   );
-  const toggleSelectOne = (id: string, checked: boolean) => {
+  const toggleSelectOne = React.useCallback((id: string, checked: boolean) => {
     setSelectedIds((prev) =>
       checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((entry) => entry !== id),
     );
-  };
-  const toggleSelectAllVisible = (checked: boolean) => {
+  }, []);
+  const toggleSelectAllVisible = React.useCallback((checked: boolean) => {
     setSelectedIds((prev) => {
       if (!checked) return prev.filter((entry) => !visibleIds.includes(entry));
       return Array.from(new Set([...prev, ...visibleIds]));
     });
-  };
+  }, [visibleIds]);
 
   const columns = React.useMemo(() => {
     const keys = new Set<string>(["id", ...config.fields.map((field) => field.key)]);
@@ -213,7 +213,7 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
         ),
       })),
     ];
-  }, [config.fields, config.key, config.label, isAllVisibleSelected, selectedIds]);
+  }, [config.fields, config.key, config.label, isAllVisibleSelected, selectedIds, toggleSelectAllVisible, toggleSelectOne]);
 
   const handleDelete = async (id: string) => {
     await remove.mutateAsync(id);

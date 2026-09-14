@@ -26,5 +26,5 @@ export const printBills = async (payloads: ReadonlyArray<BillPayload>, billType:
   const popup = printWindow ?? openBillPrintWindow();
   if (!popup) throw new Error("Pop-up blocked. Allow pop-ups to print bills.");
   const pages = payloads.map((payload) => billType === "VAT_BILL" ? vatBill(payload) : shippingLabel(payload)).join("");
-  popup.document.open(); popup.document.write(`<!doctype html><html><head><title>${billType === "VAT_BILL" ? "VAT Bills" : "Shipping Labels"}</title>${styles}</head><body>${pages}<script>window.onload=()=>{setTimeout(()=>window.print(),250)}<\/script></body></html>`); popup.document.close();
+  popup.document.open(); popup.document.write(`<!doctype html><html><head><title>${billType === "VAT_BILL" ? "VAT Bills" : "Shipping Labels"}</title>${styles}</head><body>${pages}<script>window.onload=()=>{setTimeout(()=>window.print(),250)}</script></body></html>`); popup.document.close();
 };

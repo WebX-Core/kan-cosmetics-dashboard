@@ -9,6 +9,7 @@ import {
   ImageIcon,
   CheckCircle2,
 } from "lucide-react";
+import { Icon } from "@iconify/react";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatusBadge } from "@/shared/components/dashboard/StatusBadge";
 import { catalogApi } from "@/features/catalog";
@@ -77,35 +78,47 @@ const splitFreeFromText = (value: string): string[] =>
 const getFreeFromValue = (
   product: Readonly<Record<string, unknown>> | undefined,
 ): unknown =>
-  product?.editorContent ??
-  product?.editor_content ??
   product?.keyFeatures ??
   product?.key_features ??
+  product?.editorContent ??
+  product?.editor_content ??
   product?.freeFrom ??
   product?.free_from ??
   product?.freeFromPromise;
 
-const parseFreeFromItems = (value: unknown): string[] => {
+type ParsedFreeFromItem = {
+  icon?: string;
+  title: string;
+};
+
+const parseFreeFromItems = (value: unknown): ParsedFreeFromItem[] => {
   const parsed = parseArray(value);
   if (typeof value === "string" && parsed.length === 0) {
-    return splitFreeFromText(value);
+    return splitFreeFromText(value).map((title) => ({ title }));
   }
   return parsed
     .flatMap((item) => {
-      if (typeof item === "string") return splitFreeFromText(item);
+      if (typeof item === "string") {
+        return splitFreeFromText(item).map((title) => ({ title }));
+      }
       if (typeof item !== "object" || item === null) return [];
       const record = item as Record<string, unknown>;
-      return splitFreeFromText(
-        readText(
-          record.title ??
-            record.label ??
-            record.name ??
-            record.value ??
-            record.text,
-        ),
+      const title = readText(
+        record.title ??
+          record.label ??
+          record.name ??
+          record.value ??
+          record.text ??
+          record.feature ??
+          record.keyFeature,
       );
+      const icon = readText(
+        record.icon ?? record.iconName ?? record.iconUrl ?? record.svg,
+      );
+      if (!title) return [];
+      return [{ icon: icon || undefined, title }];
     })
-    .filter(Boolean);
+    .filter((item) => item.title.length > 0);
 };
 
 const formatCurrency = (value: unknown): string => {
@@ -581,13 +594,17 @@ export const ProductDetailsPage: React.FC = () => {
             <div className="mt-7 border-t border-[#f2f2f4] pt-7">
               <p className="mb-3 text-[12px] font-semibold text-[#86868b]">Free from</p>
               <div className="flex flex-wrap gap-2">
-                {freeFromItems.map((label) => (
+                {freeFromItems.map((item, idx) => (
                   <span
-                    key={label}
+                    key={`${item.title}-${idx}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f7] px-3.5 py-1.5 text-[13px] font-medium text-[#1d1d1f]"
                   >
-                    <CheckCircle2 size={12} className="shrink-0 text-[#1a9e6b]" strokeWidth={2.5} />
-                    {label}
+                    {item.icon ? (
+                      <Icon icon={item.icon} className="h-4 w-4 shrink-0 text-[#1a9e6b]" />
+                    ) : (
+                      <CheckCircle2 size={12} className="shrink-0 text-[#1a9e6b]" strokeWidth={2.5} />
+                    )}
+                    {item.title}
                   </span>
                 ))}
               </div>

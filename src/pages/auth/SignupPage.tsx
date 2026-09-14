@@ -68,7 +68,7 @@ export const SignupPage: React.FC = () => {
       return;
     }
 
-    const { selectedRole, ...dto } = parsed.data;
+    const { selectedRole: _selectedRole, ...dto } = parsed.data;
 
     try {
       await signup.mutateAsync({

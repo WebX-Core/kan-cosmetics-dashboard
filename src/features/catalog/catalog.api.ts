@@ -55,6 +55,9 @@ export const catalogApi = {
     {
       create: (dto) => {
         const { coverImage, hoverImage, howToUseImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
+        if (import.meta.env.DEV) {
+          console.log("[catalog.api] create keyFeatures payload:", keyFeatures);
+        }
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),
@@ -72,6 +75,9 @@ export const catalogApi = {
       },
       update: (dto) => {
         const { coverImage, hoverImage, howToUseImage, pdf, gallery, keyFeatures, comboItems, ...rest } = dto;
+        if (import.meta.env.DEV) {
+          console.log("[catalog.api] update keyFeatures payload:", keyFeatures);
+        }
         return {
           fields: {
             ...(rest as Readonly<Record<string, FormFieldValue>>),

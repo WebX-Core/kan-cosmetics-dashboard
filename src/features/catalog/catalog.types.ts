@@ -16,8 +16,8 @@ export type PublicationFields = Readonly<{
   publishedAt?: string | null;
 }>;
 
-// Legacy shape; kept for reading old records. New writes use `editorContent`.
 export type ProductFreeFrom = Readonly<{
+  icon?: string;
   title: string;
 }>;
 
@@ -74,7 +74,7 @@ export type ProductDto = Readonly<{
   slug?: string;
   description?: string;
   descriptionJson?: ProductDescriptionJson | Record<string, unknown>;
-  keyFeatures?: ReadonlyArray<ProductFreeFrom>;
+  keyFeatures?: ReadonlyArray<ProductFreeFrom> | null;
   // "Free From" rich-text field, stored verbatim (emoji + text).
   editorContent?: string;
   weight?: string;

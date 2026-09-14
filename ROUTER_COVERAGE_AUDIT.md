@@ -1,6 +1,6 @@
 # Router Coverage Audit
 
-- total routes: 200
+- total routes: 205
 - required routes checked: 12
 - missing required routes: 0
 

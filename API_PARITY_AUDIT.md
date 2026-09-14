@@ -5,7 +5,7 @@
 - missing modules: 0
 - extra modules: 57
 - missing endpoints: 0
-- extra endpoints: 386
+- extra endpoints: 378
 
 ## Missing Modules
 - none
@@ -74,8 +74,6 @@
 
 ## Extra Endpoints
 - DELETE /admin/delete-users/:id
-- DELETE /advertisement/delete/:id
-- DELETE /advertisement/destroy/:id
 - DELETE /audit-log/delete/:id
 - DELETE /audit-log/destroy/:id
 - DELETE /auth/logout
@@ -103,14 +101,13 @@
 - DELETE /email-campaign/delete/:id
 - DELETE /email-campaign/destroy/:id
 - DELETE /email-log/delete/:id
+- DELETE /email-log/destroy/:id
 - DELETE /email-queue/delete/:id
 - DELETE /email-queue/destroy/:id
 - DELETE /email-recipient-bucket/delete/:id
 - DELETE /email-recipient-bucket/destroy/:id
 - DELETE /email-recipient/delete/:id
 - DELETE /email-recipient/destroy/:id
-- DELETE /faq/delete/:id
-- DELETE /faq/destroy/:id
 - DELETE /inquiry/delete/:id
 - DELETE /inquiry/destroy/:id
 - DELETE /inventory/delete/:id
@@ -157,8 +154,6 @@
 - DELETE /wishlist/item/:id
 - GET /admin/get-all-users
 - GET /admin/get-users/:id
-- GET /advertisement/deleted
-- GET /advertisement/get-all
 - GET /advertisement/get/:id
 - GET /advertisement/match
 - GET /audit-log/deleted
@@ -228,14 +223,16 @@
 - GET /email-recipient/deleted
 - GET /email-recipient/get-all
 - GET /email-recipient/get/:id
-- GET /faq/deleted
-- GET /faq/get-all
-- GET /faq/get/:id
+- GET /faq/dashboard/get-product/:id
+- GET /faq/get-product/:id
 - GET /inquiry/deleted
 - GET /inquiry/export/excel
 - GET /inquiry/export/pdf
 - GET /inquiry/get-all
 - GET /inquiry/get/:id
+- GET /inventory/bulk-upload/history
+- GET /inventory/bulk-upload/history/:id
+- GET /inventory/bulk-upload/template
 - GET /inventory/deleted
 - GET /inventory/get-all
 - GET /inventory/get/:id
@@ -320,7 +317,6 @@
 - PATCH /payment/sync-provider/:id
 - PATCH /payment/update/:id
 - POST /admin/create-users
-- POST /advertisement/create
 - POST /audit-log/create
 - POST /auth/forgot-password
 - POST /auth/signin
@@ -354,8 +350,8 @@
 - POST /email-recipient/create
 - POST /email-recipient/create-from-subscribers
 - POST /email-recipient/select-audience
-- POST /faq/create
 - POST /inquiry/create
+- POST /inventory/bulk-upload
 - POST /inventory/create
 - POST /newsletter/create
 - POST /order-bill/bulk
@@ -393,8 +389,6 @@
 - POST /web-push-subscription/create
 - POST /wishlist/add-item
 - PUT /admin/update-users/:id
-- PUT /advertisement/recover
-- PUT /advertisement/update/:id
 - PUT /audit-log/recover
 - PUT /company-setting/recover
 - PUT /company-setting/update/:id
@@ -424,8 +418,6 @@
 - PUT /email-recipient-bucket/update/:id
 - PUT /email-recipient/recover
 - PUT /email-recipient/update/:id
-- PUT /faq/recover
-- PUT /faq/update/:id
 - PUT /inquiry/recover
 - PUT /inquiry/update/:id
 - PUT /inventory/recover

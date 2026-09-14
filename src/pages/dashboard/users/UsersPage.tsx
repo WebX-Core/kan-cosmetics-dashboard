@@ -51,12 +51,13 @@ export const UsersPage: React.FC = () => {
   });
   const del = useDeleteAdminUsers();
 
-  const rows: ReadonlyArray<CombinedRow> = listQuery.data?.data ?? [];
+  const rows = listQuery.data?.data;
   const resolveRole = React.useCallback((user: CombinedRow) => (user.role ?? "USER").toUpperCase(), []);
   const totalPages = listQuery.data?.totalPages ?? 1;
   const roleScopedRows = React.useMemo<ReadonlyArray<CombinedRow>>(() => {
-    if (viewerRole === "SUDOADMIN") return rows;
-    return rows.filter((u) => resolveRole(u) !== "SUDOADMIN");
+    const list = rows ?? [];
+    if (viewerRole === "SUDOADMIN") return list;
+    return list.filter((u) => resolveRole(u) !== "SUDOADMIN");
   }, [rows, viewerRole, resolveRole]);
   const filteredRows = React.useMemo(() => {
     if (activeTab === "system") {
