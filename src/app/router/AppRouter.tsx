@@ -68,11 +68,11 @@ import {
 } from "../../pages/dashboard/inquiries/InquiryViewPages";
 import { FaqFormPage, FaqsPage } from "../../pages/dashboard/faqs";
 import { NewsletterPage } from "@/pages/dashboard/marketing/newsletter/NewsletterPage";
-import {
-  BlogPostCreatePage,
-  BlogPostEditPage,
-  BlogPostsPage,
-} from "@/pages/dashboard/marketing/blog/BlogPostsCrudPages";
+// import {
+//   BlogPostCreatePage,
+//   BlogPostEditPage,
+//   BlogPostsPage,
+// } from "@/pages/dashboard/marketing/blog/BlogPostsCrudPages";
 import { ActivityLogsPage } from "../../pages/dashboard/reports/ActivityLogsPage";
 import { AuditLogsPage } from "../../pages/dashboard/reports/AuditLogsPage";
 import {
@@ -461,7 +461,8 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/support/replies" element={<RepliesPage />} />
             <Route path="/dashboard/support/replies/create" element={<RepliesCreatePage />} />
             <Route path="/dashboard/support/replies/:id/edit" element={<RepliesEditPage />} />
-            <Route path="/dashboard/blog-posts" element={<BlogPostsPage />} />
+            {/* Blog routes (commented out) */}
+            {/* <Route path="/dashboard/blog-posts" element={<BlogPostsPage />} />
             <Route
               path="/dashboard/blog-posts/create"
               element={<BlogPostCreatePage />}
@@ -470,7 +471,7 @@ export const AppRouter: React.FC = () => {
               path="/dashboard/blog-posts/:id/edit"
               element={<BlogPostEditPage />}
             />
-            <Route path="/dashboard/blog-posts/:id" element={<BlogPostsPage />} />
+            <Route path="/dashboard/blog-posts/:id" element={<BlogPostsPage />} /> */}
             <Route element={<RoleGuard allow={["SUDOADMIN"]} />}>
               <Route path="/dashboard/seo-metadata" element={<SeoListPage />} />
               <Route path="/dashboard/seo-metadata/create" element={<SeoFormPage />} />

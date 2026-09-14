@@ -15,7 +15,6 @@ import {
   Megaphone,
   MessageCircleQuestion,
   Package,
-  Rss,
   SearchCheck,
   Send,
   ShieldUser,
@@ -65,7 +64,7 @@ export const ecommerceModules: ReadonlyArray<EcommerceModule> = [
   { key: "testimonials", label: "Testimonials", path: "/dashboard/testimonials", section: "Support", description: "Curated site-wide customer testimonials with publish control.", icon: Quote },
   { key: "faqs", label: "FAQs", path: "/dashboard/faqs", section: "Support", description: "FAQ CRUD with product and site FAQ split plus active toggle.", icon: MessageCircleQuestion },
 
-  { key: "blog-posts", label: "Blog", path: "/dashboard/blog-posts", section: "Marketing", description: "Blog post CRUD and publish toggle.", icon: Rss },
+  // { key: "blog-posts", label: "Blog", path: "/dashboard/blog-posts", section: "Marketing", description: "Blog post CRUD and publish toggle.", icon: Rss },
   { key: "newsletter", label: "Newsletter", path: "/dashboard/newsletter", section: "Marketing", description: "Subscriber list, subscription state, and segmentation.", icon: Send },
   { key: "advertisements", label: "Advertisements", path: "/dashboard/advertisements", section: "Marketing", description: "Promotional banners with category, product, and variant targeting.", icon: Megaphone },
   { key: "email-campaigns", label: "Email Campaigns", path: "/dashboard/marketing/email-campaigns", section: "Marketing", description: "Email marketing campaign management.", icon: Mail },

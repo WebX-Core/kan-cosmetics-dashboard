@@ -148,7 +148,7 @@ export const AdvertisementFormPage: React.FC = () => {
               {imagePreview ? <div className="relative overflow-hidden rounded-xl border border-[#d2d2d7] bg-[#f5f5f7]"><img src={imagePreview} alt="Advertisement preview" className="max-h-64 w-full object-contain" /><button type="button" onClick={() => { setImageFile(null); setExistingImage(""); }} className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f]/80 text-white hover:bg-[#1d1d1f]" aria-label="Remove image"><Trash2 size={14} /></button></div> : null}
               <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-4 py-6 text-center hover:bg-[#fafafa]">
                 {imagePreview ? <ImagePlus size={22} className="text-[#86868b]" /> : <UploadCloud size={26} className="text-[#86868b]" />}
-                <span className="mt-2 text-[13px] font-medium text-[#1d1d1f]">{imagePreview ? "Replace image" : "Choose an image"}</span><span className="mt-1 text-[12px] text-[#86868b]">PNG, JPEG, GIF or WebP, up to 5MB</span>
+                <span className="mt-2 text-[13px] font-medium text-[#1d1d1f]">{imagePreview ? "Replace image" : "Choose an image"}</span><span className="mt-1 text-[12px] text-[#86868b]">PNG, JPEG, GIF or WebP, up to 5MB, dimension : 1920 * 400</span>
                 <input type="file" accept="image/*" className="hidden" onChange={(event) => { onImage(event.target.files?.[0] ?? null); event.currentTarget.value = ""; }} />
               </label>
             </div>

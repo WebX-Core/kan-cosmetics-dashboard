@@ -39,7 +39,7 @@ const DropArea: React.FC<{ onFile: (file: File) => void }> = ({ onFile }) => {
     >
       <UploadCloud size={26} className="mx-auto text-[#86868b]" />
       <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Choose photo or drag and drop it here.</p>
-      <p className="mt-1 text-[12px] text-[#86868b]">Images only, up to 5MB</p>
+      <p className="mt-1 text-[12px] text-[#86868b]">Images only, up to 5MB, aspect ratio : 3:4</p>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}

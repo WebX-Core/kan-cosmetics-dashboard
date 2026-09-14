@@ -58,7 +58,7 @@ const DropArea: React.FC<{
           Choose image file or drag and drop it here.
         </p>
       ) : null}
-      {!compact ? <p className="mt-1 text-[12px] text-[#86868b]">Only images, up to 5MB</p> : null}
+      {!compact ? <p className="mt-1 text-[12px] text-[#86868b]">Only images, up to 5MB, dimension : 1920*720</p> : null}
       <button
         type="button"
         onClick={() => inputRef.current?.click()}

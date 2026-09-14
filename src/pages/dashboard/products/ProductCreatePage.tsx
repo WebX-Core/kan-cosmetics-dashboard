@@ -1570,6 +1570,7 @@ export const ProductCreatePage: React.FC = () => {
                 {!hasCoverImage ? (
                   <DropArea
                     label="Cover image"
+                    helperText="Only images, up to 5MB, aspect ratio : 3:4 and dimension : 1200: 1500"
                     onFiles={(files) => {
                       const valid = imageFileErrors(files);
                       setCoverImageFile(valid[0] ?? null);
@@ -1603,6 +1604,7 @@ export const ProductCreatePage: React.FC = () => {
                 {!hasHoverImage ? (
                   <DropArea
                     label="Hover image"
+                    helperText="Only images, up to 5MB, aspect ratio : 3:4 and dimension : 1200: 1500"
                     onFiles={(files) => {
                       const valid = imageFileErrors(files);
                       setHoverImageFile(valid[0] ?? null);

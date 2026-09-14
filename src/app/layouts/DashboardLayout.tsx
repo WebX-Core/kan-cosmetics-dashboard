@@ -24,7 +24,7 @@ const SIDEBAR_BACKEND_MODULES: Readonly<Record<string, ReadonlyArray<string>>> =
   reviews:                   ["review"],
   testimonials:              ["review"],
   faqs:                      ["faq"],
-  "blog-posts":              ["blog"],
+  // "blog-posts":              ["blog"],
   newsletter:                ["newsletter"],
   advertisements:            ["advertisement"],
   "email-campaigns":         ["email-campaign"],

@@ -379,12 +379,14 @@ export type IconPickerButtonProps = Readonly<{
   value?: string;
   onChange: (iconName: string) => void;
   className?: string;
+  showLabel?: boolean;
 }>;
 
 export const IconPickerButton: React.FC<IconPickerButtonProps> = ({
   value,
   onChange,
   className = "",
+  showLabel = false,
 }) => {
   const [modalOpen, setModalOpen] = React.useState(false);
 
@@ -394,28 +396,33 @@ export const IconPickerButton: React.FC<IconPickerButtonProps> = ({
         type="button"
         onClick={() => setModalOpen(true)}
         title={value ? `Icon: ${value} (click to change)` : "Select icon"}
-        className={`group relative flex h-9.5 shrink-0 items-center gap-2 rounded-lg border px-2.5 text-[12px] font-medium transition ${value
+        className={`group relative flex h-9.5 shrink-0 items-center justify-center rounded-lg border transition ${
+          showLabel ? "gap-2 px-2.5" : "w-9.5"
+        } ${
+          value
             ? "border-[#d2d2d7] bg-[#f9f9fb] text-[#1d1d1f] hover:border-(--primary) hover:bg-white"
             : "border-dashed border-[#d2d2d7] bg-white text-[#86868b] hover:border-(--primary) hover:text-(--primary)"
-          } ${className}`}
+        } ${className}`}
       >
         {value ? (
           <>
             <Icon
               icon={value}
-              className="h-4.5 w-4.5 shrink-0 text-(--primary)"
+              className="h-5 w-5 shrink-0 text-(--primary)"
             />
-            <span className="max-w-[85px] truncate text-[11.5px] text-[#48484a] sm:max-w-[110px]">
-              {value.split(":").pop()}
-            </span>
+            {showLabel && (
+              <span className="max-w-[85px] truncate text-[11.5px] text-[#48484a] sm:max-w-[110px]">
+                {value.split(":").pop()}
+              </span>
+            )}
           </>
         ) : (
           <>
             <Sparkles
-              size={13}
+              size={15}
               className="shrink-0 text-[#86868b] group-hover:text-(--primary)"
             />
-            <span className="text-[11.5px]">Select icon</span>
+            {showLabel && <span className="text-[11.5px]">Select icon</span>}
           </>
         )}
       </button>
