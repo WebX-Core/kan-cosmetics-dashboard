@@ -24,8 +24,8 @@ import {
 import { PublicationStatusSelector } from "@/shared/components/catalog/PublicationStatusSelector";
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
-const MAX_GALLERY_IMAGES = 10;
+// const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+// const _MAX_GALLERY_IMAGES = 10;
 type ProductMediaType = "IMAGE" | "VIDEO";
 type MediaUpload = Readonly<{ file: File; type: ProductMediaType }>;
 type ExistingMedia = Readonly<{
@@ -527,15 +527,15 @@ const isValidImageFile = (file: File): boolean =>
   file.type.startsWith("image/") && file.size <= MAX_IMAGE_SIZE_BYTES;
 const isValidPdfFile = (file: File): boolean =>
   file.type === "application/pdf" && file.size <= MAX_IMAGE_SIZE_BYTES;
-const isValidGalleryMediaFile = (file: File): boolean => {
-  if (file.type.startsWith("image/")) return file.size <= MAX_IMAGE_SIZE_BYTES;
-  if (file.type.startsWith("video/")) return file.size <= MAX_VIDEO_SIZE_BYTES;
-  return false;
-};
+// const _isValidGalleryMediaFile = (file: File): boolean => {
+//   if (file.type.startsWith("image/")) return file.size <= MAX_IMAGE_SIZE_BYTES;
+//   if (file.type.startsWith("video/")) return file.size <= MAX_VIDEO_SIZE_BYTES;
+//   return false;
+// };
 const isVideoUrl = (url: string): boolean =>
   /\.(mp4|webm|ogg|mov|m4v|avi)(\?.*)?$/i.test(url);
-const mediaTypeFromFile = (file: File): ProductMediaType =>
-  file.type.startsWith("video/") ? "VIDEO" : "IMAGE";
+// const _mediaTypeFromFile = (file: File): ProductMediaType =>
+//   file.type.startsWith("video/") ? "VIDEO" : "IMAGE";
 const mediaTypeFromString = (value: string): ProductMediaType =>
   value.toUpperCase().includes("VIDEO") ? "VIDEO" : "IMAGE";
 const readMedia = (value: unknown): ExistingMedia | null => {
@@ -726,10 +726,10 @@ export const ProductCreatePage: React.FC = () => {
     React.useState<string>("");
   const [existingHoverImage, setExistingHoverImage] =
     React.useState<string>("");
-  const [existingHowToUseImage, setExistingHowToUseImage] =
+  const [_existingHowToUseImage, setExistingHowToUseImage] =
     React.useState<string>("");
   const [existingPdf, setExistingPdf] = React.useState<string>("");
-  const [existingGallery, setExistingGallery] = React.useState<
+  const [_existingGallery, setExistingGallery] = React.useState<
     ReadonlyArray<ExistingMedia>
   >([]);
   const [removedUrls, setRemovedUrls] = React.useState<ReadonlyArray<string>>(
@@ -962,20 +962,20 @@ export const ProductCreatePage: React.FC = () => {
     },
     [toast],
   );
-  const galleryFileErrors = React.useCallback(
-    (files: FileList | null): ReadonlyArray<File> => {
-      if (!files?.length) return [];
-      const all = Array.from(files);
-      const valid = all.filter(isValidGalleryMediaFile);
-      if (valid.length !== all.length) {
-        toast.error(
-          "Gallery supports images (up to 5MB) and videos (up to 50MB).",
-        );
-      }
-      return valid;
-    },
-    [toast],
-  );
+  // const _galleryFileErrors = React.useCallback(
+  //   (files: FileList | null): ReadonlyArray<File> => {
+  //     if (!files?.length) return [];
+  //     const all = Array.from(files);
+  //     const valid = all.filter(_isValidGalleryMediaFile);
+  //     if (valid.length !== all.length) {
+  //       toast.error(
+  //         "Gallery supports images (up to 5MB) and videos (up to 50MB).",
+  //       );
+  //     }
+  //     return valid;
+  //   },
+  //   [toast],
+  // );
 
   const markRemovedUrl = React.useCallback((url: string) => {
     if (!url) return;
@@ -1002,10 +1002,10 @@ export const ProductCreatePage: React.FC = () => {
   );
   const hasCoverImage = Boolean(coverImageFile || existingCoverImage);
   const hasHoverImage = Boolean(hoverImageFile || existingHoverImage);
-  const hasHowToUseImage = Boolean(howToUseImageFile || existingHowToUseImage);
+  // const _hasHowToUseImage = Boolean(howToUseImageFile || existingHowToUseImage);
   const hasPdf = Boolean(pdfFile || existingPdf);
-  const totalGalleryImages = previewGallery.length + existingGallery.length;
-  const canAddGalleryImage = totalGalleryImages < MAX_GALLERY_IMAGES;
+  // const _totalGalleryImages = previewGallery.length + existingGallery.length;
+  // const _canAddGalleryImage = _totalGalleryImages < _MAX_GALLERY_IMAGES;
 
   React.useEffect(
     () => () => {
@@ -1631,11 +1631,11 @@ export const ProductCreatePage: React.FC = () => {
                 )}
               </div>
 
-              <div>
+              {/* <div>
                 <p className="mb-2 text-[13px] font-medium text-[#1d1d1f]">
                   How To Use Image
                 </p>
-                {!hasHowToUseImage ? (
+                {!_hasHowToUseImage ? (
                   <DropArea
                     label="How to use image"
                     helperText="Instruction or usage guide image, up to 5MB"
@@ -1664,7 +1664,7 @@ export const ProductCreatePage: React.FC = () => {
                     )}
                   </div>
                 )}
-              </div>
+              </div> */}
 
               <div>
                 <p className="mb-2 text-[13px] font-medium text-[#1d1d1f]">
@@ -1735,14 +1735,14 @@ export const ProductCreatePage: React.FC = () => {
               hoverSrc={previewHover || existingHoverImage}
             />
 
-            <div>
+            {/* <div>
               <p className="mb-1 text-[13px] font-medium text-[#1d1d1f]">
                 Gallery (Images + Videos)
               </p>
               <p className="mb-2 text-[12px] text-[#86868b]">
-                {totalGalleryImages}/{MAX_GALLERY_IMAGES}
+                {_totalGalleryImages}/{_MAX_GALLERY_IMAGES}
               </p>
-              {totalGalleryImages === 0 ? (
+              {_totalGalleryImages === 0 ? (
                 <DropArea
                   label="Gallery media"
                   multiple
@@ -1750,18 +1750,18 @@ export const ProductCreatePage: React.FC = () => {
                   promptText="Choose image/video files or drag and drop them here."
                   helperText="Images up to 5MB, videos up to 50MB"
                   onFiles={(files) => {
-                    const valid = galleryFileErrors(files);
+                    const valid = _galleryFileErrors(files);
                     if (!valid.length) return;
                     setGalleryFiles((prev) => {
                       const remaining =
-                        MAX_GALLERY_IMAGES -
+                        _MAX_GALLERY_IMAGES -
                         (prev.length + existingGallery.length);
                       if (remaining <= 0) return prev;
                       return [
                         ...prev,
                         ...valid.slice(0, remaining).map((file) => ({
                           file,
-                          type: mediaTypeFromFile(file),
+                          type: _mediaTypeFromFile(file),
                         })),
                       ];
                     });
@@ -1801,25 +1801,25 @@ export const ProductCreatePage: React.FC = () => {
                       }}
                     />
                   ))}
-                  {canAddGalleryImage ? (
+                  {_canAddGalleryImage ? (
                     <DropArea
                       label="Gallery media"
                       multiple
                       compact
                       accept="image/*,video/*"
                       onFiles={(files) => {
-                        const valid = galleryFileErrors(files);
+                        const valid = _galleryFileErrors(files);
                         if (!valid.length) return;
                         setGalleryFiles((prev) => {
                           const remaining =
-                            MAX_GALLERY_IMAGES -
+                            _MAX_GALLERY_IMAGES -
                             (prev.length + existingGallery.length);
                           if (remaining <= 0) return prev;
                           return [
                             ...prev,
                             ...valid.slice(0, remaining).map((file) => ({
                               file,
-                              type: mediaTypeFromFile(file),
+                              type: _mediaTypeFromFile(file),
                             })),
                           ];
                         });
@@ -1828,7 +1828,7 @@ export const ProductCreatePage: React.FC = () => {
                   ) : null}
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </FormSection>
 

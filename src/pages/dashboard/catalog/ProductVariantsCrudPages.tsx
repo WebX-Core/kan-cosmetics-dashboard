@@ -152,11 +152,22 @@ const VariantImageCard: React.FC<Readonly<{ src: string; primary?: boolean; onRe
 const VariantImageDropArea: React.FC<Readonly<{ compact?: boolean; onFiles: (files: FileList | null) => void }>> = ({ compact, onFiles }) => {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   return (
-    <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); onFiles(event.dataTransfer.files); }} className={compact ? "flex h-28 w-28 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] p-2 text-center transition hover:border-[var(--primary)]" : "rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-4 py-8 text-center transition hover:border-[var(--primary)]"}>
-      <UploadCloud size={compact ? 18 : 26} className="mx-auto text-[#86868b]" />
-      {!compact ? <><p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Choose images or drag and drop them here.</p><p className="mt-1 text-[12px] text-[#86868b]">Images up to 5MB · Maximum {MAX_VARIANT_IMAGES}</p></> : null}
-      <button type="button" onClick={() => inputRef.current?.click()} className={compact ? "mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]" : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"}>
-        {compact ? <Plus size={14} /> : "Browse files"}
+    <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); onFiles(event.dataTransfer.files); }} className={compact ? "flex h-28 w-28 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] p-1.5 text-center transition hover:border-[var(--primary)]" : "rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#f5f5f7] px-4 py-8 text-center transition hover:border-[var(--primary)]"}>
+      <UploadCloud size={compact ? 16 : 26} className="mx-auto text-[#86868b]" />
+      {compact ? (
+        <div className="my-1 text-[8.5px] leading-tight text-[#86868b]">
+          {/* <span>aspect ratio : 3:4</span> */}
+          {/* <br /> */}
+          <span>dimension : 1080*1350</span>
+        </div>
+      ) : (
+        <>
+          <p className="mt-2 text-[14px] font-medium text-[#1d1d1f]">Choose images or drag and drop them here.</p>
+          <p className="mt-1 text-[12px] text-[#86868b]">Images up to 5MB, aspect ratio : 3:4 and dimension : 1080*1350 · Maximum {MAX_VARIANT_IMAGES}</p>
+        </>
+      )}
+      <button type="button" onClick={() => inputRef.current?.click()} className={compact ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]" : "mt-3 inline-flex h-9 items-center rounded-lg border border-[#d2d2d7] bg-white px-3 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#fafafa]"}>
+        {compact ? <Plus size={12} /> : "Browse files"}
       </button>
       <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" aria-label="Variant images" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
     </div>
