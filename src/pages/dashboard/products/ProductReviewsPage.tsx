@@ -93,7 +93,7 @@ export const ProductReviewsPage: React.FC = () => {
   };
 
   const bulkDelete = async (ids: Set<string>, clear: () => void) => {
-    await Promise.all([...ids].map((id) => engagementApi.reviews.crud.service.softDelete(id)));
+    await Promise.all([...ids].map((id) => engagementApi.reviews.crud.service.destroy(id)));
     void invalidate();
     clear();
     toast.success(`${ids.size} review${ids.size > 1 ? "s" : ""} deleted.`);

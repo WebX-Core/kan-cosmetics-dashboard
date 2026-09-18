@@ -83,7 +83,7 @@ export const EmailQueuePage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = marketingApi.emailQueues.hooks.useSoftDelete();
+  const softDelete = marketingApi.emailQueues.hooks.useDestroy();
   const updateQueue = marketingApi.emailQueues.hooks.useUpdate();
 
   const rows = React.useMemo(() => toQueueRows(query.data), [query.data]);

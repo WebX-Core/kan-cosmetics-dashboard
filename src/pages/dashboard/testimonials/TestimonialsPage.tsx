@@ -95,7 +95,7 @@ export const TestimonialsPage: React.FC = () => {
     },
     onError: (e) => toast.error(parseApiError(e).message),
   });
-  const softDelete = engagementApi.reviews.crud.hooks.useSoftDelete();
+  const softDelete = engagementApi.reviews.crud.hooks.useDestroy();
 
   const rows = React.useMemo(() => mapRows(liveQuery.data), [liveQuery.data]);
   const totalPages = (liveQuery.data as { totalPages?: number } | undefined)?.totalPages ?? 1;

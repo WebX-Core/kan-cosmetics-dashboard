@@ -250,7 +250,7 @@ export const ProductsListPage: React.FC = () => {
     { page: 1, limit: 1000 },
     canInventoryManage,
   );
-  const softDelete = catalogApi.products.hooks.useSoftDelete();
+  const softDelete = catalogApi.products.hooks.useDestroy();
   const updateProduct = catalogApi.products.hooks.useUpdate();
 
   const lifecycleQuery =

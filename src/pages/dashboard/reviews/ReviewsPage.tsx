@@ -68,7 +68,7 @@ export const ReviewsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = engagementApi.reviews.crud.hooks.useSoftDelete();
+  const softDelete = engagementApi.reviews.crud.hooks.useDestroy();
   const siteQuery = useQuery({
     queryKey: ["reviews", "site", state.page, state.limit],
     queryFn: () => engagementApi.reviews.site({ page: state.page, limit: state.limit }),

@@ -64,7 +64,7 @@ export const PermissionsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = identityApi.permissions.hooks.useSoftDelete();
+  const softDelete = identityApi.permissions.hooks.useDestroy();
 
   const rows = React.useMemo(() => toRows(query.data), [query.data]);
   const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;

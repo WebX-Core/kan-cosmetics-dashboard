@@ -85,7 +85,7 @@ export const ProductInquiriesPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = engagementApi.inquiries.crud.hooks.useSoftDelete();
+  const softDelete = engagementApi.inquiries.crud.hooks.useDestroy();
 
   const rows = React.useMemo(() => mapRows(query.data), [query.data]);
   const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;

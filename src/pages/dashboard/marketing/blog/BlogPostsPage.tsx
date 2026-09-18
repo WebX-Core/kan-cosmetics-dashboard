@@ -70,7 +70,7 @@ export const BlogPostsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = marketingApi.blogs.hooks.useSoftDelete();
+  const softDelete = marketingApi.blogs.hooks.useDestroy();
 
   const rows = React.useMemo(() => rowsFrom(query.data), [query.data]);
   const totalPages = query.data?.totalPages ?? 1;

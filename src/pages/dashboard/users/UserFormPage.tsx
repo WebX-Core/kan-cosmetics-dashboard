@@ -9,6 +9,7 @@ import { parseApiError } from "@/shared/utils/apiError";
 import { adminUsersApi } from "@/features/adminUsers/adminUsers.api";
 import { useAdminUsersGet } from "@/features/adminUsers";
 import { identityApi } from "@/features/identity";
+import { useUserStore } from "@/store/UserStore";
 
 // ── constants ──────────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ const RolePicker: React.FC<{
   selectedIds: string[];
   onChange: (ids: string[]) => void;
 }> = ({ selectedIds, onChange }) => {
+  const viewerRole = useUserStore((state) => (state.user?.role ?? "").toUpperCase());
   const q = identityApi.roles.hooks.useList({ limit: 200 });
   const roles = React.useMemo(() => {
     const raw = q.data;
@@ -48,8 +50,8 @@ const RolePicker: React.FC<{
     return items
       .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
       .map((r) => ({ id: String(r.id ?? ""), name: String(r.name ?? "") }))
-      .filter((r) => r.id);
-  }, [q.data]);
+      .filter((r) => r.id && (viewerRole === "SUDOADMIN" || r.name.trim().toUpperCase() !== "SUDOADMIN"));
+  }, [q.data, viewerRole]);
 
   const selectedId = selectedIds[0] ?? "";
 

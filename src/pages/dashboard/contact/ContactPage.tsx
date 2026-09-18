@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useContactList, useSoftDeleteContact } from "@/features/contact";
+import { useContactList, useDestroyContact } from "@/features/contact";
 import { engagementApi } from "@/features/engagement";
 import { formatDateTime } from "@/shared/utils/date";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
@@ -79,7 +79,7 @@ export const ContactPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = useSoftDeleteContact();
+  const softDelete = useDestroyContact();
   const createReply = engagementApi.replies.hooks.useCreate();
 
   const contacts = React.useMemo(() => mapContacts(contactsData), [contactsData]);

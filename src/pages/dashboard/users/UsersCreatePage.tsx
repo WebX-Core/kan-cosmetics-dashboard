@@ -7,6 +7,7 @@ import { FormLayout } from "@/shared/components/forms/FormLayout";
 import { Button } from "@/shared/components/ui/button";
 import { useEntityForm } from "@/shared/hooks/useEntityForm";
 import { EntityFormRenderer, type EntityFieldConfig } from "@/shared/components/forms/EntityFormRenderer";
+import { useUserStore } from "@/store/UserStore";
 
 const e164PhoneRegex = /^\+[1-9]\d{7,14}$/;
 const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{6,}$/;
@@ -71,8 +72,14 @@ const baseFields: ReadonlyArray<EntityFieldConfig> = [
 export const UsersCreatePage: React.FC = () => {
   const nav = useNavigate();
   const m = useCreateAdminUser();
+  const viewerRole = useUserStore((state) => (state.user?.role ?? "").toUpperCase());
   const rolesQuery = identityApi.roles.hooks.useList({ limit: 200 });
-  const roleOptions = React.useMemo(() => toRoleOptions(rolesQuery.data), [rolesQuery.data]);
+  const roleOptions = React.useMemo(
+    () => toRoleOptions(rolesQuery.data).filter(
+      (role) => viewerRole === "SUDOADMIN" || role.name.trim().toUpperCase() !== "SUDOADMIN",
+    ),
+    [rolesQuery.data, viewerRole],
+  );
 
   const fields: ReadonlyArray<EntityFieldConfig> = React.useMemo(() => [
     ...baseFields.slice(0, 8),

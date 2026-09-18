@@ -77,7 +77,7 @@ export const WebPushNotificationsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = marketingApi.webPushNotifications.hooks.useSoftDelete();
+  const softDelete = marketingApi.webPushNotifications.hooks.useDestroy();
 
   const rows = React.useMemo(() => toNotificationRows(query.data), [query.data]);
   const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;

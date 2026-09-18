@@ -116,7 +116,7 @@ export const CategoriesPage: React.FC = () => {
     { page: state.page, limit: state.limit, search: debouncedSearch || undefined },
     publicationView === "archived"
   );
-  const softDeleteCategory = catalogApi.categories.hooks.useSoftDelete();
+  const softDeleteCategory = catalogApi.categories.hooks.useDestroy();
   const updateCategory = catalogApi.categories.hooks.useUpdate();
   // Full-set fetches to compute per-category subcategory/product counts —
   // the category list endpoint doesn't return these counts itself.

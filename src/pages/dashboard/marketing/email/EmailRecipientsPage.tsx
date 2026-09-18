@@ -63,7 +63,7 @@ export const EmailRecipientsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = marketingApi.emailRecipients.hooks.useSoftDelete();
+  const softDelete = marketingApi.emailRecipients.hooks.useDestroy();
 
   const rows = React.useMemo(() => toRecipientRows(query.data), [query.data]);
   const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;

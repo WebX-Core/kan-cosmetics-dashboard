@@ -119,7 +119,7 @@ export const SubcategoryDetailPage: React.FC = () => {
   const inventoryQuery = catalogApi.inventory.hooks.useList({ page: 1, limit: 1000 }, true);
   const publishedVariantsQuery = catalogApi.productVariants.hooks.useList({ page: 1, limit: 1000 }, true);
 
-  const softDeleteProduct = catalogApi.products.hooks.useSoftDelete();
+  const softDeleteProduct = catalogApi.products.hooks.useDestroy();
 
   const subcategory = subcategoryQuery.data as Record<string, unknown> | undefined;
   const subcategoryName = toText(subcategory?.title ?? subcategory?.name, "Subcategory");

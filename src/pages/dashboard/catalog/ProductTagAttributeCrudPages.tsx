@@ -67,7 +67,7 @@ export const ProductTagsPage: React.FC = () => {
     search: debouncedSearch || undefined,
     productId: productId || undefined,
   });
-  const del = catalogApi.productTags.hooks.useSoftDelete();
+  const del = catalogApi.productTags.hooks.useDestroy();
 
   const rows: ReadonlyArray<TagRow> = React.useMemo(() =>
     toRows(q.data?.data).map((r) => ({
@@ -243,7 +243,7 @@ export const ProductAttributesPage: React.FC = () => {
     search: debouncedSearch || undefined,
     productId: productId || undefined,
   });
-  const del = catalogApi.productAttributes.hooks.useSoftDelete();
+  const del = catalogApi.productAttributes.hooks.useDestroy();
 
   const rows: ReadonlyArray<AttrRow> = React.useMemo(() =>
     toRows(q.data?.data).map((r) => ({

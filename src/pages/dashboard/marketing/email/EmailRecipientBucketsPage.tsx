@@ -67,7 +67,7 @@ export const EmailRecipientBucketsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = marketingApi.emailRecipientBuckets.hooks.useSoftDelete();
+  const softDelete = marketingApi.emailRecipientBuckets.hooks.useDestroy();
 
   const rows = React.useMemo(() => toBucketRows(query.data), [query.data]);
   const totalPages = (query.data as { totalPages?: number } | undefined)?.totalPages ?? 1;

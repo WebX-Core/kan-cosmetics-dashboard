@@ -25,7 +25,7 @@ type DeliveryEntity = Readonly<{
     useGet: (id?: string) => { data?: Row; isLoading: boolean };
     useCreate: () => { mutateAsync: (dto: Record<string, unknown>) => Promise<unknown>; isPending: boolean };
     useUpdate: () => { mutateAsync: (payload: Readonly<{ id: string; dto: Record<string, unknown> }>) => Promise<unknown>; isPending: boolean };
-    useSoftDelete: () => { mutateAsync: (id: string) => Promise<unknown>; isPending: boolean };
+    useDestroy: () => { mutateAsync: (id: string) => Promise<unknown>; isPending: boolean };
   };
 }>;
 
@@ -141,7 +141,7 @@ const DeliveryListPage: React.FC<Readonly<{ config: ModuleConfig }>> = ({ config
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const query = config.entity.hooks.useList({ page: state.page, limit: state.limit, search: debouncedSearch || undefined });
-  const remove = config.entity.hooks.useSoftDelete();
+  const remove = config.entity.hooks.useDestroy();
 
   const rows = React.useMemo(() => toRows(query.data?.data), [query.data]);
   const totalPages = query.data?.totalPages ?? 1;

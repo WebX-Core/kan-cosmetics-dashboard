@@ -43,7 +43,7 @@ export const WebPushSubscriptionDetailPage: React.FC = () => {
   const isEdit = Boolean(id);
   const query = marketingApi.webPushSubscriptions.hooks.useGet(id, isEdit);
   const updateMutation = marketingApi.webPushSubscriptions.hooks.useUpdate();
-  const softDeleteMutation = marketingApi.webPushSubscriptions.hooks.useSoftDelete();
+  const softDeleteMutation = marketingApi.webPushSubscriptions.hooks.useDestroy();
   const [isActive, setIsActive] = React.useState(true);
   const [failureReason, setFailureReason] = React.useState("");
 

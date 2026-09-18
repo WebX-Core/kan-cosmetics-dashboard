@@ -10,7 +10,6 @@ import { formatDateTime } from "@/shared/utils/date";
 import {
   useNewsroomList,
   useNewsroomDeleted,
-  useSoftDeleteNewsroom,
   useRecoverNewsroom,
   useDestroyNewsroom,
 } from "@/features/newsroom";
@@ -52,7 +51,6 @@ export const NewsroomPage: React.FC = () => {
 
   const activeQuery = useNewsroomList({ page: state.page, limit: state.limit, search: debouncedSearch || undefined });
   const deletedQuery = useNewsroomDeleted();
-  const softDelete = useSoftDeleteNewsroom();
   const recover = useRecoverNewsroom();
   const destroy = useDestroyNewsroom();
 
@@ -63,10 +61,10 @@ export const NewsroomPage: React.FC = () => {
   const rows = activeTab === "deleted" ? deletedRows : activeRows;
 
   const handleDelete = async (id: string) => {
-    const ok = await confirmAction("Move to trash?");
+    const ok = await confirmAction("Permanently delete? Cannot be undone.");
     if (!ok) return;
-    await softDelete.mutateAsync(id);
-    toast.success("Moved to trash.");
+    await destroy.mutateAsync(id);
+    toast.success("Permanently deleted.");
   };
 
   const handleRecover = async (id: string) => {

@@ -182,7 +182,7 @@ export const InventoryPage: React.FC = () => {
     search: debouncedSearch || undefined,
   });
 
-  const softDelete = catalogApi.inventory.hooks.useSoftDelete();
+  const softDelete = catalogApi.inventory.hooks.useDestroy();
 
   const inventoryRows = React.useMemo<ReadonlyArray<InventoryRow>>(
     () => toRows(inventoryQuery.data).map(normalizeInventoryRow),

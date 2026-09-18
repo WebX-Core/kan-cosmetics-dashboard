@@ -112,7 +112,7 @@ export const WebPushSubscriptionsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const softDelete = marketingApi.webPushSubscriptions.hooks.useSoftDelete();
+  const softDelete = marketingApi.webPushSubscriptions.hooks.useDestroy();
 
   const handleDelete = async (id: string) => {
     const ok = await confirmAction("Delete this subscription?");

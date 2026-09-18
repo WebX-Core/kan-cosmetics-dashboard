@@ -58,7 +58,7 @@ const RepliesForm: React.FC<{
 export const RepliesPage: React.FC = () => {
   const nav = useNavigate();
   const q = engagementApi.replies.hooks.useList();
-  const del = engagementApi.replies.hooks.useSoftDelete();
+  const del = engagementApi.replies.hooks.useDestroy();
   const rows = toRows(q.data?.data);
   const cols: ReadonlyArray<Readonly<{ key: keyof ReplyRow; label: string }>> = [
     { key: "message", label: "Message" },

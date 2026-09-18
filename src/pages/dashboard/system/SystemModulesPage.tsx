@@ -53,6 +53,7 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 import { confirmAction } from "@/shared/utils/confirm";
 import { parseApiError } from "@/shared/utils/apiError";
+import { useUserStore } from "@/store/UserStore";
 
 const toRows = (
   value: unknown,
@@ -312,6 +313,7 @@ export const CouponUsagePage: React.FC = () => {
 export const RolesPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const viewerRole = useUserStore((store) => (store.user?.role ?? "").toUpperCase());
   const { state, setState, debouncedSearch } = useListQueryState({
     page: 1,
     limit: 20,
@@ -319,7 +321,7 @@ export const RolesPage: React.FC = () => {
   });
   const [activeTab, setActiveTab] = React.useState("all");
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
-  const softDeleteRole = identityApi.roles.hooks.useSoftDelete();
+  const softDeleteRole = identityApi.roles.hooks.useDestroy();
   const updateRole = identityApi.roles.hooks.useUpdate();
   const syncPermissions = useMutation({
     mutationFn: identityApi.permissions.sync,
@@ -349,16 +351,20 @@ export const RolesPage: React.FC = () => {
             : Number(sortOrder ?? 0) || 0,
         createdAt: String(row.createdAt ?? row.created_at ?? ""),
       };
-    });
-  }, [q.data]);
+    }).filter(
+      (row) => viewerRole === "SUDOADMIN" || row.name.trim().toUpperCase() !== "SUDOADMIN",
+    );
+  }, [q.data, viewerRole]);
 
   const stats = React.useMemo(
     () => ({
-      total: (q.data?.total as number | undefined) ?? rows.length,
+      total: viewerRole === "SUDOADMIN"
+        ? ((q.data?.total as number | undefined) ?? rows.length)
+        : rows.length,
       active: rows.filter((row) => row.status === "Active").length,
       inactive: rows.filter((row) => row.status === "Inactive").length,
     }),
-    [q.data?.total, rows],
+    [q.data?.total, rows, viewerRole],
   );
 
   const tabs = React.useMemo(
@@ -1357,7 +1363,7 @@ export const UserMetadataPage: React.FC = () => {
     },
     isDeletedView,
   );
-  const del = telemetryApi.userMetadata.hooks.useSoftDelete();
+  const del = telemetryApi.userMetadata.hooks.useDestroy();
   const recover = telemetryApi.userMetadata.hooks.useRecover();
   const destroy = telemetryApi.userMetadata.hooks.useDestroy();
 

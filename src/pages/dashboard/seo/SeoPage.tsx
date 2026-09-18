@@ -166,7 +166,7 @@ export const SeoListPage: React.FC = () => {
   const totalPages = (q.data as Record<string, unknown> | undefined)?.totalPages as number | undefined ?? 1;
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => engagementApi.seo.service.softDelete(id),
+    mutationFn: (id: string) => engagementApi.seo.service.destroy(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["seo"] }),
   });
 

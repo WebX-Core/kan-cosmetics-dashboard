@@ -66,7 +66,7 @@ export const CouponsPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const deleteCoupon = commerceApi.coupons.crud.hooks.useSoftDelete();
+  const deleteCoupon = commerceApi.coupons.crud.hooks.useDestroy();
 
   const coupons = React.useMemo(
     () => (couponsQuery.data?.data ?? []).map(toCouponRow),

@@ -96,7 +96,7 @@ export const AdvertisementsPage: React.FC = () => {
     { page: state.page, limit: state.limit },
     isDeletedView,
   );
-  const softDelete = marketingApi.advertisements.hooks.useSoftDelete();
+  const softDelete = marketingApi.advertisements.hooks.useDestroy();
   const recover = marketingApi.advertisements.hooks.useRecover();
   const destroy = marketingApi.advertisements.hooks.useDestroy();
 

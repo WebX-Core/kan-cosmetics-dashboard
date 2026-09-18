@@ -49,7 +49,7 @@ export const WebPushNotificationDetailPage: React.FC = () => {
   const confirm = useConfirmAction();
 
   const query = marketingApi.webPushNotifications.hooks.useGet(id, Boolean(id));
-  const softDelete = marketingApi.webPushNotifications.hooks.useSoftDelete();
+  const softDelete = marketingApi.webPushNotifications.hooks.useDestroy();
   const notification = (query.data ?? null) as Record<string, unknown> | null;
 
   const copyPayload = async (value: string) => {

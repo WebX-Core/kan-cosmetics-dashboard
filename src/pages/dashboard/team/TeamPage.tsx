@@ -11,7 +11,6 @@ import { slugify } from "@/shared/utils/slug";
 import {
   useTeamList,
   useTeamDeleted,
-  useSoftDeleteTeam,
   useRecoverTeam,
   useDestroyTeam,
 } from "@/features/team";
@@ -61,7 +60,6 @@ export const TeamPage: React.FC = () => {
 
   const activeQuery = useTeamList({ page: state.page, limit: state.limit, search: debouncedSearch || undefined });
   const deletedQuery = useTeamDeleted();
-  const softDelete = useSoftDeleteTeam();
   const recover = useRecoverTeam();
   const destroy = useDestroyTeam();
 
@@ -72,10 +70,10 @@ export const TeamPage: React.FC = () => {
   const rows = activeTab === "deleted" ? deletedRows : activeRows;
 
   const handleDelete = async (id: string) => {
-    const ok = await confirmAction("Move this member to trash?");
+    const ok = await confirmAction("Permanently delete this member? This cannot be undone.");
     if (!ok) return;
-    await softDelete.mutateAsync(id);
-    toast.success("Moved to trash.");
+    await destroy.mutateAsync(id);
+    toast.success("Permanently deleted.");
   };
 
   const handleRecover = async (id: string) => {

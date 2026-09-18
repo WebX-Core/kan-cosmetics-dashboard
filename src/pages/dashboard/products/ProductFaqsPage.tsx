@@ -46,7 +46,7 @@ export const ProductFaqsPage: React.FC = () => {
     },
     Boolean(productId),
   );
-  const deleteFaq = engagementApi.faqs.hooks.useSoftDelete();
+  const deleteFaq = engagementApi.faqs.hooks.useDestroy();
   const updateFaq = engagementApi.faqs.hooks.useUpdate();
 
   const productName = React.useMemo(() => {

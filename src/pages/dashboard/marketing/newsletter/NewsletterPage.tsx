@@ -52,7 +52,7 @@ export const NewsletterPage: React.FC = () => {
     limit: state.limit,
     search: debouncedSearch || undefined,
   });
-  const remove = marketingApi.newsletters.hooks.useSoftDelete();
+  const remove = marketingApi.newsletters.hooks.useDestroy();
 
   const rows = React.useMemo(() => mapRows(query.data), [query.data]);
   const totalPages = query.data?.totalPages ?? 1;
