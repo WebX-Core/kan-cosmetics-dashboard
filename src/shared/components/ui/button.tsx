@@ -10,10 +10,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border-[var(--primary)] bg-[var(--primary)] px-4 text-white shadow-none hover:border-[var(--primary-strong)] hover:bg-[var(--primary-strong)] active:scale-[0.985]",
+          "border-[var(--primary)] bg-[var(--primary)] px-4 text-white shadow-none hover:border-[var(--primary-hover)] hover:bg-[var(--primary-hover)] active:scale-[0.985]",
         destructive: "border-[#f3b3b8] bg-[#fff2f3] px-4 text-[#b42318] hover:bg-[#ffe4e7] active:scale-[0.985]",
         outline: "border-[var(--line)] bg-white px-4 text-[var(--text)] hover:bg-[var(--surface-soft)] active:scale-[0.985]",
-        secondary: "border-transparent bg-[var(--surface-soft)] px-4 text-[var(--text)] hover:bg-[var(--surface-strong)] active:scale-[0.985]",
+        secondary: "border-transparent bg-[var(--surface-soft)] px-4 text-[var(--text)] hover:bg-[var(--bg)] active:scale-[0.985]",
         ghost: "border-transparent bg-transparent px-3 text-[var(--text)] hover:bg-[var(--surface-soft)] active:scale-[0.985]",
         link: "h-auto border-transparent bg-transparent px-1 py-0 text-blue-500 underline-offset-4 hover:underline",
         contrast: "border-[#1d1d1f] bg-[#1d1d1f] px-4 text-white hover:bg-black active:scale-[0.985]",

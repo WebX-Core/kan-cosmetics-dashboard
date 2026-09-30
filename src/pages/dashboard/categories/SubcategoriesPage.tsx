@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Archive, FilePenLine, FolderTree, Globe2, Layers, MoreHorizontal, Pencil, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Archive, FilePenLine, FolderInput, FolderTree, Globe2, Layers, MoreHorizontal, Pencil, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { MoveCatalogItemDialog, type MoveCatalogItem } from "@/shared/components/catalog/MoveCatalogItemDialog";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
@@ -101,6 +102,7 @@ export const SubcategoriesPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
+  const [moveItem, setMoveItem] = React.useState<MoveCatalogItem | null>(null);
 
   const { state, setState, debouncedSearch } = useListQueryState({
     page: 1,
@@ -292,6 +294,7 @@ export const SubcategoriesPage: React.FC = () => {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={(event) => { event.stopPropagation(); navigate(`/dashboard/categories/${row.categoryId}/subcategories/${row.id}/edit`); }}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+            <DropdownMenuItem onClick={(event) => { event.stopPropagation(); setMoveItem({ id: row.id, name: row.name, parentId: row.categoryId }); }}><FolderInput className="mr-2 h-4 w-4" />Move to category</DropdownMenuItem>
             <DropdownMenuSeparator />
             {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe2 className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
             {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
@@ -364,6 +367,8 @@ export const SubcategoriesPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveCatalogItemDialog kind="subcategory" item={moveItem} onClose={() => setMoveItem(null)} />
     </PageLayout>
   );
 };

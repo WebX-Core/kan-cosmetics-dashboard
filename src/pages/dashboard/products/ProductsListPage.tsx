@@ -16,7 +16,9 @@ import {
   Globe,
   Star,
   SlidersHorizontal,
+  FolderInput,
 } from "lucide-react";
+import { MoveCatalogItemDialog, type MoveCatalogItem } from "@/shared/components/catalog/MoveCatalogItemDialog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -80,6 +82,7 @@ type ProductRow = Readonly<{
   price: number;
   stock: number;
   category: string;
+  subcategoryId: string;
   createdAt: string;
   status: PublicationStatus;
   publishedAt: string;
@@ -152,6 +155,7 @@ const toRows = (payload: unknown): ReadonlyArray<ProductRow> => {
             subcategory.name,
           "—",
         ),
+        subcategoryId: text(subcategory.id ?? item.subcategoryId, ""),
         createdAt: text(item.createdAt, ""),
         status: readPublicationStatus(item.status),
         publishedAt: text(item.publishedAt, ""),
@@ -195,6 +199,7 @@ export const ProductsListPage: React.FC = () => {
   const canInventoryUpdate = usePermission("inventory:update");
   const canInventoryManage = canInventoryCreate || canInventoryUpdate;
   const [activeTab, setActiveTab] = React.useState("all");
+  const [moveItem, setMoveItem] = React.useState<MoveCatalogItem | null>(null);
   const { state, setState, debouncedSearch } = useListQueryState({
     page: 1,
     limit: 20,
@@ -497,6 +502,17 @@ export const ProductsListPage: React.FC = () => {
                 Edit
               </DropdownMenuItem>
             )}
+            {canProductUpdate && (
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMoveItem({ id: r.id, name: r.name, parentId: r.subcategoryId });
+                }}
+              >
+                <FolderInput className="mr-2 h-4 w-4" />
+                Move to subcategory
+              </DropdownMenuItem>
+            )}
             {canReviewView && (
               <DropdownMenuItem
                 onClick={(event) => {
@@ -758,6 +774,8 @@ export const ProductsListPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveCatalogItemDialog kind="product" item={moveItem} onClose={() => setMoveItem(null)} />
     </PageLayout>
   );
 };

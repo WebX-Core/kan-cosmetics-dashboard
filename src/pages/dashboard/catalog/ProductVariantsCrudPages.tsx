@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Archive, FilePenLine, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, Trash2, UploadCloud, X } from "lucide-react";
+import { Archive, FilePenLine, FolderInput, Globe2, Layers, MoreHorizontal, PackagePlus, Pencil, Plus, Trash2, UploadCloud, X } from "lucide-react";
+import { MoveCatalogItemDialog, type MoveCatalogItem } from "@/shared/components/catalog/MoveCatalogItemDialog";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { z } from "zod";
@@ -333,6 +334,7 @@ export const ProductVariantsPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
+  const [moveItem, setMoveItem] = React.useState<MoveCatalogItem | null>(null);
 
   const productFilter = searchParams.get("product") ?? "";
   const productName = searchParams.get("productName") ?? "";
@@ -580,6 +582,7 @@ export const ProductVariantsPage: React.FC = () => {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem onClick={(event) => { event.stopPropagation(); navigate(`/dashboard/product-variants/${row.id}/edit${location.search}`); }}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={(event) => { event.stopPropagation(); setMoveItem({ id: row.id, name: row.title, parentId: row.productId }); }}><FolderInput className="mr-2 h-4 w-4" />Move to product</DropdownMenuItem>
         <DropdownMenuSeparator />
         {row.status !== "PUBLISHED" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "PUBLISHED"); }}><Globe2 className="mr-2 h-4 w-4" />Publish</DropdownMenuItem> : null}
         {row.status !== "DRAFT" ? <DropdownMenuItem onClick={(event) => { event.stopPropagation(); void changeStatus(row.id, "DRAFT"); }}><FilePenLine className="mr-2 h-4 w-4" />Move to Draft</DropdownMenuItem> : null}
@@ -659,6 +662,8 @@ export const ProductVariantsPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveCatalogItemDialog kind="variant" item={moveItem} onClose={() => setMoveItem(null)} />
     </PageLayout>
   );
 };

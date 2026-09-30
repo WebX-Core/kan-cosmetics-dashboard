@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Archive, FilePenLine, FolderOpen, Globe, Layers, MoreHorizontal, Pencil, Plus, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { Archive, FilePenLine, FolderInput, FolderOpen, Globe, Layers, MoreHorizontal, Pencil, Plus, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { MoveCatalogItemDialog, type MoveCatalogItem } from "@/shared/components/catalog/MoveCatalogItemDialog";
 import { Button } from "@/shared/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { catalogApi } from "@/features/catalog";
@@ -109,6 +110,7 @@ export const CategoryDetailPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
+  const [moveItem, setMoveItem] = React.useState<MoveCatalogItem | null>(null);
 
   const categoryQuery = catalogApi.categories.hooks.useGet(id);
   const subcategoriesQuery = catalogApi.subcategories.hooks.useList(
@@ -327,6 +329,9 @@ export const CategoryDetailPage: React.FC = () => {
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/categories/${id}/subcategories/${row.id}/edit`); }}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setMoveItem({ id: row.id, name: row.name, parentId: id ?? row.categoryId }); }}>
+              <FolderInput className="mr-2 h-4 w-4" /> Move to category
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/seo-metadata/create?entityType=SUBCATEGORY&entityId=${encodeURIComponent(row.id)}&slug=${encodeURIComponent(row.slug)}`); }}>
               <Globe className="mr-2 h-4 w-4" /> SEO
             </DropdownMenuItem>
@@ -441,6 +446,8 @@ export const CategoryDetailPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveCatalogItemDialog kind="subcategory" item={moveItem} onClose={() => setMoveItem(null)} />
     </PageLayout>
   );
 };

@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Edit2, Package, PackagePlus, Plus, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal } from "lucide-react";
+import { Edit2, Package, PackagePlus, Plus, Trash2, Layers, CheckCircle, XCircle, MoreHorizontal, Pencil, MessageSquare, Boxes, Star, Tag, SlidersHorizontal, FolderInput } from "lucide-react";
+import { MoveCatalogItemDialog, type MoveCatalogItem } from "@/shared/components/catalog/MoveCatalogItemDialog";
 import { catalogApi } from "@/features/catalog";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
@@ -99,6 +100,7 @@ export const SubcategoryDetailPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = React.useState<ReadonlyArray<string>>([]);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pendingIds, setPendingIds] = React.useState<ReadonlyArray<string>>([]);
+  const [moveItem, setMoveItem] = React.useState<MoveCatalogItem | null>(null);
 
   const subcategoryQuery = catalogApi.subcategories.hooks.useGet(subcategoryId);
   const productsQuery = catalogApi.products.hooks.useList(
@@ -351,6 +353,15 @@ export const SubcategoryDetailPage: React.FC = () => {
             <DropdownMenuItem
               onClick={(event) => {
                 event.stopPropagation();
+                setMoveItem({ id: row.id, name: row.name, parentId: subcategoryId ?? row.subcategoryId });
+              }}
+            >
+              <FolderInput className="mr-2 h-4 w-4" />
+              Move to subcategory
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation();
                 navigate(`/dashboard/products/${row.id}/reviews?name=${encodeURIComponent(row.name)}`);
               }}
             >
@@ -506,6 +517,8 @@ export const SubcategoryDetailPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveCatalogItemDialog kind="product" item={moveItem} onClose={() => setMoveItem(null)} />
     </PageLayout>
   );
 };
