@@ -890,9 +890,9 @@ export const ProductCreatePage: React.FC = () => {
         typeof row.isVatIncluded === "boolean" ? row.isVatIncluded : true,
       vatRate: row.vatRate != null ? String(row.vatRate) : "13",
       maxOrderQuantity:
-        row.maxOrderQuantity != null ? String(row.maxOrderQuantity) : "",
+        row.maxOrderQuantity ? String(row.maxOrderQuantity) : "",
       maxCustomerPurchaseQuantity:
-        row.maxCustomerPurchaseQuantity != null
+        row.maxCustomerPurchaseQuantity
           ? String(row.maxCustomerPurchaseQuantity)
           : "",
       purchaseLimitStartsAt: readDateTimeLocal(row.purchaseLimitStartsAt),
