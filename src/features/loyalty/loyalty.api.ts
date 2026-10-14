@@ -8,7 +8,7 @@ const normalizeList = <T>(payload: unknown): LoyaltyList<T> => {
   if (Array.isArray(payload)) return { data: payload as T[], total: payload.length, totalPages: 1 };
   if (!isRecord(payload)) return { data: [] };
   const body = isRecord(payload.data) ? payload.data : payload;
-  const arrays = [body.items, body.data, body.customers, body.tiers, body.rewards, body.rules, body.points, payload.items].find(Array.isArray);
+  const arrays = [body.items, body.data, body.customers, body.tiers, body.rewards, body.rules, body.points, body.ledgers, payload.items].find(Array.isArray);
   const rows = (arrays ?? []) as T[];
   return {
     data: rows,
