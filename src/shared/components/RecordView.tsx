@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Pencil } from "lucide-react";
@@ -62,7 +63,8 @@ export const RecordView: React.FC<Props> = ({ title, backHref, editHref, data })
       if (isImageKey(key) && isImageUrl(value)) {
         return <img src={value} alt={key} onClick={() => setLightboxUrl(value)} style={{ width: 220, maxWidth: "100%", borderRadius: 12, border: "1px solid var(--line)", cursor: "pointer" }} />;
       }
-      if (value.includes("<") && value.includes(">")) return <span dangerouslySetInnerHTML={{ __html: value }} />;
+      // Stored HTML can come from customers (inquiries, reviews): strip scripts first.
+      if (value.includes("<") && value.includes(">")) return <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }} />;
       return value || "-";
     }
 

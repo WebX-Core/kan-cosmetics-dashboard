@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -85,7 +86,7 @@ export const FaqViewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: 12, color: "var(--muted)" }}>Answer</div>
-            <div dangerouslySetInnerHTML={{ __html: answer }} />
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(answer) }} />
           </div>
           <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--muted)" }}>
             <span>Status: {q.data.isActive ? "Active" : "Inactive"}</span>

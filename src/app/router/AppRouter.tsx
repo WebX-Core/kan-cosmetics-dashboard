@@ -129,8 +129,6 @@ import {
   RepliesPage,
 } from "@/pages/dashboard/support/RepliesCrudPages";
 import { ApiOpsPage } from "@/pages/dashboard/system/ApiOpsPage";
-import { TempCatalogSeederPage } from "@/pages/dashboard/system/TempCatalogSeederPage";
-import { TempEngagementSeederPage } from "@/pages/dashboard/system/TempEngagementSeederPage";
 import {
   ProductVariantCreatePage,
   ProductVariantEditPage,
@@ -214,8 +212,6 @@ export const AppRouter: React.FC = () => {
             <Route path="/dashboard/marketing" element={<Navigate to="/dashboard/marketing/email-campaigns" replace />} />
             <Route path="/dashboard/profile" element={<ProfilePage />} />
             <Route element={<RoleGuard allow={["SUDOADMIN"]} />}>
-              <Route path="/dashboard/temp-catalog-seeder" element={<TempCatalogSeederPage />} />
-              <Route path="/dashboard/temp-engagement-seeder" element={<TempEngagementSeederPage />} />
             </Route>
             <Route
               path="/dashboard/change-password"
