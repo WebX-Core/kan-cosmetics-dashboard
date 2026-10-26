@@ -7,13 +7,19 @@ type LogoutHandler = Readonly<{
 }>;
 
 let handler: LogoutHandler | null = null;
+let logoutTriggered = false;
+
+export function resetGlobalLogout(): void {
+  logoutTriggered = false;
+}
 
 export function registerLogoutHandler(next: LogoutHandler): void {
   handler = next;
 }
 
 export function triggerGlobalLogout(): void {
-  if (!handler) return;
+  if (!handler || logoutTriggered) return;
+  logoutTriggered = true;
   handler.queryClient.clear();
   handler.clearAuth();
   handler.navigateToLogin();

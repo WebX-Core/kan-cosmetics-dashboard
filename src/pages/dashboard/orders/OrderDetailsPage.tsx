@@ -39,6 +39,7 @@ import {
   usePaymentsByOrder,
   useUpdateOrderStatus,
   useSyncOrderDelivery,
+  usePlaceOrderOnPickNDrop,
 } from "@/features/commerce";
 import { commerceApi } from "@/features/commerce";
 import { useToast } from "@/shared/components/feedback/ToastProvider";
@@ -377,6 +378,7 @@ export const OrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const toast = useToast();
+  const canPlaceOnPickNDrop = usePermission("order:create");
   const canViewBill = usePermission("order-bill:view");
   const canCreateBill = usePermission("order-bill:create");
   const canUpdateBill = usePermission("order-bill:update");
@@ -384,6 +386,10 @@ export const OrderDetailsPage: React.FC = () => {
   const query = useOrderGet(id, Boolean(id));
   const updateOrderStatus = useUpdateOrderStatus();
   const syncDelivery = useSyncOrderDelivery();
+  const placeOnPickNDrop = usePlaceOrderOnPickNDrop();
+  const placingRef = React.useRef(false);
+  const [placementSucceeded, setPlacementSucceeded] = React.useState<string | null>(null);
+  const [placementError, setPlacementError] = React.useState<string | null>(null);
   const paymentQuery = usePaymentsByOrder(id, Boolean(id));
   const updatePayment = usePaymentUpdate();
 
@@ -507,6 +513,30 @@ export const OrderDetailsPage: React.FC = () => {
     );
   }
 
+  const shipment = toRecord(record.shipment);
+  const trackingNumber = text(shipment.providerTrackingNumber ?? shipment.externalOrderId ?? shipment.trackingNumber, "");
+  const isPlacedOnPickNDrop = placementSucceeded === id || Boolean(
+    shipment.externalOrderId || shipment.providerTrackingNumber || shipment.trackingUrl || orderDetail.deliveryAutoAssigned,
+  );
+  const canPlaceOrder = ["PENDING", "PROCESSING", "PACKED", "READY_FOR_SHIPMENT"].includes(order.status.toUpperCase());
+  const handlePlaceOnPickNDrop = async () => {
+    if (placingRef.current || isPlacedOnPickNDrop || !canPlaceOrder) return;
+    placingRef.current = true;
+    setPlacementError(null);
+    try {
+      await placeOnPickNDrop.mutateAsync(id);
+      setPlacementSucceeded(id);
+      toast.success("Order placed on PickNDrop.");
+      await query.refetch();
+    } catch (error) {
+      const message = parseApiError(error).message;
+      setPlacementError(message);
+      toast.error(message);
+    } finally {
+      placingRef.current = false;
+    }
+  };
+
   const handleSyncDelivery = async () => {
     try {
       await syncDelivery.mutateAsync({ orderId: id, preventStatusDowngrade });
@@ -581,9 +611,23 @@ export const OrderDetailsPage: React.FC = () => {
       titleMeta={
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap justify-end gap-2">
+            {canPlaceOnPickNDrop && (
+              <button
+                type="button"
+                onClick={() => void handlePlaceOnPickNDrop()}
+                disabled={placeOnPickNDrop.isPending || updateOrderStatus.isPending || isPlacedOnPickNDrop || !canPlaceOrder}
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#17174f] px-3 text-[11px] font-semibold text-white transition-colors hover:bg-[#242466] disabled:opacity-50"
+                title={!canPlaceOrder && !isPlacedOnPickNDrop ? "This order status cannot be placed on PickNDrop" : undefined}
+              >
+                {placeOnPickNDrop.isPending ? <Loader2 size={13} className="animate-spin" /> : <Truck size={13} />}
+                {placeOnPickNDrop.isPending ? "Placing on PickNDrop..." : isPlacedOnPickNDrop ? "Placed on PickNDrop" : "Place on PickNDrop"}
+              </button>
+            )}
             {canCreateBill && <button type="button" disabled={Boolean(printing)} onClick={() => void handlePrint("SHIPPING_LABEL")} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-semibold hover:bg-[#f5f5f7] disabled:opacity-50"><Printer size={13}/> Print label</button>}
             {canCreateBill && <button type="button" disabled={Boolean(printing)} onClick={() => void handlePrint("VAT_BILL")} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#1d1d1f] px-3 text-[11px] font-semibold text-white hover:bg-black disabled:opacity-50"><ReceiptText size={13}/> Print VAT bill</button>}
           </div>
+          {isPlacedOnPickNDrop && trackingNumber && <p className="text-[11px] text-[#424245]">PickNDrop tracking: {trackingNumber}</p>}
+          {placementError && <p role="alert" className="max-w-sm text-right text-[11px] text-red-600">{placementError}</p>}
           {Object.entries(billHistory).map(([type, bill]) => bill && <p key={type} className="text-[10px] text-[#86868b]">{type === "VAT_BILL" ? "VAT" : "Label"}: {bill.billNumber} · printed {bill.printCount} time(s){bill.lastPrintedAt ? ` · last ${formatDateTime(bill.lastPrintedAt)}` : ""}</p>)}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <label className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-[11px] font-medium transition-colors ${statusColors(orderStatus).border} ${statusColors(orderStatus).bg}`}>
@@ -615,7 +659,7 @@ export const OrderDetailsPage: React.FC = () => {
                     toast.error(parseApiError(error).message);
                   }
                 }}
-                disabled={updateOrderStatus.isPending}
+                disabled={updateOrderStatus.isPending || placeOnPickNDrop.isPending}
                 className={`bg-transparent text-[11px] font-semibold outline-none disabled:opacity-60 ${statusColors(orderStatus).text}`}
               >
                 {orderStatusOptions.map((option) => (
@@ -854,8 +898,8 @@ export const OrderDetailsPage: React.FC = () => {
                     { label: "Phone", value: text(shippingAddress.phone, "—"), icon: <Phone size={13} /> },
                     { label: "Address line", value: addressLine || "—", icon: <Map size={13} /> },
                     { label: "Location", value: cityLine || "—", icon: <MapPin size={13} /> },
-                    { label: "Auto assigned", value: boolText(orderDetail.deliveryAutoAssigned), icon: <CheckCircle size={13} /> },
-                    { label: "Assigned at", value: formatDateTime(orderDetail.deliveryAssignedAt), icon: <Calendar size={13} /> },
+                    { label: "Placed on PickNDrop", value: boolText(isPlacedOnPickNDrop), icon: <CheckCircle size={13} /> },
+                    { label: "Placed at", value: formatDateTime(orderDetail.deliveryAssignedAt), icon: <Calendar size={13} /> },
                   ]}
                 />
               </div>

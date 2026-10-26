@@ -67,6 +67,7 @@ export const commerceApi = {
     salesAnalytics: async (q?: ApiListQuery) => unwrap<unknown>(await api.get("/order/sales-analytics", { params: q })),
     get: async (id: UUID) => unwrap<unknown>(await api.get(`/order/get/${id}`)),
     updateStatus: async (id: UUID, payload: OrderStatusUpdateDto) => unwrap<unknown>(await api.patch(`/order/status/${id}`, payload)),
+    placeOnPickNDrop: async (id: UUID) => unwrap<unknown>(await api.post(`/order/place-on-pickndrop/${id}`)),
     syncDelivery: async (id: UUID, payload?: OrderDeliverySyncDto) =>
       unwrap<unknown>(await api.post(`/order/sync-delivery/${id}`, payload ?? {})),
     deliveryWebhook: async (payload: Record<string, unknown>) => unwrap<unknown>(await api.post("/order/delivery-webhook", payload)),

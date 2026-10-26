@@ -56,17 +56,21 @@ api.interceptors.response.use(
       const resp = typedError.response;
       const requestPath = getRequestPath(typedError.config);
       const isSessionProbe = requestPath.endsWith("/auth/session");
+      // Customer cookies and credential errors do not invalidate an admin session.
+      const isPublicAuthEndpoint = /\/auth\/(signin|signup|forgot-password|reset-password)\/?$/.test(requestPath);
+      const isCustomerAuthEndpoint = /\/customer-auth(?:\/|$)/.test(requestPath);
       const message = typeof resp?.data?.message === "string"
         ? resp.data.message.toLowerCase()
         : "";
       const isExpiredSession =
+        message.includes("invalid access token") ||
         message.includes("session expired") ||
         message.includes("invalid or expired token") ||
         message.includes("missing or expired") ||
         message === "please login" ||
         message === "unauthorized";
 
-      if (resp?.status === 401 && !isSessionProbe && isExpiredSession) {
+      if (resp?.status === 401 && !isSessionProbe && !isPublicAuthEndpoint && !isCustomerAuthEndpoint && isExpiredSession) {
         triggerGlobalLogout();
       }
     }

@@ -994,7 +994,6 @@ export const OrderCreatePage: React.FC = () => {
   const [shippingAmount, setShippingAmount] = React.useState("");
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = React.useState(false);
   const [deliveryQuoteError, setDeliveryQuoteError] = React.useState("");
-  const [syncDelivery, setSyncDelivery] = React.useState(false);
   const deliveryQuoteRequestId = React.useRef(0);
 
   const branchesQuery = useQuery({
@@ -1066,7 +1065,6 @@ export const OrderCreatePage: React.FC = () => {
         redeemPoints: redeemPoints.trim() ? money(redeemPoints) : undefined,
         shippingAmount: shippingAmount.trim() ? money(shippingAmount) : undefined,
         orderSource: resolvedOrderSource || "ADMIN_DASHBOARD",
-        syncDeliveryNow: syncDelivery,
       });
     },
     onSuccess: (data) => {
@@ -1346,18 +1344,7 @@ export const OrderCreatePage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                id="syncDelivery"
-                type="checkbox"
-                checked={syncDelivery}
-                onChange={(e) => setSyncDelivery(e.target.checked)}
-                className="h-4 w-4 rounded border-[#d2d2d7] text-[var(--primary)]"
-              />
-              <label htmlFor="syncDelivery" className="text-sm text-[#1d1d1f] cursor-pointer select-none">
-                Sync delivery now
-              </label>
-            </div>
+            <p className="text-xs text-[#86868b]">After creating the order, use Place on PickNDrop on its detail page to arrange delivery.</p>
 
             {branchesQuery.isError && (
               <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">

@@ -3,7 +3,7 @@ import React, { createContext, useContext, useMemo, useRef, useState } from "rea
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { queryClient } from "../../shared/api/queryClient";
-import { registerLogoutHandler } from "./authEvents";
+import { registerLogoutHandler, resetGlobalLogout } from "./authEvents";
 import { authApi } from "../../features/auth";
 import type { Role, User } from "../../features/auth/auth.types";
 import { clearSessionToken } from "@/shared/auth/sessionToken";
@@ -84,6 +84,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const setAuthenticated = React.useCallback((user: User | null, permissions: ReadonlyArray<string> = []) => {
     authVersionRef.current += 1;
+    resetGlobalLogout();
     setState({
       isAuthenticated: true,
       user,
@@ -115,6 +116,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const clearAuth = React.useCallback(() => {
     authVersionRef.current += 1;
     clearSessionToken();
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
     queryClient.clear();
     setState({
       isAuthenticated: false,

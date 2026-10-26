@@ -140,6 +140,19 @@ export const useUpdateOrderStatus = () => {
   });
 };
 
+export const usePlaceOrderOnPickNDrop = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: UUID) => commerceApi.orders.placeOnPickNDrop(orderId),
+    onSuccess: (_data, orderId) => {
+      void qc.invalidateQueries({ queryKey: ["commerce", "orders"] });
+      void qc.invalidateQueries({ queryKey: keys.order(orderId) });
+      void qc.invalidateQueries({ queryKey: ["delivery", "shipments"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+    },
+  });
+};
+
 export const useSyncOrderDelivery = () => {
   const qc = useQueryClient();
   const toast = useToast();
