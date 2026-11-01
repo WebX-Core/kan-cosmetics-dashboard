@@ -990,7 +990,7 @@ export const OrderCreatePage: React.FC = () => {
   const [orderSource, setOrderSource] = React.useState("ADMIN_DASHBOARD");
   const [customOrderSource, setCustomOrderSource] = React.useState("");
   const [couponCode, setCouponCode] = React.useState("");
-  const [redeemPoints, setRedeemPoints] = React.useState("");
+  const [redeemInput, setRedeemInput] = React.useState("");
   const [shippingAmount, setShippingAmount] = React.useState("");
   const [deliveryQuoteLoading, setDeliveryQuoteLoading] = React.useState(false);
   const [deliveryQuoteError, setDeliveryQuoteError] = React.useState("");
@@ -1009,8 +1009,8 @@ export const OrderCreatePage: React.FC = () => {
   );
 
   React.useEffect(() => {
-    if (!customer && redeemPoints) setRedeemPoints("");
-  }, [customer, redeemPoints]);
+    if (!customer && redeemInput) setRedeemInput("");
+  }, [customer, redeemInput]);
 
   const createOrder = useMutation({
     mutationFn: () => {
@@ -1062,7 +1062,8 @@ export const OrderCreatePage: React.FC = () => {
         addresses,
         paymentMethod,
         couponCode: couponCode.trim() || undefined,
-        redeemPoints: redeemPoints.trim() ? money(redeemPoints) : undefined,
+        // The form takes rupees; the API takes wallet points.
+        redeemPoints: redeemInput.trim() ? Math.round(money(redeemInput) * pointsPerNprValue) : undefined,
         shippingAmount: shippingAmount.trim() ? money(shippingAmount) : undefined,
         orderSource: resolvedOrderSource || "ADMIN_DASHBOARD",
       });
@@ -1075,12 +1076,12 @@ export const OrderCreatePage: React.FC = () => {
     onError: (error) => toast.error(parseApiError(error).message),
   });
 
-  const redeemPointCount = React.useMemo(() => money(redeemPoints), [redeemPoints]);
+  const redeemAmount = React.useMemo(() => money(redeemInput), [redeemInput]);
   const couponPointStackingAllowed = loyaltySettingsQuery.data?.allowCouponWithPointRedeem === true;
   const canSubmit =
     items.length > 0 &&
-    !(redeemPointCount > 0 && !customer) &&
-    !(redeemPointCount > 0 && couponCode.trim() && !couponPointStackingAllowed) &&
+    !(redeemAmount > 0 && !customer) &&
+    !(redeemAmount > 0 && couponCode.trim() && !couponPointStackingAllowed) &&
     Boolean(shipping.fullName) &&
     Boolean(shipping.phone) &&
     Boolean(shipping.addressLine1) &&
@@ -1091,10 +1092,10 @@ export const OrderCreatePage: React.FC = () => {
   const formValidationMessage =
     items.length === 0
       ? "Add at least one product."
-      : redeemPointCount > 0 && !customer
-        ? "Select a customer before redeeming loyalty points."
-        : redeemPointCount > 0 && couponCode.trim() && !couponPointStackingAllowed
-          ? "Coupon and loyalty point redemption cannot be used together."
+      : redeemAmount > 0 && !customer
+        ? "Select a customer before redeeming loyalty rewards."
+        : redeemAmount > 0 && couponCode.trim() && !couponPointStackingAllowed
+          ? "Coupon and loyalty rewards cannot be used together."
       : !shipping.fullName || !shipping.phone || !shipping.addressLine1 || !shipping.city || !shipping.destinationBranch || !shipping.destinationCityArea
         ? "Complete the shipping address, destination branch, and delivery area."
         : orderSource === "OTHER" && !customOrderSource.trim()
@@ -1111,8 +1112,8 @@ export const OrderCreatePage: React.FC = () => {
     [loyaltySettingsQuery.data?.pointsPerNprValue],
   );
   const estimatedRedeemAmount = React.useMemo(
-    () => redeemPointCount > 0 ? Math.min(subtotal, redeemPointCount / pointsPerNprValue) : 0,
-    [pointsPerNprValue, redeemPointCount, subtotal],
+    () => Math.min(subtotal, redeemAmount),
+    [redeemAmount, subtotal],
   );
   const grandTotal = Math.max(0, subtotal + deliveryCharge - estimatedRedeemAmount);
 
@@ -1271,21 +1272,20 @@ export const OrderCreatePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#86868b]">Redeem Loyalty Points</label>
+              <label className="mb-1.5 block text-xs font-medium text-[#86868b]">Redeem Loyalty Rewards (Rs.)</label>
               <input
                 type="number"
                 min="0"
                 step="1"
-                value={redeemPoints}
-                onChange={(e) => setRedeemPoints(e.target.value)}
-                placeholder={customer ? "Optional points to redeem" : "Select customer first"}
-                disabled={!customer}
+                value={redeemInput}
+                onChange={(e) => setRedeemInput(e.target.value)}
+                placeholder={!customer ? "Select customer first" : loyaltySettingsQuery.data ? "Optional amount to redeem" : "Loyalty settings unavailable"}
+                // ponytail: no rate means no safe rupee-to-points conversion.
+                disabled={!customer || !loyaltySettingsQuery.data}
                 className={inputCls}
               />
               <p className="mt-1 text-xs text-[#86868b]">
-                {redeemPointCount > 0
-                  ? `Estimated point discount: NPR ${estimatedRedeemAmount.toLocaleString()}`
-                  : `Current conversion: ${pointsPerNprValue.toLocaleString()} points = NPR 1`}
+                {redeemAmount > 0 && `Estimated rewards discount: Rs. ${estimatedRedeemAmount.toLocaleString()}`}
               </p>
             </div>
 
@@ -1385,7 +1385,7 @@ export const OrderCreatePage: React.FC = () => {
                     : `NPR ${deliveryCharge.toLocaleString()}`}
                 </span>
               </div>
-              {redeemPointCount > 0 && (
+              {redeemAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-[#86868b]">Loyalty redemption</span>
                   <span className="font-medium text-emerald-700">

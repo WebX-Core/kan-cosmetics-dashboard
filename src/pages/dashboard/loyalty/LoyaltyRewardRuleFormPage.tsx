@@ -242,9 +242,9 @@ export const LoyaltyRewardRuleFormPage: React.FC = () => {
       ["Maximum product subtotal", form.maxProductSubtotal],
       ["Reward multiplier", form.rewardMultiplier],
       ["Birthday reward multiplier", form.birthdayRewardMultiplier],
-      ["Status point multiplier", form.statusPointMultiplier],
+      ["Yearly spend multiplier", form.statusPointMultiplier],
       ["Bonus reward points", form.bonusRewardPoints],
-      ["Bonus status points", form.bonusStatusPoints],
+      ["Bonus yearly spend", form.bonusStatusPoints],
       ["Discount value", form.discountValue],
       ["Maximum discount amount", form.maximumDiscountAmount],
       ["Minimum order amount for coupon", form.minimumOrderAmountForCoupon],
@@ -323,7 +323,7 @@ export const LoyaltyRewardRuleFormPage: React.FC = () => {
   return (
     <ModernFormLayout
       title={isEdit ? "Edit Reward Rule" : "Create Reward Rule"}
-      subtitle="Configure dynamic loyalty rewards, coupons, bonus points, birthday benefits, and packing notes."
+      subtitle="Configure dynamic loyalty rewards, coupons, bonus rewards, birthday benefits, and packing notes."
       onBack={() => navigate("/dashboard/loyalty/reward-rules")}
     >
       <form onSubmit={submit} className="space-y-6">
@@ -388,10 +388,10 @@ export const LoyaltyRewardRuleFormPage: React.FC = () => {
             <FormField label="Maximum order amount"><input type="number" min="0" value={form.maxOrderAmount} onChange={(e) => set("maxOrderAmount", e.target.value)} className={input} placeholder="No maximum" /></FormField>
             <FormField label="Minimum selected product subtotal"><input type="number" min="0" value={form.minProductSubtotal} onChange={(e) => set("minProductSubtotal", e.target.value)} className={input} placeholder="3000" /></FormField>
             <FormField label="Maximum selected product subtotal"><input type="number" min="0" value={form.maxProductSubtotal} onChange={(e) => set("maxProductSubtotal", e.target.value)} className={input} placeholder="No maximum" /></FormField>
-            <FormField label="Minimum yearly points"><input type="number" min="0" value={form.minYearlyPoints} onChange={(e) => set("minYearlyPoints", e.target.value)} className={input} placeholder="5000" /></FormField>
-            <FormField label="Maximum yearly points"><input type="number" min="0" value={form.maxYearlyPoints} onChange={(e) => set("maxYearlyPoints", e.target.value)} className={input} placeholder="12999" /></FormField>
-            <FormField label="Minimum lifetime points"><input type="number" min="0" value={form.minLifetimePoints} onChange={(e) => set("minLifetimePoints", e.target.value)} className={input} placeholder="Optional" /></FormField>
-            <FormField label="Maximum lifetime points"><input type="number" min="0" value={form.maxLifetimePoints} onChange={(e) => set("maxLifetimePoints", e.target.value)} className={input} placeholder="Optional" /></FormField>
+            <FormField label="Minimum yearly spend (Rs.)"><input type="number" min="0" value={form.minYearlyPoints} onChange={(e) => set("minYearlyPoints", e.target.value)} className={input} placeholder="5000" /></FormField>
+            <FormField label="Maximum yearly spend (Rs.)"><input type="number" min="0" value={form.maxYearlyPoints} onChange={(e) => set("maxYearlyPoints", e.target.value)} className={input} placeholder="12999" /></FormField>
+            <FormField label="Minimum lifetime spend (Rs.)"><input type="number" min="0" value={form.minLifetimePoints} onChange={(e) => set("minLifetimePoints", e.target.value)} className={input} placeholder="Optional" /></FormField>
+            <FormField label="Maximum lifetime spend (Rs.)"><input type="number" min="0" value={form.maxLifetimePoints} onChange={(e) => set("maxLifetimePoints", e.target.value)} className={input} placeholder="Optional" /></FormField>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Product IDs" hint="Comma-separated UUIDs. Rule applies only when order contains these products.">
@@ -410,13 +410,13 @@ export const LoyaltyRewardRuleFormPage: React.FC = () => {
           </div>
         </FormSection>
 
-        <FormSection title="Point calculation" description="These fields control 1x, 1.5x, 2x, 3x and bonus point behavior.">
+        <FormSection title="Reward calculation" description="These fields control 1x, 1.5x, 2x, 3x and bonus reward behavior.">
           <div className="grid gap-4 md:grid-cols-5">
             <FormField label="Reward multiplier"><input type="number" min="0" step="0.01" value={form.rewardMultiplier} onChange={(e) => set("rewardMultiplier", e.target.value)} className={input} placeholder="1.5" /></FormField>
             <FormField label="Birthday multiplier"><input type="number" min="0" step="0.01" value={form.birthdayRewardMultiplier} onChange={(e) => set("birthdayRewardMultiplier", e.target.value)} className={input} placeholder="2 or 3" /></FormField>
-            <FormField label="Status point multiplier"><input type="number" min="0" step="0.01" value={form.statusPointMultiplier} onChange={(e) => set("statusPointMultiplier", e.target.value)} className={input} placeholder="1" /></FormField>
+            <FormField label="Yearly spend multiplier"><input type="number" min="0" step="0.01" value={form.statusPointMultiplier} onChange={(e) => set("statusPointMultiplier", e.target.value)} className={input} placeholder="1" /></FormField>
             <FormField label="Bonus reward points"><input type="number" min="0" value={form.bonusRewardPoints} onChange={(e) => set("bonusRewardPoints", e.target.value)} className={input} placeholder="5000" /></FormField>
-            <FormField label="Bonus status points"><input type="number" min="0" value={form.bonusStatusPoints} onChange={(e) => set("bonusStatusPoints", e.target.value)} className={input} placeholder="Optional" /></FormField>
+            <FormField label="Bonus yearly spend (Rs.)"><input type="number" min="0" value={form.bonusStatusPoints} onChange={(e) => set("bonusStatusPoints", e.target.value)} className={input} placeholder="Optional" /></FormField>
           </div>
         </FormSection>
 

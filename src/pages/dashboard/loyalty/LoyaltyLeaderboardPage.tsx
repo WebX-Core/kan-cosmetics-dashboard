@@ -1,12 +1,12 @@
 import React from "react";
 import { Award, Coins, Trophy, Users } from "lucide-react";
-import { useLoyaltyCustomers } from "@/features/loyalty";
+import { useLoyaltyCustomers, useLoyaltySettings } from "@/features/loyalty";
 import { PageLayout } from "@/shared/components/dashboard/PageLayout";
 import { StatCardV2 } from "@/shared/components/dashboard/StatCardV2";
 import { DataTableV2 } from "@/shared/components/dashboard/DataTableV2";
 import { useListQueryState } from "@/shared/hooks/useListQueryState";
 import { RankBadge, TierBadge } from "./loyaltyUi";
-import { customerName, date, number, text } from "./loyaltyUtils";
+import { customerName, date, number, rs, text, walletRs } from "./loyaltyUtils";
 import { ExportMenu } from "@/shared/components/dashboard/ExportMenu";
 import { useNavigate } from "react-router-dom";
 
@@ -15,21 +15,22 @@ export const LoyaltyLeaderboardPage: React.FC = () => {
   const { state, setState, debouncedSearch } = useListQueryState({ page: 1, limit: 20, search: "" });
   const query = useLoyaltyCustomers({ page: state.page, limit: state.limit, search: debouncedSearch || undefined });
   const rows = query.data?.data ?? [];
+  const pointsPerNpr = useLoyaltySettings().data?.pointsPerNprValue;
   const columns = [
     { key: "rank", label: "Rank", sortValue: (row: typeof rows[number]) => number(row.rank), render: (row: typeof rows[number]) => <RankBadge rank={number(row.rank)} /> },
     { key: "customer", label: "Customer", sortValue: (row: typeof rows[number]) => customerName(row.customer), render: (row: typeof rows[number]) => <div><p className="font-medium text-gray-900">{customerName(row.customer)}</p><p className="text-xs text-gray-500">{text(row.customer?.email)}</p></div> },
     { key: "currentTierCode", label: "Tier", sortValue: (row: typeof rows[number]) => text(row.currentTierCode), render: (row: typeof rows[number]) => <TierBadge code={row.currentTierCode} /> },
-    { key: "yearlyPoints", label: "Yearly Points", sortValue: (row: typeof rows[number]) => number(row.yearlyPoints), render: (row: typeof rows[number]) => <span className="font-semibold">{number(row.yearlyPoints).toLocaleString()}</span> },
-    { key: "lifetimePoints", label: "Lifetime", sortValue: (row: typeof rows[number]) => number(row.lifetimePoints), render: (row: typeof rows[number]) => number(row.lifetimePoints).toLocaleString() },
-    { key: "availablePoints", label: "Wallet", sortValue: (row: typeof rows[number]) => number(row.availablePoints), render: (row: typeof rows[number]) => number(row.availablePoints).toLocaleString() },
-    { key: "redeemedRewardPoints", label: "Redeemed", render: (row: typeof rows[number]) => number(row.redeemedRewardPoints).toLocaleString() },
+    { key: "yearlyPoints", label: "Yearly Spend", sortValue: (row: typeof rows[number]) => number(row.yearlyPoints), render: (row: typeof rows[number]) => <span className="font-semibold">{rs(row.yearlyPoints)}</span> },
+    { key: "lifetimePoints", label: "Lifetime Spend", sortValue: (row: typeof rows[number]) => number(row.lifetimePoints), render: (row: typeof rows[number]) => rs(row.lifetimePoints) },
+    { key: "availablePoints", label: "Wallet", sortValue: (row: typeof rows[number]) => number(row.availablePoints), render: (row: typeof rows[number]) => walletRs(row.availablePoints, pointsPerNpr) },
+    { key: "redeemedRewardPoints", label: "Redeemed", render: (row: typeof rows[number]) => walletRs(row.redeemedRewardPoints, pointsPerNpr) },
     { key: "cycle", label: "Current Cycle", render: (row: typeof rows[number]) => <span className="text-xs">{date(row.currentCycleStartAt)} – {date(row.currentCycleEndAt)}</span> },
     { key: "referralCode", label: "Referral Code", render: (row: typeof rows[number]) => <span className="font-mono text-xs">{text(row.referralCode)}</span> },
     { key: "yearlyResetAt", label: "Last Reset", sortValue: (row: typeof rows[number]) => text(row.yearlyResetAt), render: (row: typeof rows[number]) => date(row.yearlyResetAt) },
   ];
   const pageYearly = rows.reduce((sum, row) => sum + number(row.yearlyPoints), 0);
-  return <PageLayout title="Loyalty Leaderboard" subtitle="Yearly customer ranking, points, tiers, and referral codes." actions={<ExportMenu basePath="/customer-loyalty/admin/customers" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="loyalty-customers"/>} searchValue={state.search} onSearchChange={(search) => setState((prev) => ({ ...prev, page: 1, search }))} searchPlaceholder="Search customers...">
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><StatCardV2 label="Loyalty Members" value={query.data?.total ?? rows.length} icon={Users} colorVariant="blue" /><StatCardV2 label="Page Yearly Points" value={pageYearly.toLocaleString()} icon={Coins} colorVariant="emerald" /><StatCardV2 label="Top Rank" value={rows[0]?.rank ? `#${rows[0].rank}` : "—"} icon={Trophy} colorVariant="amber" /><StatCardV2 label="Tiers Represented" value={new Set(rows.map((row) => row.currentTierCode)).size} icon={Award} colorVariant="cyan" /></div>
+  return <PageLayout title="Loyalty Leaderboard" subtitle="Yearly customer ranking, spend, tiers, and referral codes." actions={<ExportMenu basePath="/customer-loyalty/admin/customers" params={{ search: debouncedSearch || undefined, limit: 10000 }} filename="loyalty-customers"/>} searchValue={state.search} onSearchChange={(search) => setState((prev) => ({ ...prev, page: 1, search }))} searchPlaceholder="Search customers...">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><StatCardV2 label="Loyalty Members" value={query.data?.total ?? rows.length} icon={Users} colorVariant="blue" /><StatCardV2 label="Page Yearly Spend" value={rs(pageYearly)} icon={Coins} colorVariant="emerald" /><StatCardV2 label="Top Rank" value={rows[0]?.rank ? `#${rows[0].rank}` : "—"} icon={Trophy} colorVariant="amber" /><StatCardV2 label="Tiers Represented" value={new Set(rows.map((row) => row.currentTierCode)).size} icon={Award} colorVariant="cyan" /></div>
     <DataTableV2 columns={columns} data={rows} searchValue={state.search} emptyMessage={query.isLoading ? "Loading leaderboard..." : "No loyalty customers found."} showPagination currentPage={state.page} totalPages={query.data?.totalPages ?? 1} onPageChange={(page) => setState((prev) => ({ ...prev, page }))} pageSize={state.limit} onPageSizeChange={(limit) => setState((prev) => ({ ...prev, page: 1, limit }))} onRowClick={(row) => navigate(`/dashboard/loyalty/customers/${row.customerId}`)} />
   </PageLayout>;
 };
