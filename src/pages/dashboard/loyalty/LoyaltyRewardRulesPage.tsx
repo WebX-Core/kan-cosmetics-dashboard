@@ -77,7 +77,7 @@ export const LoyaltyRewardRulesPage: React.FC = () => {
   return (
     <PageLayout
       title="Loyalty Reward Rules"
-      subtitle="Dynamic order rewards, point multipliers, coupons, birthday benefits, and packing gifts."
+      subtitle="Dynamic order rewards, reward multipliers, coupons, birthday benefits, and packing gifts."
       onBack={() => navigate("/dashboard/loyalty")}
       searchValue={state.search}
       onSearchChange={(search) => setState((prev) => ({ ...prev, page: 1, search }))}

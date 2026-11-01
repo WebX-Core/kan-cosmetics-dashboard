@@ -211,7 +211,7 @@ export const CustomerDetailsPage: React.FC = () => {
 
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => navigate(`/dashboard/loyalty/customers/${customerId}`)} className="rounded-full border border-[#d2d2d7] bg-white px-4 py-2 text-sm font-medium hover:bg-[#f5f5f7]">
-          Loyalty details{typeof loyalty.currentPoints === "number" ? ` · ${loyalty.currentPoints} points` : ""}
+          Loyalty details{typeof loyalty.currentPoints === "number" ? ` · Rs. ${loyalty.currentPoints}` : ""}
         </button>
         {activeBan ? (
           <button type="button" onClick={() => navigate(`/dashboard/customers/bans/${text(activeBan.id)}/edit`)} className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">

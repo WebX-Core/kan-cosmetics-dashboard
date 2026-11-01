@@ -281,7 +281,7 @@ export const LoyaltyTierFormPage: React.FC = () => {
     const existing = tiers.data?.data.filter((tier) => tier.id !== id) ?? [];
 
     if (!form.name.trim() || !code) return toast.error("Tier name and code are required.");
-    if (min < 0 || (max != null && max < min)) return toast.error("Tier point range is invalid.");
+    if (min < 0 || (max != null && max < min)) return toast.error("Tier spend range is invalid.");
     if (existing.some((tier) => normalizeCode(tier.code) === code)) {
       return toast.error("A tier with this code already exists.");
     }
@@ -297,7 +297,7 @@ export const LoyaltyTierFormPage: React.FC = () => {
       const currentMax = max ?? Number.POSITIVE_INFINITY;
       return min <= otherMax && tier.minYearlyPoints <= currentMax;
     });
-    if (overlap) return toast.error(`Point range overlaps with ${overlap.name}.`);
+    if (overlap) return toast.error(`Spend range overlaps with ${overlap.name}.`);
 
     const discount = Number(form.discountPercent) || 0;
     const fixed = Number(form.fixedAmountOff) || 0;
@@ -386,10 +386,10 @@ export const LoyaltyTierFormPage: React.FC = () => {
             <FormField label="Code" required hint={`Normalized: ${normalizeCode(form.code) || "-"}`}>
               <input value={form.code} onChange={(e) => set("code", e.target.value)} className={input} placeholder="PHASE_3" />
             </FormField>
-            <FormField label="Minimum yearly points" required>
+            <FormField label="Minimum yearly spend (Rs.)" required>
               <input type="number" min="0" value={form.minYearlyPoints} onChange={(e) => set("minYearlyPoints", e.target.value)} className={input} placeholder="13000" />
             </FormField>
-            <FormField label="Maximum yearly points">
+            <FormField label="Maximum yearly spend (Rs.)">
               <input type="number" min="0" value={form.maxYearlyPoints} onChange={(e) => set("maxYearlyPoints", e.target.value)} className={input} placeholder="24999 or leave blank" />
             </FormField>
             <FormField label="Sort order">
@@ -422,7 +422,7 @@ export const LoyaltyTierFormPage: React.FC = () => {
 
         <FormSection
           title="Order reward coupons"
-          description="Create customer-specific next-order coupons when a qualifying order earns loyalty points."
+          description="Create customer-specific next-order coupons when a qualifying order earns loyalty rewards."
         >
           <div className="space-y-4">
             {orderRewards.map((rule, index) => (
