@@ -80,7 +80,7 @@ const getCustomerName = (orderRef: Record<string, unknown>): string => {
   if (directName) return directName;
 
   return toText(
-    customer.fullname ?? customer.name ?? orderRef.customerName ?? shippingAddress.fullName ?? orderRef.fullname ?? orderRef.name,
+    orderRef.pickupName ?? customer.fullname ?? customer.name ?? orderRef.customerName ?? shippingAddress.fullName ?? orderRef.fullname ?? orderRef.name,
     "Unknown",
   );
 };

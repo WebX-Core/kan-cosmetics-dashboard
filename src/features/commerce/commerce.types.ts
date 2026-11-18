@@ -84,8 +84,11 @@ export type OrderCreateAddressDto = Readonly<{
 }>;
 
 export type OrderCreateDto = Readonly<{
+  fulfillmentMethod?: "DELIVERY" | "STORE_PICKUP";
+  pickupName?: string;
+  pickupPhone?: string;
   items: ReadonlyArray<OrderCreateItemDto>;
-  addresses: ReadonlyArray<OrderCreateAddressDto>;
+  addresses?: ReadonlyArray<OrderCreateAddressDto>;
   shippingAmount?: number;
   paymentMethod: string;
   couponCode?: string;

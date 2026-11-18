@@ -278,21 +278,41 @@ const ProductPicker: React.FC<{
   const q = catalogApi.products.hooks.useList(
     { search: debouncedSearch || undefined, limit: 20 },
   );
+  const variantsQuery = catalogApi.productVariants.hooks.useList(
+    { search: debouncedSearch || undefined, limit: 20 },
+  );
 
   const results = React.useMemo(() => {
     const raw = q.data;
     const arr: unknown[] = Array.isArray(raw) ? raw : ((raw as { data?: unknown[] } | undefined)?.data ?? []);
-    return arr
+    const products = arr
       .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
+      .filter(p => p.hasVariant !== true)
       .map((p) => ({
         id: str(p.id ?? p._id),
+        productVariantId: undefined as string | undefined,
         name: str(p.title ?? p.name, "Unnamed"),
         price: num(p.salePrice ?? p.price ?? p.regularPrice),
         thumbnail: str(p.coverImage ?? p.thumbnail ?? p.image),
         sku: str(p.sku),
       }))
       .filter((p) => p.id);
-  }, [q.data]);
+    const variantRaw = variantsQuery.data;
+    const variants: unknown[] = Array.isArray(variantRaw) ? variantRaw : ((variantRaw as { data?: unknown[] } | undefined)?.data ?? []);
+    return [...products, ...variants
+      .filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null)
+      .map(v => {
+        const product = (v.product ?? {}) as Record<string, unknown>;
+        return {
+          id: str(product.id ?? v.productId),
+          productVariantId: str(v.id),
+          name: `${str(product.title, "Product")} · ${str(v.title ?? v.variantValue, "Variant")}`,
+          price: num(v.salePrice ?? v.price),
+          thumbnail: str(v.image ?? product.coverImage),
+          sku: str(v.sku),
+        };
+      }).filter(v => v.id && v.productVariantId)];
+  }, [q.data, variantsQuery.data]);
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -303,25 +323,26 @@ const ProductPicker: React.FC<{
   }, []);
 
   const addProduct = (p: (typeof results)[number]) => {
-    const existing = items.find((i) => i.productId === p.id);
+    const matches = (i: LineItem) => i.productId === p.id && i.productVariantId === p.productVariantId;
+    const existing = items.find(matches);
     if (existing) {
-      onChange(items.map((i) => i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
+      onChange(items.map((i) => matches(i) ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-      onChange([...items, { productId: p.id, productName: p.name, productPrice: p.price, thumbnail: p.thumbnail, quantity: 1 }]);
+      onChange([...items, { productId: p.id, productVariantId: p.productVariantId, productName: p.name, productPrice: p.price, thumbnail: p.thumbnail, quantity: 1 }]);
     }
     setSearch("");
     setOpen(false);
   };
 
-  const updateQty = (productId: string, delta: number) => {
+  const updateQty = (productId: string, delta: number, productVariantId?: string) => {
     onChange(
       items
-        .map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i)
+        .map((i) => i.productId === productId && i.productVariantId === productVariantId ? { ...i, quantity: i.quantity + delta } : i)
         .filter((i) => i.quantity > 0),
     );
   };
 
-  const removeItem = (productId: string) => onChange(items.filter((i) => i.productId !== productId));
+  const removeItem = (productId: string, productVariantId?: string) => onChange(items.filter((i) => i.productId !== productId || i.productVariantId !== productVariantId));
 
   const subtotal = items.reduce((s, i) => s + i.productPrice * i.quantity, 0);
 
@@ -335,21 +356,21 @@ const ProductPicker: React.FC<{
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
-            placeholder="Search products to add…"
+            placeholder="Search product, variant, or SKU…"
             className="h-10 w-full rounded-xl border border-[#d2d2d7] bg-white pl-9 pr-4 text-sm text-[#1d1d1f] placeholder-[#86868b] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
           />
         </div>
 
         {open && (
           <div className="absolute z-50 mt-1 w-full rounded-xl border border-[#d2d2d7] bg-white shadow-lg overflow-hidden">
-            {q.isLoading ? (
+            {q.isFetching || variantsQuery.isFetching || search !== debouncedSearch ? (
               <p className="px-4 py-3 text-xs text-[#86868b]">Searching…</p>
             ) : results.length === 0 ? (
               <p className="px-4 py-3 text-xs text-[#86868b]">No products found.</p>
             ) : (
               <ul className="max-h-72 overflow-y-auto divide-y divide-[#f5f5f7]">
                 {results.map((p) => (
-                  <li key={p.id}>
+                  <li key={`${p.id}:${p.productVariantId ?? "product"}`}>
                     <button
                       type="button"
                       onClick={() => addProduct(p)}
@@ -383,7 +404,7 @@ const ProductPicker: React.FC<{
         <div className="rounded-xl border border-[#d2d2d7] overflow-hidden">
           <ul className="divide-y divide-[#f5f5f7]">
             {items.map((item) => (
-              <li key={item.productId} className="flex items-center gap-3 px-4 py-3">
+              <li key={`${item.productId}:${item.productVariantId ?? "product"}`} className="flex items-center gap-3 px-4 py-3">
                 {item.thumbnail ? (
                   <img src={item.thumbnail} alt="" className="h-10 w-10 rounded-lg object-cover bg-[#f5f5f7] shrink-0" />
                 ) : (
@@ -400,7 +421,7 @@ const ProductPicker: React.FC<{
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
-                    onClick={() => updateQty(item.productId, -1)}
+                    onClick={() => updateQty(item.productId, -1, item.productVariantId)}
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
                   >
                     <Minus size={11} />
@@ -408,7 +429,7 @@ const ProductPicker: React.FC<{
                   <span className="w-6 text-center text-sm font-medium text-[#1d1d1f]">{item.quantity}</span>
                   <button
                     type="button"
-                    onClick={() => updateQty(item.productId, 1)}
+                    onClick={() => updateQty(item.productId, 1, item.productVariantId)}
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-[#d2d2d7] bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
                   >
                     <Plus size={11} />
@@ -416,7 +437,7 @@ const ProductPicker: React.FC<{
                 </div>
                 <button
                   type="button"
-                  onClick={() => removeItem(item.productId)}
+                  onClick={() => removeItem(item.productId, item.productVariantId)}
                   className="ml-1 shrink-0 rounded-full p-1 text-[#86868b] hover:bg-[#f5f5f7] hover:text-red-600 transition-colors"
                 >
                   <X size={13} />
@@ -984,6 +1005,8 @@ export const OrderCreatePage: React.FC = () => {
   const [guestEmail, setGuestEmail] = React.useState("");
   const [items, setItems] = React.useState<LineItem[]>([]);
   const [shipping, setShipping] = React.useState<AddressForm>(EMPTY_ADDRESS);
+  const [fulfillmentMethod, setFulfillmentMethod] = React.useState<"DELIVERY" | "STORE_PICKUP">("DELIVERY");
+  const isStorePickup = fulfillmentMethod === "STORE_PICKUP";
   const [billing, setBilling] = React.useState<AddressForm>(EMPTY_ADDRESS);
   const [sameAsBilling, setSameAsBilling] = React.useState(true);
   const [paymentMethod, setPaymentMethod] = React.useState("COD");
@@ -1052,6 +1075,8 @@ export const OrderCreatePage: React.FC = () => {
         orderSource === "OTHER" ? customOrderSource.trim() : orderSource.trim();
 
       return commerceApi.orders.createDashboard({
+        fulfillmentMethod,
+        ...(isStorePickup ? { pickupName: shipping.fullName.trim(), pickupPhone: shipping.phone.trim() } : {}),
         ...(customer ? { customerId: customer.id } : {}),
         ...(!customer && guestEmail.trim() ? { guestEmail: guestEmail.trim() } : {}),
         items: items.map((i) => ({
@@ -1059,7 +1084,7 @@ export const OrderCreatePage: React.FC = () => {
           quantity: i.quantity,
           ...(i.productVariantId ? { productVariantId: i.productVariantId } : {}),
         })),
-        addresses,
+        ...(isStorePickup ? {} : { addresses }),
         paymentMethod,
         couponCode: couponCode.trim() || undefined,
         // The form takes rupees; the API takes wallet points.
@@ -1084,10 +1109,10 @@ export const OrderCreatePage: React.FC = () => {
     !(redeemAmount > 0 && couponCode.trim() && !couponPointStackingAllowed) &&
     Boolean(shipping.fullName) &&
     Boolean(shipping.phone) &&
-    Boolean(shipping.addressLine1) &&
+    (isStorePickup || (Boolean(shipping.addressLine1) &&
     Boolean(shipping.city) &&
     Boolean(shipping.destinationBranch) &&
-    Boolean(shipping.destinationCityArea);
+    Boolean(shipping.destinationCityArea)));
 
   const formValidationMessage =
     items.length === 0
@@ -1096,7 +1121,7 @@ export const OrderCreatePage: React.FC = () => {
         ? "Select a customer before redeeming loyalty rewards."
         : redeemAmount > 0 && couponCode.trim() && !couponPointStackingAllowed
           ? "Coupon and loyalty rewards cannot be used together."
-      : !shipping.fullName || !shipping.phone || !shipping.addressLine1 || !shipping.city || !shipping.destinationBranch || !shipping.destinationCityArea
+      : !shipping.fullName || !shipping.phone || (!isStorePickup && (!shipping.addressLine1 || !shipping.city || !shipping.destinationBranch || !shipping.destinationCityArea))
         ? "Complete the shipping address, destination branch, and delivery area."
         : orderSource === "OTHER" && !customOrderSource.trim()
           ? "Enter a custom order source."
@@ -1120,7 +1145,7 @@ export const OrderCreatePage: React.FC = () => {
   React.useEffect(() => {
     const branch = shipping.destinationBranch.trim();
     const area = shipping.destinationCityArea.trim();
-    if (!items.length || !branch || !area) {
+    if (isStorePickup || !items.length || !branch || !area) {
       deliveryQuoteRequestId.current += 1;
       setDeliveryQuoteLoading(false);
       setDeliveryQuoteError("");
@@ -1164,6 +1189,7 @@ export const OrderCreatePage: React.FC = () => {
       window.clearTimeout(timeout);
     };
   }, [
+    isStorePickup,
     items,
     shipping.destinationBranch,
     shipping.destinationCityArea,
@@ -1214,6 +1240,17 @@ export const OrderCreatePage: React.FC = () => {
 
           {/* Addresses */}
           <div className={sectionCls}>
+            <fieldset className="mb-4 flex flex-wrap gap-5">
+              <legend className="mb-2 text-sm font-medium">Fulfillment</legend>
+              {(["DELIVERY", "STORE_PICKUP"] as const).map(method => <label key={method} className="flex items-center gap-2 text-sm">
+                <input type="radio" name="fulfillment" checked={fulfillmentMethod === method} onChange={() => { setFulfillmentMethod(method); setShippingAmount(""); }} />
+                {method === "DELIVERY" ? "Delivery" : "Store pickup (free)"}
+              </label>)}
+            </fieldset>
+            {isStorePickup ? <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm">Pickup name<input className={inputCls} value={shipping.fullName} onChange={event => setShipping({...shipping, fullName: event.target.value})} /></label>
+              <label className="text-sm">Pickup phone<input type="tel" className={inputCls} value={shipping.phone} onChange={event => setShipping({...shipping, phone: event.target.value})} /></label>
+            </div> : <>
             <SectionHeader icon={<MapPin size={16} />} title="Addresses" subtitle="Shipping and billing information" />
             <AddressForm title="Shipping Address" value={shipping} onChange={setShipping} branches={deliveryBranches} />
 
@@ -1233,6 +1270,7 @@ export const OrderCreatePage: React.FC = () => {
             {!sameAsBilling && (
               <AddressForm title="Billing Address" value={billing} onChange={setBilling} branches={deliveryBranches} />
             )}
+            </>}
           </div>
 
         </div>

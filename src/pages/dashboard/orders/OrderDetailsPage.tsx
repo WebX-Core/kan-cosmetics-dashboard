@@ -518,7 +518,8 @@ export const OrderDetailsPage: React.FC = () => {
   const isPlacedOnPickNDrop = placementSucceeded === id || Boolean(
     shipment.externalOrderId || shipment.providerTrackingNumber || shipment.trackingUrl || orderDetail.deliveryAutoAssigned,
   );
-  const canPlaceOrder = ["PENDING", "PROCESSING", "PACKED", "READY_FOR_SHIPMENT"].includes(order.status.toUpperCase());
+  const isStorePickup = orderDetail.fulfillmentMethod === "STORE_PICKUP";
+  const canPlaceOrder = !isStorePickup && ["PENDING", "PROCESSING", "PACKED", "READY_FOR_SHIPMENT"].includes(order.status.toUpperCase());
   const handlePlaceOnPickNDrop = async () => {
     if (placingRef.current || isPlacedOnPickNDrop || !canPlaceOrder) return;
     placingRef.current = true;
@@ -600,6 +601,7 @@ export const OrderDetailsPage: React.FC = () => {
       subtitle={
         <>
           <span>Created on {formatDateTime(orderDetail.createdAt)}</span>
+          {isStorePickup && <span className="font-medium">Store pickup · {text(orderDetail.pickupName, "")} · {text(orderDetail.pickupPhone, "")}</span>}
           {orderSource && (
             <>
               <span className="text-[#c4c4c8]">•</span>
@@ -611,7 +613,7 @@ export const OrderDetailsPage: React.FC = () => {
       titleMeta={
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap justify-end gap-2">
-            {canPlaceOnPickNDrop && (
+            {canPlaceOnPickNDrop && !isStorePickup && (
               <button
                 type="button"
                 onClick={() => void handlePlaceOnPickNDrop()}
@@ -664,7 +666,7 @@ export const OrderDetailsPage: React.FC = () => {
               >
                 {orderStatusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                  {isStorePickup && option.value === "READY_FOR_SHIPMENT" ? "Ready for pickup" : isStorePickup && option.value === "DELIVERED" ? "Collected" : option.label}
                   </option>
                 ))}
               </select>
@@ -720,7 +722,7 @@ export const OrderDetailsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => void handleSyncDelivery()}
-              disabled={syncDelivery.isPending}
+              disabled={isStorePickup || syncDelivery.isPending}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
             >
               {syncDelivery.isPending ? (
@@ -733,7 +735,7 @@ export const OrderDetailsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => void handlePickupNotification()}
-              disabled={syncingPickup}
+              disabled={isStorePickup || syncingPickup}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d2d2d7] bg-white px-3 text-[11px] font-medium text-[#424245] transition-colors hover:bg-[#f5f5f7] disabled:opacity-50"
             >
               {syncingPickup ? (
@@ -886,19 +888,22 @@ export const OrderDetailsPage: React.FC = () => {
 
             <section className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
               <SectionIconHeader
-                title="Delivery"
+                title={isStorePickup ? "Store Pickup" : "Home Delivery"}
                 icon={<Truck size={18} className="text-white" strokeWidth={2} />}
                 bg="bg-sky-500"
               />
               <div className="mt-4">
                 <IconFieldList
                   fields={[
-                    { label: "Recipient", value: text(shippingAddress.fullName, "—"), icon: <User size={13} /> },
-                    { label: "Phone", value: text(shippingAddress.phone, "—"), icon: <Phone size={13} /> },
+                    { label: "Fulfillment Type", value: isStorePickup ? "Self pickup from store" : "Home delivery · Pick & Drop", icon: <Building2 size={13} /> },
+                    { label: "Recipient", value: text(isStorePickup ? orderDetail.pickupName : shippingAddress.fullName, "—"), icon: <User size={13} /> },
+                    { label: "Phone", value: text(isStorePickup ? orderDetail.pickupPhone : shippingAddress.phone, "—"), icon: <Phone size={13} /> },
+                    ...(isStorePickup ? [] : [
                     { label: "Address line", value: addressLine || "—", icon: <Map size={13} /> },
                     { label: "Location", value: cityLine || "—", icon: <MapPin size={13} /> },
                     { label: "Placed on PickNDrop", value: boolText(isPlacedOnPickNDrop), icon: <CheckCircle size={13} /> },
                     { label: "Placed at", value: formatDateTime(orderDetail.deliveryAssignedAt), icon: <Calendar size={13} /> },
+                    ]),
                   ]}
                 />
               </div>
